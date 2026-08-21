@@ -74,7 +74,7 @@ export function TrendChart({ series, xUnit, yUnit }: { series: TrendSeries[]; xU
   );
 }
 
-export function CurveChart({ series }: { series: CurveSeries[] }) {
+export function CurveChart({ series, yAxisLabel }: { series: CurveSeries[]; yAxisLabel: string }) {
   const all = series.flatMap((item) => item.points);
   if (!all.length) {
     return <div className="empty-chart"><strong>Aucune courbe IV disponible</strong><span>Choisissez un autre temps ou élargissez les filtres.</span></div>;
@@ -97,7 +97,7 @@ export function CurveChart({ series }: { series: CurveSeries[] }) {
         {yMin < 0 && yMax > 0 ? <line className="zero-line" x1={margin.left} x2={width - margin.right} y1={sy(0)} y2={sy(0)} /> : null}
         <line className="axis-line" x1={margin.left} x2={width - margin.right} y1={height - margin.bottom} y2={height - margin.bottom} />
         <text className="axis-title" x={width - margin.right} y={height - 5} textAnchor="end">Tension (V)</text>
-        <text className="axis-title" x={margin.left} y={14}>J produit (mA/cm²)</text>
+        <text className="axis-title" x={margin.left} y={14}>{yAxisLabel}</text>
         {series.map((item) => {
           const path = item.points.map((point, index) => `${index ? "L" : "M"}${sx(point.x)},${sy(point.y)}`).join(" ");
           return <path key={item.label} d={path} fill="none" stroke={item.color} strokeWidth="4" strokeLinejoin="round" strokeLinecap="round"><title>{item.label}</title></path>;

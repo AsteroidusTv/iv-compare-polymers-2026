@@ -17,6 +17,7 @@ const fr = new Intl.NumberFormat("fr-CH", { maximumFractionDigits: 2 });
 
 type View = "trend" | "curves";
 type ValueMode = "absolute" | "retention";
+type CurrentConvention = "instrument" | "pv";
 
 function unique(values: Array<string | null | undefined>): string[] {
   return [...new Set(values.filter((value): value is string => Boolean(value)))].sort((a, b) => a.localeCompare(b, "fr"));
@@ -47,6 +48,7 @@ export default function Home() {
   const [recipe, setRecipe] = useState("all");
   const [includeQa, setIncludeQa] = useState(false);
   const [curveTime, setCurveTime] = useState<number | null>(null);
+  const [currentConvention, setCurrentConvention] = useState<CurrentConvention>("instrument");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const installDataset = useCallback((next: IVDataset, message: string) => {
@@ -222,7 +224,12 @@ export default function Home() {
     return [pick(materialA, COLORS.a), pick(materialB, COLORS.b)].filter((item): item is NonNullable<typeof item> => Boolean(item));
   }, [dataset, curveTime, eligibleFiles, includeQa, materialA, materialB, stress]);
 
-  const curveSeries: CurveSeries[] = curveSelections.map((selection) => ({ label: selection.material, color: selection.color, points: selection.points }));
+  const currentPolarity = currentConvention === "instrument" ? -1 : 1;
+  const curveSeries: CurveSeries[] = curveSelections.map((selection) => ({
+    label: selection.material,
+    color: selection.color,
+    points: selection.points.map((point) => ({ x: point.x, y: point.y * currentPolarity })),
+  }));
   const xUnit = timeUnit(stress);
   const yUnit = mode === "retention" ? "% de l’état initial" : METRICS[metric].unit;
   const conditionMixed = electrode === "all" || recipe === "all";
@@ -368,15 +375,16 @@ export default function Home() {
           <div className="curve-workspace">
             <div className="curve-toolbar">
               <label>Temps cible<select value={curveTime ?? ""} onChange={(event) => setCurveTime(Number(event.target.value))} disabled={!curveTimes.all.length}>{curveTimes.all.length ? curveTimes.all.map((time) => <option key={time} value={time}>{fr.format(time)} {xUnit}{curveTimes.common.includes(time) ? " · commun" : ""}</option>) : <option>Aucun temps disponible</option>}</select></label>
+              <label>Convention du courant<select value={currentConvention} onChange={(event) => setCurrentConvention(event.target.value as CurrentConvention)}><option value="instrument">Logiciel · J négatif</option><option value="pv">PV · J produit positif</option></select></label>
               <label className="check-control"><input type="checkbox" checked={includeQa} onChange={(event) => setIncludeQa(event.target.checked)} /> Inclure les mesures signalées QA</label>
               <span>La meilleure courbe disponible est retenue pour chaque matériau, au temps commun ou le plus proche.</span>
             </div>
             <section className="chart-card curve-chart-card">
               <div className="chart-title">
                 {curveSelections.map((selection) => <div key={selection.material}><span className="legend-dot" style={{ background: selection.color }} />{selection.material} · {fr.format(selection.actualTime)} {xUnit}</div>)}
-                <span>J produit positif</span>
+                <span>{currentConvention === "instrument" ? "Convention logiciel · photocourant négatif" : "Convention PV · courant produit positif"}</span>
               </div>
-              <CurveChart series={curveSeries} />
+              <CurveChart series={curveSeries} yAxisLabel={currentConvention === "instrument" ? "J instrument (mA/cm²)" : "J produit (mA/cm²)"} />
             </section>
             <div className="measurement-grid">
               {curveSelections.map((selection) => <article className="measurement-card" key={selection.material} style={{ borderTopColor: selection.color }}><p className="eyebrow">{selection.material}</p><h4>{fr.format(selection.actualTime)} {xUnit} · {selection.measurement.measurement_uid}</h4><dl><div><dt>Rendement</dt><dd>{numeric(selection.measurement.efficiency_pct) ? `${fr.format(selection.measurement.efficiency_pct)} %` : "—"}</dd></div><div><dt>Voc</dt><dd>{numeric(selection.measurement.voc_V) ? `${fr.format(selection.measurement.voc_V)} V` : "—"}</dd></div><div><dt>Jsc</dt><dd>{numeric(selection.measurement.jsc_mA_cm2) ? `${fr.format(selection.measurement.jsc_mA_cm2)} mA/cm²` : "—"}</dd></div><div><dt>FF</dt><dd>{numeric(selection.measurement.ff_pct) ? `${fr.format(selection.measurement.ff_pct)} %` : "—"}</dd></div></dl><small>{selection.file.source_file}</small></article>)}
