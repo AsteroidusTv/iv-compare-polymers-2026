@@ -651,7 +651,7 @@ export default function Home() {
       </section>
 
       <footer>
-        <span>IV Compare · format .ivpack v1.0</span>
+        <span>IV Compare · format .ivpack v{dataset?.schemaVersion ?? "1.0"}</span>
         <span>Les valeurs extrêmes restent disponibles via le contrôle QA.</span>
       </footer>
     </main>
