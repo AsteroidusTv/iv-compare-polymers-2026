@@ -4,6 +4,13 @@ export interface TrendPoint {
   min: number;
   max: number;
   n: number;
+  members: Array<{
+    observationId: string;
+    sampleUid: string;
+    sampleLabel: string;
+    value: number;
+  }>;
+  selectedLabel?: string;
 }
 
 export interface TrendSeries {
@@ -77,7 +84,7 @@ export function TrendChart({ series, xUnit, yUnit }: { series: TrendSeries[]; xU
           return <g key={item.label}>
             {ordered.map((point) => <line key={`range-${point.x}`} x1={sx(point.x)} x2={sx(point.x)} y1={sy(point.min)} y2={sy(point.max)} stroke={item.color} strokeWidth="2" opacity=".25" />)}
             <path d={path} fill="none" stroke={item.color} strokeWidth="4" strokeLinejoin="round" strokeLinecap="round" />
-            {ordered.map((point) => <circle key={`point-${point.x}`} cx={sx(point.x)} cy={sy(point.y)} r="5.5" fill="white" stroke={item.color} strokeWidth="3"><title>{`${item.label} — ${fr.format(point.x)} ${xUnit}: ${fr.format(point.y)} ${yUnit} (n=${point.n})`}</title></circle>)}
+            {ordered.map((point) => <circle key={`point-${point.x}`} cx={sx(point.x)} cy={sy(point.y)} r={point.selectedLabel ? "6.5" : "5.5"} fill={point.selectedLabel ? item.color : "white"} stroke={item.color} strokeWidth="3"><title>{`${item.label} — ${fr.format(point.x)} ${xUnit}: ${fr.format(point.y)} ${yUnit}${point.selectedLabel ? ` · ${point.selectedLabel}` : ` (n=${point.n})`}`}</title></circle>)}
           </g>;
         })}
       </svg>

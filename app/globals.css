@@ -124,6 +124,24 @@ th { position: sticky; top: 0; z-index: 1; background: #f2f0eb; color: #6d7480; 
 th, td { padding: 10px 12px; border-bottom: 1px solid #ece9e3; white-space: nowrap; }
 tbody tr:last-child td { border-bottom: 0; }
 tbody tr:hover { background: #faf9f6; }
+.individual-selected { background: #f5f7fc; }
+.n-toggle { min-width: 36px; padding: 4px 7px; display: inline-flex; gap: 7px; align-items: center; justify-content: center; border: 1px solid #cfd4dc; border-radius: 999px; background: white; color: var(--ink); cursor: pointer; font-size: 10px; font-weight: 800; }
+.n-toggle:hover, .n-toggle:focus-visible { border-color: var(--blue); outline: none; box-shadow: 0 0 0 3px rgba(52,105,212,.1); }
+.n-toggle span { color: var(--blue); font-size: 12px; line-height: 1; }
+.replicate-detail-row:hover { background: transparent; }
+.replicate-detail-row > td { padding: 0 12px 14px; background: #faf9f6; white-space: normal; }
+.replicate-panel { padding: 13px; border: 1px solid #dedbd2; border-radius: 12px; background: white; }
+.replicate-heading { margin-bottom: 10px; display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+.replicate-heading strong { font-size: 11px; }
+.replicate-heading span { color: var(--muted); font-size: 9px; }
+.replicate-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; }
+.replicate-choice { min-width: 0; padding: 10px 11px; display: flex; gap: 12px; align-items: center; justify-content: space-between; border: 1px solid #e2e4e8; border-left: 4px solid; border-radius: 9px; background: #fafafa; color: var(--ink); cursor: pointer; text-align: left; }
+.replicate-choice:hover, .replicate-choice:focus-visible { border-color: #aeb8ca; outline: none; }
+.replicate-choice.active { background: #eef3ff; box-shadow: inset 0 0 0 1px rgba(52,105,212,.35); }
+.replicate-choice > span { min-width: 0; display: grid; gap: 3px; }
+.replicate-choice b { overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.replicate-choice small { overflow: hidden; color: var(--muted); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.replicate-choice > strong { flex: 0 0 auto; color: var(--ink); font-size: 10px; white-space: nowrap; }
 
 .curve-workspace { display: grid; gap: 18px; }
 .curve-toolbar { min-height: 68px; padding: 14px; display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); align-items: end; gap: 12px; border-radius: 14px; background: #f2f0eb; }

@@ -1,6 +1,6 @@
 "use client";
 
-import { DragEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { DragEvent, Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CurveChart, CurveSeries, TrendChart, TrendPoint, TrendSeries } from "./components/Charts";
 import { FieldTitle, InfoTip } from "./components/InfoTip";
 import {
@@ -41,6 +41,7 @@ const HELP = {
   matching: "L’appariement relie chaque fichier IV au patch de l’inventaire grâce aux métadonnées. Les fichiers exclus restent dans le jeu source mais ne participent pas aux comparaisons par défaut.",
   observations: "Nombre total de mesures individuelles contribuant aux points actuellement affichés. Ce n’est pas le nombre de durées ni le nombre de moyennes.",
   minmax: "Pour chaque durée, la ligne principale montre la valeur agrégée. Les traits fins couvrent la valeur minimale et maximale des observations retenues.",
+  replicates: "Lorsque n > 1, cliquez sur n pour ouvrir les observations individuelles. Le choix d’un patch modifie uniquement le point tracé ; l’agrégat, les calculs et les exports restent inchangés.",
   targetTime: "Le site cherche cette durée pour les deux matériaux. Si elle n’existe pas exactement, il retient le temps disponible le plus proche et l’indique dans la légende.",
   convention: "La convention instrument affiche le photocourant négatif, comme les valeurs brutes du simulateur solaire. La convention PV inverse seulement le signe pour montrer le courant produit positif ; la physique ne change pas.",
   sweep: "La suite de points est découpée lorsqu’un saut de tension ou une inversion de balayage est détecté. Le segment principal couvre normalement V = 0 et le passage par Voc ; les autres segments restent conservés.",
@@ -70,6 +71,10 @@ function numeric(value: number | null | undefined): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
+function trendRowKey(seriesId: SeriesId, time: number): string {
+  return `${seriesId}:${time}`;
+}
+
 export default function Home() {
   const [dataset, setDataset] = useState<IVDataset | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
@@ -91,6 +96,8 @@ export default function Home() {
   const [showCurvePoints, setShowCurvePoints] = useState(false);
   const [showLandmarks, setShowLandmarks] = useState(true);
   const [hiddenSeries, setHiddenSeries] = useState<Set<SeriesId>>(() => new Set());
+  const [expandedTrendRows, setExpandedTrendRows] = useState<Set<string>>(() => new Set());
+  const [selectedTrendMembers, setSelectedTrendMembers] = useState<Record<string, string>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const installDataset = useCallback((next: IVDataset, message: string) => {
@@ -105,6 +112,8 @@ export default function Home() {
     setElectrode("all");
     setRecipe("all");
     setHiddenSeries(new Set());
+    setExpandedTrendRows(new Set());
+    setSelectedTrendMembers({});
   }, []);
 
   useEffect(() => {
@@ -179,7 +188,7 @@ export default function Home() {
   const trendSeries = useMemo<TrendSeries[]>(() => {
     if (!dataset) return [];
     const build = (id: SeriesId, material: string, color: string): TrendSeries => {
-      const groups = new Map<number, number[]>();
+      const groups = new Map<number, TrendPoint["members"]>();
       dataset.observations.forEach((observation) => {
         if (observation.test_type !== stress || !samplePasses(observation.sample_uid, material)) return;
         const raw = observation[metric];
@@ -192,21 +201,31 @@ export default function Home() {
           if (!numeric(baseline) || baseline === 0) return;
           value = stress === "Unaged" ? 100 : (raw / baseline) * 100;
         }
-        const values = groups.get(x) ?? [];
-        values.push(value);
-        groups.set(x, values);
+        const members = groups.get(x) ?? [];
+        const sample = sampleMap.get(observation.sample_uid);
+        members.push({
+          observationId: observation.observation_uid,
+          sampleUid: observation.sample_uid,
+          sampleLabel: sample?.sample_label || sample?.sample_id_raw || observation.sample_uid,
+          value,
+        });
+        groups.set(x, members);
       });
-      const points: TrendPoint[] = [...groups.entries()].map(([x, values]) => ({
-        x,
-        y: aggregate(values, aggregation),
-        min: Math.min(...values),
-        max: Math.max(...values),
-        n: values.length,
-      })).sort((a, b) => a.x - b.x);
+      const points: TrendPoint[] = [...groups.entries()].map(([x, members]) => {
+        const values = members.map((member) => member.value);
+        return {
+          x,
+          y: aggregate(values, aggregation),
+          min: Math.min(...values),
+          max: Math.max(...values),
+          n: values.length,
+          members,
+        };
+      }).sort((a, b) => a.x - b.x);
       return { id, label: material, color, points };
     };
     return [build("a", materialA, COLORS.a), build("b", materialB, COLORS.b)];
-  }, [dataset, materialA, materialB, stress, metric, mode, aggregation, samplePasses, baselineBySample]);
+  }, [dataset, materialA, materialB, stress, metric, mode, aggregation, samplePasses, baselineBySample, sampleMap]);
 
   const eligibleFiles = useCallback((material: string) => {
     if (!dataset) return [];
@@ -285,6 +304,21 @@ export default function Home() {
     })),
   }));
   const visibleTrendSeries = trendSeries.filter((series) => !hiddenSeries.has(series.id));
+  const plottedTrendSeries = visibleTrendSeries.map((series) => ({
+    ...series,
+    points: series.points.map((point) => {
+      const selectedId = selectedTrendMembers[trendRowKey(series.id, point.x)];
+      const selected = point.members.find((member) => member.observationId === selectedId);
+      return selected ? {
+        ...point,
+        y: selected.value,
+        min: selected.value,
+        max: selected.value,
+        n: 1,
+        selectedLabel: `${selected.sampleLabel} · observation individuelle`,
+      } : point;
+    }),
+  }));
   const visibleCurveSeries = curveSeries.filter((series) => !hiddenSeries.has(series.id));
   const visibleCurveSelections = curveSelections.filter((selection) => !hiddenSeries.has(selection.seriesId));
   const curveAudit = visibleCurveSelections.reduce((summary, selection) => {
@@ -299,6 +333,20 @@ export default function Home() {
     if (next.has(seriesId)) next.delete(seriesId);
     else next.add(seriesId);
     return next;
+  });
+  const toggleTrendRow = (rowKey: string) => setExpandedTrendRows((current) => {
+    const next = new Set(current);
+    if (next.has(rowKey)) next.delete(rowKey);
+    else next.add(rowKey);
+    return next;
+  });
+  const selectTrendMember = (rowKey: string, observationId?: string) => setSelectedTrendMembers((current) => {
+    if (!observationId) {
+      const next = { ...current };
+      delete next[rowKey];
+      return next;
+    }
+    return { ...current, [rowKey]: observationId };
   });
   const xUnit = timeUnit(stress);
   const yUnit = mode === "retention" ? "% de l’état initial" : METRICS[metric].unit;
@@ -423,7 +471,7 @@ export default function Home() {
                 })}
                 <span>{METRICS[metric].label} · {yUnit}<InfoTip text={METRIC_HELP[metric]} align="right" /></span>
               </div>
-              <TrendChart series={visibleTrendSeries} xUnit={xUnit} yUnit={yUnit} />
+              <TrendChart series={plottedTrendSeries} xUnit={xUnit} yUnit={yUnit} />
             </section>
             <aside className="insight-card">
               <p className="eyebrow">Lecture rapide</p>
@@ -437,8 +485,33 @@ export default function Home() {
               {conditionMixed ? <p className="caution">Pour conclure sur le matériau, choisissez une électrode et une recette identiques.</p> : null}
             </aside>
             <section className="data-table-card">
-              <div className="section-head"><div><p className="eyebrow">Valeurs agrégées</p><h4>Points affichés</h4></div><span>Les traits fins montrent min–max. <InfoTip text={HELP.minmax} align="right" /></span></div>
-              <div className="table-scroll"><table><thead><tr><th>Matériau</th><th>Temps</th><th>Valeur</th><th>Min</th><th>Max</th><th>n</th></tr></thead><tbody>{trendSeries.flatMap((series) => series.points.map((point) => <tr key={`${series.label}-${point.x}`}><td><span className="table-dot" style={{ background: series.color }} />{series.label}</td><td>{fr.format(point.x)} {xUnit}</td><td><b>{fr.format(point.y)}</b> {yUnit}</td><td>{fr.format(point.min)}</td><td>{fr.format(point.max)}</td><td>{point.n}</td></tr>))}</tbody></table></div>
+              <div className="section-head"><div><p className="eyebrow">Valeurs agrégées</p><h4>Points affichés</h4></div><span>Min–max · cliquez sur n pour voir les patchs. <InfoTip text={`${HELP.minmax} ${HELP.replicates}`} align="right" /></span></div>
+              <div className="table-scroll"><table><thead><tr><th>Matériau</th><th>Temps</th><th>Valeur</th><th>Min</th><th>Max</th><th>n</th></tr></thead><tbody>
+                {trendSeries.flatMap((series) => series.points.map((point) => {
+                  const rowKey = trendRowKey(series.id, point.x);
+                  const expanded = expandedTrendRows.has(rowKey);
+                  const selectedId = selectedTrendMembers[rowKey];
+                  return <Fragment key={rowKey}>
+                    <tr className={selectedId ? "individual-selected" : ""}>
+                      <td><span className="table-dot" style={{ background: series.color }} />{series.label}</td>
+                      <td>{fr.format(point.x)} {xUnit}</td>
+                      <td><b>{fr.format(point.y)}</b> {yUnit}</td>
+                      <td>{fr.format(point.min)}</td>
+                      <td>{fr.format(point.max)}</td>
+                      <td>{point.n > 1 ? <button type="button" className="n-toggle" aria-expanded={expanded} onClick={() => toggleTrendRow(rowKey)} title="Afficher les observations individuelles">{point.n}<span aria-hidden="true">{expanded ? "−" : "+"}</span></button> : point.n}</td>
+                    </tr>
+                    {expanded ? <tr className="replicate-detail-row"><td colSpan={6}>
+                      <div className="replicate-panel">
+                        <div className="replicate-heading"><strong>Valeur utilisée sur le graphe</strong><span>Le tableau conserve l’agrégat de référence.</span></div>
+                        <div className="replicate-choices">
+                          <button type="button" className={`replicate-choice ${!selectedId ? "active" : ""}`} aria-pressed={!selectedId} onClick={() => selectTrendMember(rowKey)} style={{ borderLeftColor: series.color }}><span><b>Agrégat</b><small>{{ mean: "Moyenne", median: "Médiane", best: "Meilleure valeur" }[aggregation]} · n={point.n}</small></span><strong>{fr.format(point.y)} {yUnit}</strong></button>
+                          {point.members.map((member, index) => <button type="button" className={`replicate-choice ${selectedId === member.observationId ? "active" : ""}`} aria-pressed={selectedId === member.observationId} key={member.observationId} onClick={() => selectTrendMember(rowKey, member.observationId)} style={{ borderLeftColor: series.color }}><span><b>Patch {index + 1} · {member.sampleLabel}</b><small>{member.sampleUid} · {member.observationId}</small></span><strong>{fr.format(member.value)} {yUnit}</strong></button>)}
+                        </div>
+                      </div>
+                    </td></tr> : null}
+                  </Fragment>;
+                }))}
+              </tbody></table></div>
             </section>
           </div>
         ) : (
