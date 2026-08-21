@@ -8,6 +8,8 @@ export interface TrendPoint {
     observationId: string;
     sampleUid: string;
     sampleLabel: string;
+    sampleReference: string;
+    batchNo?: string;
     value: number;
   }>;
   selectedLabel?: string;

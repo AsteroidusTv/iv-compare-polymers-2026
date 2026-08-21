@@ -42,7 +42,8 @@ const HELP = {
   observations: "Nombre total de mesures individuelles contribuant aux points actuellement affichés. Ce n’est pas le nombre de durées ni le nombre de moyennes.",
   minmax: "Pour chaque durée, la ligne principale montre la valeur agrégée. Les traits fins couvrent la valeur minimale et maximale des observations retenues.",
   replicates: "Lorsque n > 1, cliquez sur n pour ouvrir les observations individuelles. Le choix d’un patch modifie uniquement le point tracé ; l’agrégat, les calculs et les exports restent inchangés.",
-  globalReplicate: "Applique le même rang de patch à tous les points qui possèdent plusieurs observations. Les patchs sont classés de façon stable par identifiant d’échantillon. Si le rang demandé n’existe pas à une durée, l’agrégat est conservé. Un choix fait dans une ligne crée une exception locale.",
+  globalReplicate: "Les sélecteurs A et B sont indépendants : vous pouvez par exemple tracer le patch 1 du polymère A contre le patch 2 du polymère B. Chaque choix correspond à une référence d’échantillon précise issue de l’inventaire Excel. Les durées sans mesure pour ce patch ne sont pas tracées. Un choix dans une ligne crée une exception locale.",
+  patchReference: "Nom et référence du patch provenant de l’inventaire Excel. En mode agrégé, la cellule liste les patchs qui contribuent au point ; en mode individuel, elle indique exactement le patch tracé.",
   targetTime: "Le site cherche cette durée pour les deux matériaux. Si elle n’existe pas exactement, il retient le temps disponible le plus proche et l’indique dans la légende.",
   convention: "La convention instrument affiche le photocourant négatif, comme les valeurs brutes du simulateur solaire. La convention PV inverse seulement le signe pour montrer le courant produit positif ; la physique ne change pas.",
   sweep: "La suite de points est découpée lorsqu’un saut de tension ou une inversion de balayage est détecté. Le segment principal couvre normalement V = 0 et le passage par Voc ; les autres segments restent conservés.",
@@ -99,7 +100,7 @@ export default function Home() {
   const [hiddenSeries, setHiddenSeries] = useState<Set<SeriesId>>(() => new Set());
   const [expandedTrendRows, setExpandedTrendRows] = useState<Set<string>>(() => new Set());
   const [selectedTrendMembers, setSelectedTrendMembers] = useState<Record<string, string | null>>({});
-  const [globalTrendMemberIndex, setGlobalTrendMemberIndex] = useState<number | null>(null);
+  const [globalTrendSamples, setGlobalTrendSamples] = useState<Record<SeriesId, string | null>>({ a: null, b: null });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const installDataset = useCallback((next: IVDataset, message: string) => {
@@ -116,7 +117,7 @@ export default function Home() {
     setHiddenSeries(new Set());
     setExpandedTrendRows(new Set());
     setSelectedTrendMembers({});
-    setGlobalTrendMemberIndex(null);
+    setGlobalTrendSamples({ a: null, b: null });
   }, []);
 
   useEffect(() => {
@@ -210,6 +211,8 @@ export default function Home() {
           observationId: observation.observation_uid,
           sampleUid: observation.sample_uid,
           sampleLabel: sample?.sample_label || sample?.sample_id_raw || observation.sample_uid,
+          sampleReference: sample?.sample_id_raw || observation.sample_uid,
+          batchNo: sample?.batch_no_raw || undefined,
           value,
         });
         groups.set(x, members);
@@ -307,30 +310,45 @@ export default function Home() {
       points: segment.points.map((point) => ({ x: point.x, y: point.y * currentPolarity, sourceIndex: point.sourceIndex })),
     })),
   }));
-  const visibleTrendSeries = trendSeries.filter((series) => !hiddenSeries.has(series.id));
-  const maxTrendMembers = trendSeries.reduce((maximum, series) => Math.max(maximum, ...series.points.map((point) => point.n)), 1);
-  const selectedTrendMember = (seriesId: SeriesId, point: TrendPoint) => {
+  const trendSampleOptions = Object.fromEntries(trendSeries.map((series) => {
+    const byUid = new Map<string, TrendPoint["members"][number]>();
+    series.points.forEach((point) => point.members.forEach((member) => {
+      if (!byUid.has(member.sampleUid)) byUid.set(member.sampleUid, member);
+    }));
+    return [series.id, [...byUid.values()].sort((left, right) => left.sampleUid.localeCompare(right.sampleUid, "fr"))];
+  })) as Record<SeriesId, TrendPoint["members"]>;
+  const activeTrendSamples: Record<SeriesId, string | null> = {
+    a: trendSampleOptions.a?.some((member) => member.sampleUid === globalTrendSamples.a) ? globalTrendSamples.a : null,
+    b: trendSampleOptions.b?.some((member) => member.sampleUid === globalTrendSamples.b) ? globalTrendSamples.b : null,
+  };
+  const resolveTrendSelection = (seriesId: SeriesId, point: TrendPoint) => {
     const rowKey = trendRowKey(seriesId, point.x);
     if (Object.prototype.hasOwnProperty.call(selectedTrendMembers, rowKey)) {
       const observationId = selectedTrendMembers[rowKey];
-      return observationId ? point.members.find((member) => member.observationId === observationId) : undefined;
+      const member = observationId ? point.members.find((item) => item.observationId === observationId) : undefined;
+      return member ? { mode: "member" as const, member } : { mode: "aggregate" as const };
     }
-    return globalTrendMemberIndex !== null && point.n > 1 ? point.members[globalTrendMemberIndex] : undefined;
+    const sampleUid = activeTrendSamples[seriesId];
+    if (!sampleUid) return { mode: "aggregate" as const };
+    const member = point.members.find((item) => item.sampleUid === sampleUid);
+    return member ? { mode: "member" as const, member } : { mode: "missing" as const };
   };
-  const plottedTrendSeries = visibleTrendSeries.map((series) => ({
+  const selectedTrendSeries = trendSeries.map((series) => ({
     ...series,
-    points: series.points.map((point) => {
-      const selected = selectedTrendMember(series.id, point);
-      return selected ? {
+    points: series.points.flatMap((point) => {
+      const selection = resolveTrendSelection(series.id, point);
+      if (selection.mode === "missing") return [];
+      return selection.mode === "member" ? [{
         ...point,
-        y: selected.value,
-        min: selected.value,
-        max: selected.value,
+        y: selection.member.value,
+        min: selection.member.value,
+        max: selection.member.value,
         n: 1,
-        selectedLabel: `${selected.sampleLabel} · observation individuelle`,
-      } : point;
+        selectedLabel: `${selection.member.sampleLabel} · ${selection.member.sampleReference}`,
+      }] : [point];
     }),
   }));
+  const plottedTrendSeries = selectedTrendSeries.filter((series) => !hiddenSeries.has(series.id));
   const visibleCurveSeries = curveSeries.filter((series) => !hiddenSeries.has(series.id));
   const visibleCurveSelections = curveSelections.filter((selection) => !hiddenSeries.has(selection.seriesId));
   const curveAudit = visibleCurveSelections.reduce((summary, selection) => {
@@ -353,16 +371,16 @@ export default function Home() {
     return next;
   });
   const selectTrendMember = (rowKey: string, observationId?: string) => setSelectedTrendMembers((current) => ({ ...current, [rowKey]: observationId ?? null }));
-  const selectAllTrendMembers = (value: string) => {
-    setGlobalTrendMemberIndex(value === "aggregate" ? null : Number(value));
-    setSelectedTrendMembers({});
+  const selectTrendSample = (seriesId: SeriesId, value: string) => {
+    setGlobalTrendSamples((current) => ({ ...current, [seriesId]: value === "aggregate" ? null : value }));
+    setSelectedTrendMembers((current) => Object.fromEntries(Object.entries(current).filter(([rowKey]) => !rowKey.startsWith(`${seriesId}:`))));
   };
   const xUnit = timeUnit(stress);
   const yUnit = mode === "retention" ? "% de l’état initial" : METRICS[metric].unit;
   const conditionMixed = electrode === "all" || recipe === "all";
 
   const trendInsight = useMemo(() => {
-    const [a, b] = trendSeries;
+    const [a, b] = selectedTrendSeries;
     if (!a || !b) return null;
     const aByX = new Map(a.points.map((point) => [point.x, point]));
     const common = b.points.filter((point) => aByX.has(point.x));
@@ -377,7 +395,7 @@ export default function Home() {
       time: pointB.x,
       count: pointA.n + pointB.n,
     };
-  }, [trendSeries, materialA, materialB, xUnit, mode, metric]);
+  }, [selectedTrendSeries, materialA, materialB, xUnit, mode, metric]);
 
   const exportTrend = () => {
     const [a, b] = trendSeries;
@@ -498,31 +516,33 @@ export default function Home() {
                 <div><p className="eyebrow">Valeurs agrégées</p><h4>Points affichés</h4></div>
                 <div className="table-head-tools">
                   <span>Min–max · cliquez sur n pour voir les patchs. <InfoTip text={`${HELP.minmax} ${HELP.replicates}`} align="right" /></span>
-                  <label className="inline-select"><FieldTitle help={HELP.globalReplicate} align="right">Répétitions</FieldTitle><select value={globalTrendMemberIndex === null ? "aggregate" : String(globalTrendMemberIndex)} onChange={(event) => selectAllTrendMembers(event.target.value)}><option value="aggregate">Agrégat (défaut)</option>{Array.from({ length: maxTrendMembers }, (_, index) => <option key={index} value={index}>Patch {index + 1} partout</option>)}</select></label>
+                  {trendSeries.map((series) => <label className="inline-select patch-select" key={series.id}><FieldTitle help={HELP.globalReplicate} align="right">Patch {series.id.toUpperCase()}</FieldTitle><select value={activeTrendSamples[series.id] ?? "aggregate"} onChange={(event) => selectTrendSample(series.id, event.target.value)} style={{ borderLeftColor: series.color }}><option value="aggregate">Agrégat · tous</option>{(trendSampleOptions[series.id] ?? []).map((member, index) => <option key={member.sampleUid} value={member.sampleUid}>Patch {index + 1} · {member.sampleLabel} · {member.sampleReference}</option>)}</select></label>)}
                 </div>
               </div>
-              <div className="table-scroll"><table><thead><tr><th>Matériau</th><th>Temps</th><th>Valeur</th><th>Min</th><th>Max</th><th>n</th></tr></thead><tbody>
+              <div className="table-scroll"><table><thead><tr><th>Matériau</th><th>Patch / référence <InfoTip text={HELP.patchReference} align="left" /></th><th>Temps</th><th>Valeur tracée</th><th>Min</th><th>Max</th><th>n</th></tr></thead><tbody>
                 {trendSeries.flatMap((series) => series.points.map((point) => {
                   const rowKey = trendRowKey(series.id, point.x);
                   const expanded = expandedTrendRows.has(rowKey);
-                  const hasLocalSelection = Object.prototype.hasOwnProperty.call(selectedTrendMembers, rowKey);
-                  const globalMember = !hasLocalSelection && globalTrendMemberIndex !== null && point.n > 1 ? point.members[globalTrendMemberIndex] : undefined;
-                  const selectedId = hasLocalSelection ? selectedTrendMembers[rowKey] : globalMember?.observationId;
+                  const selection = resolveTrendSelection(series.id, point);
+                  const selectedMember = selection.mode === "member" ? selection.member : undefined;
+                  const selectedId = selectedMember?.observationId;
+                  const globalTarget = activeTrendSamples[series.id] ? trendSampleOptions[series.id].find((member) => member.sampleUid === activeTrendSamples[series.id]) : undefined;
                   return <Fragment key={rowKey}>
-                    <tr className={selectedId ? "individual-selected" : ""}>
+                    <tr className={selection.mode === "missing" ? "patch-unavailable" : selectedId ? "individual-selected" : ""}>
                       <td><span className="table-dot" style={{ background: series.color }} />{series.label}</td>
+                      <td>{selection.mode === "member" ? <span className="patch-reference"><b>{selectedMember!.sampleLabel}</b><small>Réf. Excel : {selectedMember!.sampleReference}{selectedMember!.batchNo ? ` · lot ${selectedMember!.batchNo}` : ""}</small></span> : selection.mode === "missing" ? <span className="patch-reference"><b>Pas de mesure à cette durée</b><small>{globalTarget?.sampleLabel} · {globalTarget?.sampleReference}</small></span> : <span className="patch-reference"><b>Agrégat · {point.n} patch{point.n > 1 ? "s" : ""}</b><small>{point.members.map((member) => `${member.sampleLabel} (${member.sampleReference})`).join(" · ")}</small></span>}</td>
                       <td>{fr.format(point.x)} {xUnit}</td>
-                      <td><b>{fr.format(point.y)}</b> {yUnit}</td>
-                      <td>{fr.format(point.min)}</td>
-                      <td>{fr.format(point.max)}</td>
+                      <td>{selection.mode === "missing" ? "—" : <><b>{fr.format(selectedMember?.value ?? point.y)}</b> {yUnit}</>}</td>
+                      <td>{selection.mode === "aggregate" ? fr.format(point.min) : "—"}</td>
+                      <td>{selection.mode === "aggregate" ? fr.format(point.max) : "—"}</td>
                       <td>{point.n > 1 ? <button type="button" className="n-toggle" aria-expanded={expanded} onClick={() => toggleTrendRow(rowKey)} title="Afficher les observations individuelles">{point.n}<span aria-hidden="true">{expanded ? "−" : "+"}</span></button> : point.n}</td>
                     </tr>
-                    {expanded ? <tr className="replicate-detail-row"><td colSpan={6}>
+                    {expanded ? <tr className="replicate-detail-row"><td colSpan={7}>
                       <div className="replicate-panel">
-                        <div className="replicate-heading"><strong>Valeur utilisée sur le graphe</strong><span>{globalTrendMemberIndex === null ? "Le tableau conserve l’agrégat de référence." : `Mode global : patch ${globalTrendMemberIndex + 1}. Un choix ici crée une exception.`}</span></div>
+                        <div className="replicate-heading"><strong>Valeur utilisée sur le graphe</strong><span>{activeTrendSamples[series.id] ? `Sélection globale ${series.id.toUpperCase()} : ${globalTarget?.sampleLabel}. Un choix ici crée une exception.` : "Le tableau utilise l’agrégat de référence."}</span></div>
                         <div className="replicate-choices">
-                          <button type="button" className={`replicate-choice ${!selectedId ? "active" : ""}`} aria-pressed={!selectedId} onClick={() => selectTrendMember(rowKey)} style={{ borderLeftColor: series.color }}><span><b>Agrégat</b><small>{{ mean: "Moyenne", median: "Médiane", best: "Meilleure valeur" }[aggregation]} · n={point.n}</small></span><strong>{fr.format(point.y)} {yUnit}</strong></button>
-                          {point.members.map((member, index) => <button type="button" className={`replicate-choice ${selectedId === member.observationId ? "active" : ""}`} aria-pressed={selectedId === member.observationId} key={member.observationId} onClick={() => selectTrendMember(rowKey, member.observationId)} style={{ borderLeftColor: series.color }}><span><b>Patch {index + 1} · {member.sampleLabel}</b><small>{member.sampleUid} · {member.observationId}</small></span><strong>{fr.format(member.value)} {yUnit}</strong></button>)}
+                          <button type="button" className={`replicate-choice ${selection.mode === "aggregate" ? "active" : ""}`} aria-pressed={selection.mode === "aggregate"} onClick={() => selectTrendMember(rowKey)} style={{ borderLeftColor: series.color }}><span><b>Agrégat</b><small>{{ mean: "Moyenne", median: "Médiane", best: "Meilleure valeur" }[aggregation]} · n={point.n}</small></span><strong>{fr.format(point.y)} {yUnit}</strong></button>
+                          {point.members.map((member, index) => <button type="button" className={`replicate-choice ${selectedId === member.observationId ? "active" : ""}`} aria-pressed={selectedId === member.observationId} key={member.observationId} onClick={() => selectTrendMember(rowKey, member.observationId)} style={{ borderLeftColor: series.color }}><span><b>Patch {index + 1} · {member.sampleLabel}</b><small>Réf. Excel : {member.sampleReference}{member.batchNo ? ` · lot ${member.batchNo}` : ""} · {member.observationId}</small></span><strong>{fr.format(member.value)} {yUnit}</strong></button>)}
                         </div>
                       </div>
                     </td></tr> : null}
