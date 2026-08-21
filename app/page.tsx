@@ -42,6 +42,7 @@ const HELP = {
   observations: "Nombre total de mesures individuelles contribuant aux points actuellement affichés. Ce n’est pas le nombre de durées ni le nombre de moyennes.",
   minmax: "Pour chaque durée, la ligne principale montre la valeur agrégée. Les traits fins couvrent la valeur minimale et maximale des observations retenues.",
   replicates: "Lorsque n > 1, cliquez sur n pour ouvrir les observations individuelles. Le choix d’un patch modifie uniquement le point tracé ; l’agrégat, les calculs et les exports restent inchangés.",
+  globalReplicate: "Applique le même rang de patch à tous les points qui possèdent plusieurs observations. Les patchs sont classés de façon stable par identifiant d’échantillon. Si le rang demandé n’existe pas à une durée, l’agrégat est conservé. Un choix fait dans une ligne crée une exception locale.",
   targetTime: "Le site cherche cette durée pour les deux matériaux. Si elle n’existe pas exactement, il retient le temps disponible le plus proche et l’indique dans la légende.",
   convention: "La convention instrument affiche le photocourant négatif, comme les valeurs brutes du simulateur solaire. La convention PV inverse seulement le signe pour montrer le courant produit positif ; la physique ne change pas.",
   sweep: "La suite de points est découpée lorsqu’un saut de tension ou une inversion de balayage est détecté. Le segment principal couvre normalement V = 0 et le passage par Voc ; les autres segments restent conservés.",
@@ -97,7 +98,8 @@ export default function Home() {
   const [showLandmarks, setShowLandmarks] = useState(true);
   const [hiddenSeries, setHiddenSeries] = useState<Set<SeriesId>>(() => new Set());
   const [expandedTrendRows, setExpandedTrendRows] = useState<Set<string>>(() => new Set());
-  const [selectedTrendMembers, setSelectedTrendMembers] = useState<Record<string, string>>({});
+  const [selectedTrendMembers, setSelectedTrendMembers] = useState<Record<string, string | null>>({});
+  const [globalTrendMemberIndex, setGlobalTrendMemberIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const installDataset = useCallback((next: IVDataset, message: string) => {
@@ -114,6 +116,7 @@ export default function Home() {
     setHiddenSeries(new Set());
     setExpandedTrendRows(new Set());
     setSelectedTrendMembers({});
+    setGlobalTrendMemberIndex(null);
   }, []);
 
   useEffect(() => {
@@ -212,14 +215,15 @@ export default function Home() {
         groups.set(x, members);
       });
       const points: TrendPoint[] = [...groups.entries()].map(([x, members]) => {
-        const values = members.map((member) => member.value);
+        const orderedMembers = [...members].sort((left, right) => left.sampleUid.localeCompare(right.sampleUid, "fr") || left.observationId.localeCompare(right.observationId, "fr"));
+        const values = orderedMembers.map((member) => member.value);
         return {
           x,
           y: aggregate(values, aggregation),
           min: Math.min(...values),
           max: Math.max(...values),
           n: values.length,
-          members,
+          members: orderedMembers,
         };
       }).sort((a, b) => a.x - b.x);
       return { id, label: material, color, points };
@@ -304,11 +308,19 @@ export default function Home() {
     })),
   }));
   const visibleTrendSeries = trendSeries.filter((series) => !hiddenSeries.has(series.id));
+  const maxTrendMembers = trendSeries.reduce((maximum, series) => Math.max(maximum, ...series.points.map((point) => point.n)), 1);
+  const selectedTrendMember = (seriesId: SeriesId, point: TrendPoint) => {
+    const rowKey = trendRowKey(seriesId, point.x);
+    if (Object.prototype.hasOwnProperty.call(selectedTrendMembers, rowKey)) {
+      const observationId = selectedTrendMembers[rowKey];
+      return observationId ? point.members.find((member) => member.observationId === observationId) : undefined;
+    }
+    return globalTrendMemberIndex !== null && point.n > 1 ? point.members[globalTrendMemberIndex] : undefined;
+  };
   const plottedTrendSeries = visibleTrendSeries.map((series) => ({
     ...series,
     points: series.points.map((point) => {
-      const selectedId = selectedTrendMembers[trendRowKey(series.id, point.x)];
-      const selected = point.members.find((member) => member.observationId === selectedId);
+      const selected = selectedTrendMember(series.id, point);
       return selected ? {
         ...point,
         y: selected.value,
@@ -340,14 +352,11 @@ export default function Home() {
     else next.add(rowKey);
     return next;
   });
-  const selectTrendMember = (rowKey: string, observationId?: string) => setSelectedTrendMembers((current) => {
-    if (!observationId) {
-      const next = { ...current };
-      delete next[rowKey];
-      return next;
-    }
-    return { ...current, [rowKey]: observationId };
-  });
+  const selectTrendMember = (rowKey: string, observationId?: string) => setSelectedTrendMembers((current) => ({ ...current, [rowKey]: observationId ?? null }));
+  const selectAllTrendMembers = (value: string) => {
+    setGlobalTrendMemberIndex(value === "aggregate" ? null : Number(value));
+    setSelectedTrendMembers({});
+  };
   const xUnit = timeUnit(stress);
   const yUnit = mode === "retention" ? "% de l’état initial" : METRICS[metric].unit;
   const conditionMixed = electrode === "all" || recipe === "all";
@@ -452,6 +461,7 @@ export default function Home() {
           </div>
           <InfoTip text={HELP.retention} align="left" />
           <label className="inline-select"><FieldTitle help={aggregationHelp}>Agrégation</FieldTitle><select value={aggregation} onChange={(event) => setAggregation(event.target.value as Aggregation)}><option value="mean">Moyenne</option><option value="median">Médiane</option><option value="best">Meilleure valeur</option></select></label>
+          {view === "trend" ? <label className="inline-select"><FieldTitle help={HELP.globalReplicate}>Répétitions</FieldTitle><select value={globalTrendMemberIndex === null ? "aggregate" : String(globalTrendMemberIndex)} onChange={(event) => selectAllTrendMembers(event.target.value)}><option value="aggregate">Agrégat (défaut)</option>{Array.from({ length: maxTrendMembers }, (_, index) => <option key={index} value={index}>Patch {index + 1} partout</option>)}</select></label> : null}
           <span className="condition-group"><span className={`condition-chip ${conditionMixed ? "warning" : "ok"}`}>{conditionMixed ? "Conditions mixtes" : "Conditions alignées"}</span><InfoTip text={HELP.conditions} /></span>
           <span className="quality-note">{report ? `${report.matchedFiles}/${report.files} fichiers appariés · ${report.reviewFiles} exclus` : ""}<InfoTip text={HELP.matching} align="right" /></span>
         </div>
@@ -490,7 +500,9 @@ export default function Home() {
                 {trendSeries.flatMap((series) => series.points.map((point) => {
                   const rowKey = trendRowKey(series.id, point.x);
                   const expanded = expandedTrendRows.has(rowKey);
-                  const selectedId = selectedTrendMembers[rowKey];
+                  const hasLocalSelection = Object.prototype.hasOwnProperty.call(selectedTrendMembers, rowKey);
+                  const globalMember = !hasLocalSelection && globalTrendMemberIndex !== null && point.n > 1 ? point.members[globalTrendMemberIndex] : undefined;
+                  const selectedId = hasLocalSelection ? selectedTrendMembers[rowKey] : globalMember?.observationId;
                   return <Fragment key={rowKey}>
                     <tr className={selectedId ? "individual-selected" : ""}>
                       <td><span className="table-dot" style={{ background: series.color }} />{series.label}</td>
@@ -502,7 +514,7 @@ export default function Home() {
                     </tr>
                     {expanded ? <tr className="replicate-detail-row"><td colSpan={6}>
                       <div className="replicate-panel">
-                        <div className="replicate-heading"><strong>Valeur utilisée sur le graphe</strong><span>Le tableau conserve l’agrégat de référence.</span></div>
+                        <div className="replicate-heading"><strong>Valeur utilisée sur le graphe</strong><span>{globalTrendMemberIndex === null ? "Le tableau conserve l’agrégat de référence." : `Mode global : patch ${globalTrendMemberIndex + 1}. Un choix ici crée une exception.`}</span></div>
                         <div className="replicate-choices">
                           <button type="button" className={`replicate-choice ${!selectedId ? "active" : ""}`} aria-pressed={!selectedId} onClick={() => selectTrendMember(rowKey)} style={{ borderLeftColor: series.color }}><span><b>Agrégat</b><small>{{ mean: "Moyenne", median: "Médiane", best: "Meilleure valeur" }[aggregation]} · n={point.n}</small></span><strong>{fr.format(point.y)} {yUnit}</strong></button>
                           {point.members.map((member, index) => <button type="button" className={`replicate-choice ${selectedId === member.observationId ? "active" : ""}`} aria-pressed={selectedId === member.observationId} key={member.observationId} onClick={() => selectTrendMember(rowKey, member.observationId)} style={{ borderLeftColor: series.color }}><span><b>Patch {index + 1} · {member.sampleLabel}</b><small>{member.sampleUid} · {member.observationId}</small></span><strong>{fr.format(member.value)} {yUnit}</strong></button>)}
