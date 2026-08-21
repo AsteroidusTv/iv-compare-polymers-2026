@@ -7,12 +7,14 @@ export interface TrendPoint {
 }
 
 export interface TrendSeries {
+  id: "a" | "b";
   label: string;
   color: string;
   points: TrendPoint[];
 }
 
 export interface CurveSeries {
+  id: "a" | "b";
   label: string;
   color: string;
   segments: Array<{
@@ -44,6 +46,9 @@ function ticks(min: number, max: number, count = 5): number[] {
 }
 
 export function TrendChart({ series, xUnit, yUnit }: { series: TrendSeries[]; xUnit: string; yUnit: string }) {
+  if (!series.length) {
+    return <div className="empty-chart"><strong>Toutes les courbes sont masquées</strong><span>Cliquez sur une légende pour réafficher une série.</span></div>;
+  }
   const all = series.flatMap((item) => item.points);
   if (!all.length) {
     return <div className="empty-chart"><strong>Aucun point comparable</strong><span>Élargissez les filtres ou choisissez une autre condition.</span></div>;
@@ -132,6 +137,9 @@ export function CurveChart({
   showLandmarks: boolean;
   scaleMode: "primary" | "all";
 }) {
+  if (!series.length) {
+    return <div className="empty-chart"><strong>Toutes les courbes sont masquées</strong><span>Cliquez sur une légende pour réafficher une série.</span></div>;
+  }
   const all = series.flatMap((item) => item.segments.flatMap((segment) => segment.points));
   if (!all.length) {
     return <div className="empty-chart"><strong>Aucune courbe IV disponible</strong><span>Choisissez un autre temps ou élargissez les filtres.</span></div>;

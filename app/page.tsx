@@ -22,6 +22,7 @@ type ValueMode = "absolute" | "retention";
 type CurrentConvention = "instrument" | "pv";
 type SweepView = "primary" | "all";
 type CurveScale = "primary" | "all";
+type SeriesId = "a" | "b";
 
 const METRIC_HELP: Record<MetricKey, string> = {
   efficiency_pct: "Le rendement est la puissance électrique maximale délivrée divisée par la puissance lumineuse incidente. Il combine les effets de Jsc, Voc et du fill factor.",
@@ -89,6 +90,7 @@ export default function Home() {
   const [curveScale, setCurveScale] = useState<CurveScale>("primary");
   const [showCurvePoints, setShowCurvePoints] = useState(false);
   const [showLandmarks, setShowLandmarks] = useState(true);
+  const [hiddenSeries, setHiddenSeries] = useState<Set<SeriesId>>(() => new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const installDataset = useCallback((next: IVDataset, message: string) => {
@@ -102,6 +104,7 @@ export default function Home() {
     setMaterialB(preferredB);
     setElectrode("all");
     setRecipe("all");
+    setHiddenSeries(new Set());
   }, []);
 
   useEffect(() => {
@@ -175,7 +178,7 @@ export default function Home() {
 
   const trendSeries = useMemo<TrendSeries[]>(() => {
     if (!dataset) return [];
-    const build = (material: string, color: string): TrendSeries => {
+    const build = (id: SeriesId, material: string, color: string): TrendSeries => {
       const groups = new Map<number, number[]>();
       dataset.observations.forEach((observation) => {
         if (observation.test_type !== stress || !samplePasses(observation.sample_uid, material)) return;
@@ -200,9 +203,9 @@ export default function Home() {
         max: Math.max(...values),
         n: values.length,
       })).sort((a, b) => a.x - b.x);
-      return { label: material, color, points };
+      return { id, label: material, color, points };
     };
-    return [build(materialA, COLORS.a), build(materialB, COLORS.b)];
+    return [build("a", materialA, COLORS.a), build("b", materialB, COLORS.b)];
   }, [dataset, materialA, materialB, stress, metric, mode, aggregation, samplePasses, baselineBySample]);
 
   const eligibleFiles = useCallback((material: string) => {
@@ -237,7 +240,7 @@ export default function Home() {
 
   const curveSelections = useMemo(() => {
     if (!dataset || curveTime === null) return [];
-    const pick = (material: string, color: string) => {
+    const pick = (seriesId: SeriesId, material: string, color: string) => {
       const files = eligibleFiles(material).filter((file) => numeric(stress === "Unaged" ? 0 : file.inferred_exposure_duration));
       if (!files.length) return null;
       const distance = Math.min(...files.map((file) => Math.abs((stress === "Unaged" ? 0 : file.inferred_exposure_duration as number) - curveTime)));
@@ -254,6 +257,7 @@ export default function Home() {
         .filter((point): point is { x: number; y: number } => numeric(point.x) && numeric(point.y));
       const analysis = analyzeIVCurve(points, measurement.voc_V);
       return {
+        seriesId,
         material,
         color,
         measurement,
@@ -263,11 +267,12 @@ export default function Home() {
         analysis,
       };
     };
-    return [pick(materialA, COLORS.a), pick(materialB, COLORS.b)].filter((item): item is NonNullable<typeof item> => Boolean(item));
+    return [pick("a", materialA, COLORS.a), pick("b", materialB, COLORS.b)].filter((item): item is NonNullable<typeof item> => Boolean(item));
   }, [dataset, curveTime, eligibleFiles, includeQa, materialA, materialB, stress]);
 
   const currentPolarity = currentConvention === "instrument" ? -1 : 1;
   const curveSeries: CurveSeries[] = curveSelections.map((selection) => ({
+    id: selection.seriesId,
     label: selection.material,
     color: selection.color,
     segments: (sweepView === "primary"
@@ -279,13 +284,22 @@ export default function Home() {
       points: segment.points.map((point) => ({ x: point.x, y: point.y * currentPolarity, sourceIndex: point.sourceIndex })),
     })),
   }));
-  const curveAudit = curveSelections.reduce((summary, selection) => {
+  const visibleTrendSeries = trendSeries.filter((series) => !hiddenSeries.has(series.id));
+  const visibleCurveSeries = curveSeries.filter((series) => !hiddenSeries.has(series.id));
+  const visibleCurveSelections = curveSelections.filter((selection) => !hiddenSeries.has(selection.seriesId));
+  const curveAudit = visibleCurveSelections.reduce((summary, selection) => {
     summary.raw += selection.analysis.rawPointCount;
     summary.primary += selection.analysis.primaryPointCount;
     summary.segments += selection.analysis.segments.length;
     return summary;
   }, { raw: 0, primary: 0, segments: 0 });
   const displayedPointCount = sweepView === "primary" ? curveAudit.primary : curveAudit.raw;
+  const toggleSeries = (seriesId: SeriesId) => setHiddenSeries((current) => {
+    const next = new Set(current);
+    if (next.has(seriesId)) next.delete(seriesId);
+    else next.add(seriesId);
+    return next;
+  });
   const xUnit = timeUnit(stress);
   const yUnit = mode === "retention" ? "% de l’état initial" : METRICS[metric].unit;
   const conditionMixed = electrode === "all" || recipe === "all";
@@ -343,30 +357,22 @@ export default function Home() {
       <header className="topbar">
         <div className="brand-mark">IV</div>
         <div>
-          <p className="eyebrow">Perovskite encapsulation lab</p>
+          <p className="eyebrow">Outil interne · données IV</p>
           <h1>IV Compare</h1>
         </div>
         <div className={`dataset-pill ${loadState}`}><span /> {loadMessage}</div>
       </header>
 
-      <section className="hero-grid">
-        <div className="hero-copy">
-          <p className="kicker">Comparer sans perdre le contexte expérimental</p>
-          <h2>Quel polymère tient le mieux après vieillissement&nbsp;?</h2>
-          <p className="lede">Alignez matériau, électrode et recette de lamination. Suivez la performance dans le temps, puis ouvrez les courbes IV qui expliquent l’écart.</p>
-          <div className="hero-stats">
-            <div><strong>{report ? fr.format(report.samples) : "—"}</strong><span>patchs</span></div>
-            <div><strong>{report ? fr.format(report.measurements) : "—"}</strong><span>courbes IV</span></div>
-            <div><strong>{report ? `${fr.format(report.points / 1000)}k` : "—"}</strong><span>points</span></div>
-          </div>
+      <section className="dataset-toolbar">
+        <div className="dataset-stats" aria-label="Résumé du jeu de données">
+          <div><strong>{report ? fr.format(report.samples) : "—"}</strong><span>patchs</span></div>
+          <div><strong>{report ? fr.format(report.measurements) : "—"}</strong><span>courbes IV</span></div>
+          <div><strong>{report ? `${fr.format(report.points / 1000)}k` : "—"}</strong><span>points</span></div>
         </div>
-        <label className={`import-card ${loadState === "loading" ? "busy" : ""}`} onDragOver={(event) => event.preventDefault()} onDrop={onDrop}>
-          <span className="import-icon">＋</span>
-          <strong>Importer vos données triées</strong>
-          <small>Un paquet <b>.ivpack</b>, ou ensemble le classeur normalisé <b>.xlsx</b> et les points <b>.tsv</b>.</small>
+        <label className={`compact-import ${loadState === "loading" ? "busy" : ""}`} onDragOver={(event) => event.preventDefault()} onDrop={onDrop}>
           <input ref={fileInputRef} type="file" multiple accept=".ivpack,.json,.gz,.xlsx,.tsv" aria-label="Importer les données IV" onChange={(event) => void processFiles(Array.from(event.target.files ?? []))} />
-          <span className="import-action">Choisir les fichiers</span>
-          <span className="privacy-note">Traitement dans votre navigateur · aucun envoi</span>
+          <span className="import-action">Importer des données</span>
+          <small>.ivpack ou .xlsx + .tsv · traitement local</small>
         </label>
       </section>
 
@@ -411,11 +417,13 @@ export default function Home() {
           <div className="chart-layout">
             <section className="chart-card">
               <div className="chart-title">
-                <div><span className="legend-dot coral" />{materialA}</div>
-                <div><span className="legend-dot blue" />{materialB}</div>
+                {trendSeries.map((series) => {
+                  const hidden = hiddenSeries.has(series.id);
+                  return <button type="button" className={`legend-toggle ${hidden ? "hidden" : ""}`} key={series.id} aria-pressed={!hidden} onClick={() => toggleSeries(series.id)} title={`${hidden ? "Afficher" : "Masquer"} ${series.label} — les calculs restent inchangés`}><span className="legend-dot" style={{ background: series.color }} />{series.label}</button>;
+                })}
                 <span>{METRICS[metric].label} · {yUnit}<InfoTip text={METRIC_HELP[metric]} align="right" /></span>
               </div>
-              <TrendChart series={trendSeries} xUnit={xUnit} yUnit={yUnit} />
+              <TrendChart series={visibleTrendSeries} xUnit={xUnit} yUnit={yUnit} />
             </section>
             <aside className="insight-card">
               <p className="eyebrow">Lecture rapide</p>
@@ -448,11 +456,14 @@ export default function Home() {
             </div>
             <section className="chart-card curve-chart-card">
               <div className="chart-title">
-                {curveSelections.map((selection) => <div key={selection.material}><span className="legend-dot" style={{ background: selection.color }} />{selection.material} · {fr.format(selection.actualTime)} {xUnit}</div>)}
+                {curveSelections.map((selection) => {
+                  const hidden = hiddenSeries.has(selection.seriesId);
+                  return <button type="button" className={`legend-toggle ${hidden ? "hidden" : ""}`} key={selection.seriesId} aria-pressed={!hidden} onClick={() => toggleSeries(selection.seriesId)} title={`${hidden ? "Afficher" : "Masquer"} ${selection.material} — les calculs restent inchangés`}><span className="legend-dot" style={{ background: selection.color }} />{selection.material} · {fr.format(selection.actualTime)} {xUnit}</button>;
+                })}
                 <span>{currentConvention === "instrument" ? "Convention logiciel · photocourant négatif" : "Convention PV · courant produit positif"}</span>
               </div>
               {curveAudit.raw ? <div className={`curve-audit ${curveAudit.raw === curveAudit.primary ? "clean" : "segmented"}`} role="status"><span className="curve-audit-title"><strong>{displayedPointCount}/{curveAudit.raw} points affichés</strong><InfoTip text={HELP.pointAudit} align="left" /></span><span>{curveAudit.raw === curveAudit.primary ? "Balayage continu" : `${curveAudit.raw - curveAudit.primary} points supplémentaires conservés · ${curveAudit.segments} segments détectés`}</span></div> : null}
-              <CurveChart series={curveSeries} yAxisLabel={currentConvention === "instrument" ? "J instrument (mA/cm²)" : "J produit (mA/cm²)"} currentConvention={currentConvention} showPoints={showCurvePoints} showLandmarks={showLandmarks} scaleMode={curveScale} />
+              <CurveChart series={visibleCurveSeries} yAxisLabel={currentConvention === "instrument" ? "J instrument (mA/cm²)" : "J produit (mA/cm²)"} currentConvention={currentConvention} showPoints={showCurvePoints} showLandmarks={showLandmarks} scaleMode={curveScale} />
             </section>
             <div className="measurement-grid">
               {curveSelections.map((selection) => <article className="measurement-card" key={selection.material} style={{ borderTopColor: selection.color }}>
