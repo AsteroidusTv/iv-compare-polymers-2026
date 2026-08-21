@@ -2,6 +2,7 @@
 
 import { DragEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CurveChart, CurveSeries, TrendChart, TrendPoint, TrendSeries } from "./components/Charts";
+import { FieldTitle, InfoTip } from "./components/InfoTip";
 import {
   Aggregation,
   aggregate,
@@ -21,6 +22,38 @@ type ValueMode = "absolute" | "retention";
 type CurrentConvention = "instrument" | "pv";
 type SweepView = "primary" | "all";
 type CurveScale = "primary" | "all";
+
+const METRIC_HELP: Record<MetricKey, string> = {
+  efficiency_pct: "Le rendement est la puissance électrique maximale délivrée divisée par la puissance lumineuse incidente. Il combine les effets de Jsc, Voc et du fill factor.",
+  jsc_mA_cm2: "Jsc est la densité de courant de court-circuit, évaluée à V = 0. Elle reflète principalement la génération et la collecte des charges photogénérées.",
+  voc_V: "Voc est la tension de circuit ouvert, obtenue lorsque le courant est nul. Elle est sensible aux pertes par recombinaison et à la qualité des interfaces.",
+  ff_pct: "Le fill factor mesure la rectangularité de la courbe IV : FF = Pmax / (Voc × Jsc). Une baisse signale souvent davantage de pertes résistives ou de recombinaison.",
+};
+
+const HELP = {
+  polymer: "Famille du polymère d’encapsulation associée au patch dans l’inventaire. Pour isoler son effet, gardez l’électrode et la recette de lamination identiques.",
+  ageing: "Type de vieillissement appliqué : DH correspond à chaleur humide, TC aux cycles thermiques et Outdoor à l’exposition extérieure. Les durées ne sont comparables qu’au sein d’un même protocole.",
+  electrode: "Métal de l’électrode du dispositif. Il peut modifier les contacts, la corrosion et la stabilité ; mélanger plusieurs électrodes introduit un facteur de confusion.",
+  recipe: "Conditions de lamination liées au patch : température, pression, durée et séquences. Une recette différente peut modifier l’adhésion, la réticulation et les performances IV.",
+  retention: "Rétention = valeur au temps t / valeur initiale du même patch × 100. Elle compare la dégradation relative, mais nécessite une mesure initiale correctement appariée.",
+  conditions: "Conditions alignées signifie qu’une électrode et une recette précises sont sélectionnées. En conditions mixtes, l’écart observé ne peut pas être attribué au seul polymère.",
+  matching: "L’appariement relie chaque fichier IV au patch de l’inventaire grâce aux métadonnées. Les fichiers exclus restent dans le jeu source mais ne participent pas aux comparaisons par défaut.",
+  observations: "Nombre total de mesures individuelles contribuant aux points actuellement affichés. Ce n’est pas le nombre de durées ni le nombre de moyennes.",
+  minmax: "Pour chaque durée, la ligne principale montre la valeur agrégée. Les traits fins couvrent la valeur minimale et maximale des observations retenues.",
+  targetTime: "Le site cherche cette durée pour les deux matériaux. Si elle n’existe pas exactement, il retient le temps disponible le plus proche et l’indique dans la légende.",
+  convention: "La convention instrument affiche le photocourant négatif, comme les valeurs brutes du simulateur solaire. La convention PV inverse seulement le signe pour montrer le courant produit positif ; la physique ne change pas.",
+  sweep: "La suite de points est découpée lorsqu’un saut de tension ou une inversion de balayage est détecté. Le segment principal couvre normalement V = 0 et le passage par Voc ; les autres segments restent conservés.",
+  scale: "L’échelle « segments principaux » reste lisible pour comparer les matériaux. « Toutes les données » élargit les axes jusqu’aux segments secondaires, sans modifier aucune valeur.",
+  rawPoints: "Affiche chaque point réellement mesuré. Aucune interpolation ni aucun lissage n’est utilisé pour tracer la ligne entre deux points successifs d’un même segment.",
+  landmarks: "Jsc est interpolé à V = 0, Voc à J = 0 et MPP correspond au point mesuré qui maximise la puissance délivrée. Ces repères servent à lire la courbe, pas à remplacer les valeurs du logiciel source.",
+  qa: "Inclut aussi les mesures portant un signalement automatique : valeur extrême, métadonnée ambiguë ou autre incohérence. Elles sont masquées par défaut pour éviter des conclusions fragiles.",
+  pointAudit: "Le numérateur indique les points tracés dans le mode choisi ; le dénominateur indique tous les points présents dans les fichiers. Les points non affichés ne sont jamais supprimés.",
+  segmentation: "Le segment principal est choisi automatiquement selon la continuité du balayage, la présence de V = 0 et la cohérence avec Voc. Tous les segments gardent leur ordre d’acquisition d’origine.",
+  efficiency: "Puissance maximale extraite sous éclairement, rapportée à la puissance incidente et exprimée en pourcentage.",
+  voc: "Tension de circuit ouvert, au point où la densité de courant traverse zéro.",
+  jsc: "Densité de courant à V = 0. La fiche conserve la valeur positive rapportée par le logiciel, même lorsque la courbe utilise la convention instrument négative.",
+  ff: "FF = Pmax / (Voc × Jsc). Plus la courbe possède un coude net et peu de pertes résistives, plus cette valeur est élevée.",
+} as const;
 
 function unique(values: Array<string | null | undefined>): string[] {
   return [...new Set(values.filter((value): value is string => Boolean(value)))].sort((a, b) => a.localeCompare(b, "fr"));
@@ -299,6 +332,11 @@ export default function Home() {
 
   const report = dataset?.report;
   const comparisonCount = trendSeries.reduce((total, series) => total + series.points.reduce((sum, point) => sum + point.n, 0), 0);
+  const aggregationHelp = {
+    mean: "La moyenne utilise toutes les valeurs et reste sensible aux mesures extrêmes.",
+    median: "La médiane retient la valeur centrale et résiste mieux aux valeurs extrêmes, mais masque une éventuelle dispersion bimodale.",
+    best: "La meilleure valeur retient le maximum observé à chaque durée. Elle montre le potentiel atteint, pas le comportement représentatif du groupe.",
+  }[aggregation];
 
   return (
     <main className="app-shell">
@@ -345,12 +383,12 @@ export default function Home() {
         </div>
 
         <div className="filters">
-          <label>Polymère A<select value={materialA} onChange={(event) => setMaterialA(event.target.value)}>{materials.map((item) => <option key={item}>{item}</option>)}</select></label>
-          <label>Polymère B<select value={materialB} onChange={(event) => setMaterialB(event.target.value)}>{materials.map((item) => <option key={item}>{item}</option>)}</select></label>
-          <label>Vieillissement<select value={stress} onChange={(event) => setStress(event.target.value)}>{stresses.map((item) => <option key={item}>{item}</option>)}</select></label>
-          <label>Mesure<select value={metric} onChange={(event) => setMetric(event.target.value as MetricKey)}>{Object.entries(METRICS).map(([key, item]) => <option key={key} value={key}>{item.label}</option>)}</select></label>
-          <label>Électrode<select value={electrode} onChange={(event) => setElectrode(event.target.value)}><option value="all">Toutes</option>{electrodes.map((item) => <option key={item}>{item}</option>)}</select></label>
-          <label>Recette<select value={recipe} onChange={(event) => setRecipe(event.target.value)}><option value="all">Toutes les recettes</option>{recipes.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
+          <label><FieldTitle help={HELP.polymer}>Polymère A</FieldTitle><select value={materialA} onChange={(event) => setMaterialA(event.target.value)}>{materials.map((item) => <option key={item}>{item}</option>)}</select></label>
+          <label><FieldTitle help={HELP.polymer}>Polymère B</FieldTitle><select value={materialB} onChange={(event) => setMaterialB(event.target.value)}>{materials.map((item) => <option key={item}>{item}</option>)}</select></label>
+          <label><FieldTitle help={HELP.ageing}>Vieillissement</FieldTitle><select value={stress} onChange={(event) => setStress(event.target.value)}>{stresses.map((item) => <option key={item}>{item}</option>)}</select></label>
+          <label><FieldTitle help={METRIC_HELP[metric]}>Mesure</FieldTitle><select value={metric} onChange={(event) => setMetric(event.target.value as MetricKey)}>{Object.entries(METRICS).map(([key, item]) => <option key={key} value={key}>{item.label}</option>)}</select></label>
+          <label><FieldTitle help={HELP.electrode} align="right">Électrode</FieldTitle><select value={electrode} onChange={(event) => setElectrode(event.target.value)}><option value="all">Toutes</option>{electrodes.map((item) => <option key={item}>{item}</option>)}</select></label>
+          <label><FieldTitle help={HELP.recipe} align="right">Recette</FieldTitle><select value={recipe} onChange={(event) => setRecipe(event.target.value)}><option value="all">Toutes les recettes</option>{recipes.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
         </div>
 
         <div className="control-row">
@@ -358,9 +396,10 @@ export default function Home() {
             <button className={mode === "retention" ? "active" : ""} onClick={() => setMode("retention")}>Rétention</button>
             <button className={mode === "absolute" ? "active" : ""} onClick={() => setMode("absolute")}>Valeur absolue</button>
           </div>
-          <label className="inline-select">Agrégation<select value={aggregation} onChange={(event) => setAggregation(event.target.value as Aggregation)}><option value="mean">Moyenne</option><option value="median">Médiane</option><option value="best">Meilleure valeur</option></select></label>
-          <span className={`condition-chip ${conditionMixed ? "warning" : "ok"}`}>{conditionMixed ? "Conditions mixtes" : "Conditions alignées"}</span>
-          <span className="quality-note">{report ? `${report.matchedFiles}/${report.files} fichiers appariés · ${report.reviewFiles} exclus` : ""}</span>
+          <InfoTip text={HELP.retention} align="left" />
+          <label className="inline-select"><FieldTitle help={aggregationHelp}>Agrégation</FieldTitle><select value={aggregation} onChange={(event) => setAggregation(event.target.value as Aggregation)}><option value="mean">Moyenne</option><option value="median">Médiane</option><option value="best">Meilleure valeur</option></select></label>
+          <span className="condition-group"><span className={`condition-chip ${conditionMixed ? "warning" : "ok"}`}>{conditionMixed ? "Conditions mixtes" : "Conditions alignées"}</span><InfoTip text={HELP.conditions} /></span>
+          <span className="quality-note">{report ? `${report.matchedFiles}/${report.files} fichiers appariés · ${report.reviewFiles} exclus` : ""}<InfoTip text={HELP.matching} align="right" /></span>
         </div>
 
         <nav className="view-tabs" aria-label="Type de graphique">
@@ -374,7 +413,7 @@ export default function Home() {
               <div className="chart-title">
                 <div><span className="legend-dot coral" />{materialA}</div>
                 <div><span className="legend-dot blue" />{materialB}</div>
-                <span>{METRICS[metric].label} · {yUnit}</span>
+                <span>{METRICS[metric].label} · {yUnit}<InfoTip text={METRIC_HELP[metric]} align="right" /></span>
               </div>
               <TrendChart series={trendSeries} xUnit={xUnit} yUnit={yUnit} />
             </section>
@@ -383,28 +422,28 @@ export default function Home() {
               <strong>{trendInsight?.title ?? "Pas encore de point commun"}</strong>
               <p>{trendInsight?.detail ?? "Les deux séries n’ont pas de durée comparable avec ces filtres."}</p>
               <dl>
-                <div><dt>Observations</dt><dd>{comparisonCount}</dd></div>
-                <div><dt>Mode</dt><dd>{mode === "retention" ? "vs initial" : "absolu"}</dd></div>
-                <div><dt>Agrégation</dt><dd>{{ mean: "moyenne", median: "médiane", best: "meilleure" }[aggregation]}</dd></div>
+                <div><dt>Observations <InfoTip text={HELP.observations} align="left" /></dt><dd>{comparisonCount}</dd></div>
+                <div><dt>Mode <InfoTip text={HELP.retention} align="left" /></dt><dd>{mode === "retention" ? "vs initial" : "absolu"}</dd></div>
+                <div><dt>Agrégation <InfoTip text={aggregationHelp} align="left" /></dt><dd>{{ mean: "moyenne", median: "médiane", best: "meilleure" }[aggregation]}</dd></div>
               </dl>
               {conditionMixed ? <p className="caution">Pour conclure sur le matériau, choisissez une électrode et une recette identiques.</p> : null}
             </aside>
             <section className="data-table-card">
-              <div className="section-head"><div><p className="eyebrow">Valeurs agrégées</p><h4>Points affichés</h4></div><span>Les traits fins montrent min–max.</span></div>
+              <div className="section-head"><div><p className="eyebrow">Valeurs agrégées</p><h4>Points affichés</h4></div><span>Les traits fins montrent min–max. <InfoTip text={HELP.minmax} align="right" /></span></div>
               <div className="table-scroll"><table><thead><tr><th>Matériau</th><th>Temps</th><th>Valeur</th><th>Min</th><th>Max</th><th>n</th></tr></thead><tbody>{trendSeries.flatMap((series) => series.points.map((point) => <tr key={`${series.label}-${point.x}`}><td><span className="table-dot" style={{ background: series.color }} />{series.label}</td><td>{fr.format(point.x)} {xUnit}</td><td><b>{fr.format(point.y)}</b> {yUnit}</td><td>{fr.format(point.min)}</td><td>{fr.format(point.max)}</td><td>{point.n}</td></tr>))}</tbody></table></div>
             </section>
           </div>
         ) : (
           <div className="curve-workspace">
             <div className="curve-toolbar">
-              <label>Temps cible<select value={curveTime ?? ""} onChange={(event) => setCurveTime(Number(event.target.value))} disabled={!curveTimes.all.length}>{curveTimes.all.length ? curveTimes.all.map((time) => <option key={time} value={time}>{fr.format(time)} {xUnit}{curveTimes.common.includes(time) ? " · commun" : ""}</option>) : <option>Aucun temps disponible</option>}</select></label>
-              <label>Convention du courant<select value={currentConvention} onChange={(event) => setCurrentConvention(event.target.value as CurrentConvention)}><option value="instrument">Logiciel · J négatif</option><option value="pv">PV · J produit positif</option></select></label>
-              <label>Balayage<select value={sweepView} onChange={(event) => setSweepView(event.target.value as SweepView)}><option value="primary">Principal · recommandé</option><option value="all">Tous les segments</option></select></label>
-              <label>Échelle<select value={curveScale} onChange={(event) => setCurveScale(event.target.value as CurveScale)}><option value="primary">Segments principaux</option><option value="all">Toutes les données</option></select></label>
+              <label><FieldTitle help={HELP.targetTime}>Temps cible</FieldTitle><select value={curveTime ?? ""} onChange={(event) => setCurveTime(Number(event.target.value))} disabled={!curveTimes.all.length}>{curveTimes.all.length ? curveTimes.all.map((time) => <option key={time} value={time}>{fr.format(time)} {xUnit}{curveTimes.common.includes(time) ? " · commun" : ""}</option>) : <option>Aucun temps disponible</option>}</select></label>
+              <label><FieldTitle help={HELP.convention}>Convention du courant</FieldTitle><select value={currentConvention} onChange={(event) => setCurrentConvention(event.target.value as CurrentConvention)}><option value="instrument">Logiciel · J négatif</option><option value="pv">PV · J produit positif</option></select></label>
+              <label><FieldTitle help={HELP.sweep}>Balayage</FieldTitle><select value={sweepView} onChange={(event) => setSweepView(event.target.value as SweepView)}><option value="primary">Principal · recommandé</option><option value="all">Tous les segments</option></select></label>
+              <label><FieldTitle help={HELP.scale} align="right">Échelle</FieldTitle><select value={curveScale} onChange={(event) => setCurveScale(event.target.value as CurveScale)}><option value="primary">Segments principaux</option><option value="all">Toutes les données</option></select></label>
               <div className="curve-checks">
-                <label className="check-control"><input type="checkbox" checked={showCurvePoints} onChange={(event) => setShowCurvePoints(event.target.checked)} /> Points mesurés</label>
-                <label className="check-control"><input type="checkbox" checked={showLandmarks} onChange={(event) => setShowLandmarks(event.target.checked)} /> Repères IV</label>
-                <label className="check-control"><input type="checkbox" checked={includeQa} onChange={(event) => setIncludeQa(event.target.checked)} /> Mesures signalées QA</label>
+                <span className="check-item"><label className="check-control"><input type="checkbox" checked={showCurvePoints} onChange={(event) => setShowCurvePoints(event.target.checked)} /> Points mesurés</label><InfoTip text={HELP.rawPoints} align="left" /></span>
+                <span className="check-item"><label className="check-control"><input type="checkbox" checked={showLandmarks} onChange={(event) => setShowLandmarks(event.target.checked)} /> Repères IV</label><InfoTip text={HELP.landmarks} /></span>
+                <span className="check-item"><label className="check-control"><input type="checkbox" checked={includeQa} onChange={(event) => setIncludeQa(event.target.checked)} /> Mesures signalées QA</label><InfoTip text={HELP.qa} align="right" /></span>
               </div>
             </div>
             <section className="chart-card curve-chart-card">
@@ -412,11 +451,22 @@ export default function Home() {
                 {curveSelections.map((selection) => <div key={selection.material}><span className="legend-dot" style={{ background: selection.color }} />{selection.material} · {fr.format(selection.actualTime)} {xUnit}</div>)}
                 <span>{currentConvention === "instrument" ? "Convention logiciel · photocourant négatif" : "Convention PV · courant produit positif"}</span>
               </div>
-              {curveAudit.raw ? <div className={`curve-audit ${curveAudit.raw === curveAudit.primary ? "clean" : "segmented"}`} role="status"><strong>{displayedPointCount}/{curveAudit.raw} points affichés</strong><span>{curveAudit.raw === curveAudit.primary ? "Balayage continu" : `${curveAudit.raw - curveAudit.primary} points supplémentaires conservés · ${curveAudit.segments} segments détectés`}</span></div> : null}
+              {curveAudit.raw ? <div className={`curve-audit ${curveAudit.raw === curveAudit.primary ? "clean" : "segmented"}`} role="status"><span className="curve-audit-title"><strong>{displayedPointCount}/{curveAudit.raw} points affichés</strong><InfoTip text={HELP.pointAudit} align="left" /></span><span>{curveAudit.raw === curveAudit.primary ? "Balayage continu" : `${curveAudit.raw - curveAudit.primary} points supplémentaires conservés · ${curveAudit.segments} segments détectés`}</span></div> : null}
               <CurveChart series={curveSeries} yAxisLabel={currentConvention === "instrument" ? "J instrument (mA/cm²)" : "J produit (mA/cm²)"} currentConvention={currentConvention} showPoints={showCurvePoints} showLandmarks={showLandmarks} scaleMode={curveScale} />
             </section>
             <div className="measurement-grid">
-              {curveSelections.map((selection) => <article className="measurement-card" key={selection.material} style={{ borderTopColor: selection.color }}><p className="eyebrow">{selection.material}</p><h4>{fr.format(selection.actualTime)} {xUnit} · {selection.measurement.measurement_uid}</h4><dl><div><dt>Rendement</dt><dd>{numeric(selection.measurement.efficiency_pct) ? `${fr.format(selection.measurement.efficiency_pct)} %` : "—"}</dd></div><div><dt>Voc</dt><dd>{numeric(selection.measurement.voc_V) ? `${fr.format(selection.measurement.voc_V)} V` : "—"}</dd></div><div><dt>Jsc</dt><dd>{numeric(selection.measurement.jsc_mA_cm2) ? `${fr.format(selection.measurement.jsc_mA_cm2)} mA/cm²` : "—"}</dd></div><div><dt>FF</dt><dd>{numeric(selection.measurement.ff_pct) ? `${fr.format(selection.measurement.ff_pct)} %` : "—"}</dd></div></dl><p className="curve-segment-note">Segment principal : {selection.analysis.primaryPointCount}/{selection.analysis.rawPointCount} points · {selection.analysis.segments.length} segment{selection.analysis.segments.length > 1 ? "s" : ""} conservé{selection.analysis.segments.length > 1 ? "s" : ""}</p><small>{selection.file.source_file}</small></article>)}
+              {curveSelections.map((selection) => <article className="measurement-card" key={selection.material} style={{ borderTopColor: selection.color }}>
+                <p className="eyebrow">{selection.material}</p>
+                <h4>{fr.format(selection.actualTime)} {xUnit} · {selection.measurement.measurement_uid}</h4>
+                <dl>
+                  <div><dt>Rendement <InfoTip text={HELP.efficiency} align="left" /></dt><dd>{numeric(selection.measurement.efficiency_pct) ? `${fr.format(selection.measurement.efficiency_pct)} %` : "—"}</dd></div>
+                  <div><dt>Voc <InfoTip text={HELP.voc} /></dt><dd>{numeric(selection.measurement.voc_V) ? `${fr.format(selection.measurement.voc_V)} V` : "—"}</dd></div>
+                  <div><dt>Jsc <InfoTip text={HELP.jsc} /></dt><dd>{numeric(selection.measurement.jsc_mA_cm2) ? `${fr.format(selection.measurement.jsc_mA_cm2)} mA/cm²` : "—"}</dd></div>
+                  <div><dt>FF <InfoTip text={HELP.ff} align="right" /></dt><dd>{numeric(selection.measurement.ff_pct) ? `${fr.format(selection.measurement.ff_pct)} %` : "—"}</dd></div>
+                </dl>
+                <p className="curve-segment-note">Segment principal : {selection.analysis.primaryPointCount}/{selection.analysis.rawPointCount} points · {selection.analysis.segments.length} segment{selection.analysis.segments.length > 1 ? "s" : ""} conservé{selection.analysis.segments.length > 1 ? "s" : ""}<InfoTip text={HELP.segmentation} align="right" /></p>
+                <small>{selection.file.source_file}</small>
+              </article>)}
               {!curveSelections.length ? <div className="missing-selection">Aucune mesure répondant à ces filtres.</div> : null}
             </div>
           </div>
