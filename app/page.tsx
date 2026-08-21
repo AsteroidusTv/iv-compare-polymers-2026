@@ -16,6 +16,8 @@ import { analyzeIVCurve } from "./lib/iv-curve-analysis";
 
 const SERIES_COLORS = ["#ee735e", "#3469d4", "#2f9b72", "#9a62d4", "#d4932f", "#24a0ad", "#c84f83", "#68717e"];
 const fr = new Intl.NumberFormat("fr-CH", { maximumFractionDigits: 2 });
+const IV_METRICS: MetricKey[] = ["efficiency_pct", "jsc_mA_cm2", "voc_V", "ff_pct"];
+const OUTDOOR_METRICS: MetricKey[] = ["outdoor_pr_pct", "outdoor_pmpp_W", "outdoor_irradiance_W_m2"];
 
 type View = "trend" | "curves";
 type ValueMode = "absolute" | "retention";
@@ -29,6 +31,9 @@ const METRIC_HELP: Record<MetricKey, string> = {
   jsc_mA_cm2: "Jsc est la densité de courant de court-circuit, évaluée à V = 0. Elle reflète principalement la génération et la collecte des charges photogénérées.",
   voc_V: "Voc est la tension de circuit ouvert, obtenue lorsque le courant est nul. Elle est sensible aux pertes par recombinaison et à la qualité des interfaces.",
   ff_pct: "Le fill factor mesure la rectangularité de la courbe IV : FF = Pmax / (Voc × Jsc). Une baisse signale souvent davantage de pertes résistives ou de recombinaison.",
+  outdoor_pr_pct: "Performance Ratio (PR) fourni par le logger, résumé par la médiane journalière des mesures prises lorsque l’irradiance est au moins 200 W/m². Ce seuil écarte la nuit et les très faibles éclairements, où le ratio devient instable.",
+  outdoor_pmpp_W: "Puissance au point de puissance maximale mesurée en extérieur. Le maximum journalier est affiché pour suivre la meilleure capacité de production de chaque journée, sans supprimer les mesures brutes du classeur.",
+  outdoor_irradiance_W_m2: "Irradiance solaire incidente. Le maximum journalier décrit le niveau d’éclairement disponible ce jour-là et aide à interpréter Pmpp ; il ne constitue pas, à lui seul, une mesure de stabilité du dispositif.",
 };
 
 const HELP = {
@@ -37,7 +42,7 @@ const HELP = {
   ageing: "Type de vieillissement appliqué : DH correspond à chaleur humide, TC aux cycles thermiques et Outdoor à l’exposition extérieure. Les durées ne sont comparables qu’au sein d’un même protocole.",
   electrode: "Métal de l’électrode du dispositif. Il peut modifier les contacts, la corrosion et la stabilité ; mélanger plusieurs électrodes introduit un facteur de confusion.",
   recipe: "Conditions de lamination liées au patch : température, pression, durée et séquences. Une recette différente peut modifier l’adhésion, la réticulation et les performances IV.",
-  retention: "Rétention = valeur au temps t / valeur initiale du même patch × 100. Elle compare la dégradation relative, mais nécessite une mesure initiale correctement appariée.",
+  retention: "Rétention = valeur au temps t / valeur de référence du même patch × 100. Pour DH/TC, la référence est l’état initial. Pour Outdoor, la référence robuste est la médiane des sept premiers jours valides du logger pour la métrique choisie.",
   conditions: "Conditions alignées signifie qu’une électrode et une recette précises sont sélectionnées. En conditions mixtes, l’écart observé ne peut pas être attribué au seul polymère.",
   matching: "L’appariement relie chaque fichier IV au patch de l’inventaire grâce aux métadonnées. Les fichiers exclus restent dans le jeu source mais ne participent pas aux comparaisons par défaut.",
   observations: "Nombre total de mesures individuelles contribuant aux points actuellement affichés. Ce n’est pas le nombre de durées ni le nombre de moyennes.",
@@ -170,10 +175,15 @@ export default function Home() {
     const ordered = ["DH", "TC", "Outdoor", "Unaged", "DH+TC"].filter((item) => available.includes(item));
     return ordered.length ? ordered : available;
   }, [dataset]);
+  const metricOptions = stress === "Outdoor" ? OUTDOOR_METRICS : IV_METRICS;
 
   useEffect(() => {
     if (stresses.length && !stresses.includes(stress)) setStress(stresses[0]);
   }, [stress, stresses]);
+
+  useEffect(() => {
+    if (!metricOptions.includes(metric)) setMetric(stress === "Outdoor" ? "outdoor_pr_pct" : "efficiency_pct");
+  }, [metric, metricOptions, stress]);
 
   const samplePasses = useCallback((sampleId: string | null | undefined, material: string) => {
     if (!sampleId) return false;
@@ -186,12 +196,25 @@ export default function Home() {
 
   const baselineBySample = useMemo(() => {
     const result = new Map<string, number>();
-    dataset?.observations.forEach((observation) => {
+    const observations = [...(dataset?.observations ?? [])].sort((left, right) => (left.exposure_duration_numeric ?? Number.POSITIVE_INFINITY) - (right.exposure_duration_numeric ?? Number.POSITIVE_INFINITY));
+    if (stress === "Outdoor") {
+      const firstSeven = new Map<string, number[]>();
+      observations.forEach((observation) => {
+        const value = observation[metric];
+        if (observation.test_type !== "Outdoor" || !numeric(value)) return;
+        const values = firstSeven.get(observation.sample_uid) ?? [];
+        if (values.length < 7) values.push(value);
+        firstSeven.set(observation.sample_uid, values);
+      });
+      firstSeven.forEach((values, sampleUid) => result.set(sampleUid, aggregate(values, "median")));
+      return result;
+    }
+    observations.forEach((observation) => {
       const value = observation[metric];
       if (observation.test_type === "Unaged" && numeric(value) && !result.has(observation.sample_uid)) result.set(observation.sample_uid, value);
     });
     return result;
-  }, [dataset, metric]);
+  }, [dataset, metric, stress]);
 
   const trendSeries = useMemo<TrendSeries[]>(() => {
     if (!dataset) return [];
@@ -379,7 +402,7 @@ export default function Home() {
     setSelectedTrendMembers((current) => Object.fromEntries(Object.entries(current).filter(([rowKey]) => !rowKey.startsWith(`${seriesId}:`))));
   };
   const xUnit = timeUnit(stress);
-  const yUnit = mode === "retention" ? "% de l’état initial" : METRICS[metric].unit;
+  const yUnit = mode === "retention" ? (stress === "Outdoor" ? "% de la référence 7 j" : "% de l’état initial") : METRICS[metric].unit;
   const conditionMixed = electrode === "all" || recipe === "all";
 
   const trendInsight = useMemo(() => {
@@ -500,7 +523,7 @@ export default function Home() {
 
         <div className="filters context-filters">
           <label><FieldTitle help={HELP.ageing}>Vieillissement</FieldTitle><select value={stress} onChange={(event) => setStress(event.target.value)}>{stresses.map((item) => <option key={item}>{item}</option>)}</select></label>
-          <label><FieldTitle help={METRIC_HELP[metric]}>Mesure</FieldTitle><select value={metric} onChange={(event) => setMetric(event.target.value as MetricKey)}>{Object.entries(METRICS).map(([key, item]) => <option key={key} value={key}>{item.label}</option>)}</select></label>
+          <label><FieldTitle help={METRIC_HELP[metric]}>Mesure</FieldTitle><select value={metric} onChange={(event) => setMetric(event.target.value as MetricKey)}>{metricOptions.map((key) => <option key={key} value={key}>{METRICS[key].label}</option>)}</select></label>
           <label><FieldTitle help={HELP.electrode} align="right">Électrode</FieldTitle><select value={electrode} onChange={(event) => setElectrode(event.target.value)}><option value="all">Toutes</option>{electrodes.map((item) => <option key={item}>{item}</option>)}</select></label>
           <label><FieldTitle help={HELP.recipe} align="right">Recette</FieldTitle><select value={recipe} onChange={(event) => setRecipe(event.target.value)}><option value="all">Toutes les recettes</option>{recipes.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
         </div>
@@ -539,7 +562,7 @@ export default function Home() {
               <p>{trendInsight?.detail ?? "Les deux séries n’ont pas de durée comparable avec ces filtres."}</p>
               <dl>
                 <div><dt>Observations <InfoTip text={HELP.observations} align="left" /></dt><dd>{comparisonCount}</dd></div>
-                <div><dt>Mode <InfoTip text={HELP.retention} align="left" /></dt><dd>{mode === "retention" ? "vs initial" : "absolu"}</dd></div>
+                <div><dt>Mode <InfoTip text={HELP.retention} align="left" /></dt><dd>{mode === "retention" ? (stress === "Outdoor" ? "vs médiane 7 j" : "vs initial") : "absolu"}</dd></div>
                 <div><dt>Agrégation <InfoTip text={aggregationHelp} align="left" /></dt><dd>{{ mean: "moyenne", median: "médiane", best: "meilleure" }[aggregation]}</dd></div>
               </dl>
               {conditionMixed ? <p className="caution">Pour conclure sur le matériau, choisissez une électrode et une recette identiques.</p> : null}

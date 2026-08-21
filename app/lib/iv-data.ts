@@ -1,4 +1,4 @@
-export type MetricKey = "efficiency_pct" | "jsc_mA_cm2" | "voc_V" | "ff_pct";
+export type MetricKey = "efficiency_pct" | "jsc_mA_cm2" | "voc_V" | "ff_pct" | "outdoor_pr_pct" | "outdoor_pmpp_W" | "outdoor_irradiance_W_m2";
 export type Aggregation = "mean" | "median" | "best";
 
 export interface Sample {
@@ -39,6 +39,9 @@ export interface Observation {
   jsc_mA_cm2?: number | null;
   voc_V?: number | null;
   ff_pct?: number | null;
+  outdoor_pr_pct?: number | null;
+  outdoor_pmpp_W?: number | null;
+  outdoor_irradiance_W_m2?: number | null;
   action_or_status?: string | null;
   comments?: string | null;
   data_quality_flag?: string | null;
@@ -149,7 +152,7 @@ export async function readPack(blob: Blob): Promise<IVDataset> {
 }
 
 export async function fetchDefaultDataset(): Promise<IVDataset> {
-  const response = await fetch("/data/iv-compare-dowsil.ivpack", { cache: "force-cache" });
+  const response = await fetch("/data/iv-compare-dowsil.ivpack", { cache: "no-store" });
   if (!response.ok) throw new Error("Le jeu de données fourni n’a pas pu être chargé.");
   return readPack(await response.blob());
 }
@@ -197,9 +200,28 @@ function normalizeObservations(rows: UnknownRow[]): Observation[] {
     jsc_mA_cm2: asNumber(row.jsc_mA_cm2),
     voc_V: asNumber(row.voc_V),
     ff_pct: asNumber(row.ff_pct),
+    outdoor_pr_pct: asNumber(row.outdoor_pr_pct),
+    outdoor_pmpp_W: asNumber(row.outdoor_pmpp_W),
+    outdoor_irradiance_W_m2: asNumber(row.outdoor_irradiance_W_m2),
     action_or_status: asText(row.action_or_status),
     comments: asText(row.comments),
     data_quality_flag: asText(row.data_quality_flag),
+  })).filter((row) => row.observation_uid && row.sample_uid);
+}
+
+function normalizeOutdoorDaily(rows: UnknownRow[]): Observation[] {
+  return rows.map((row) => ({
+    observation_uid: String(row.outdoor_daily_uid ?? ""),
+    sample_uid: String(row.sample_uid ?? ""),
+    test_type: "Outdoor",
+    exposure_duration_numeric: asNumber(row.exposure_days),
+    exposure_unit: "days",
+    outdoor_pr_pct: asNumber(row.performance_ratio_pct_median),
+    outdoor_pmpp_W: asNumber(row.pmpp_W_max),
+    outdoor_irradiance_W_m2: asNumber(row.irradiance_W_m2_max),
+    action_or_status: "outdoor_daily_aggregate",
+    comments: asText(row.aggregation_protocol),
+    data_quality_flag: asText(row.qa_flags),
   })).filter((row) => row.observation_uid && row.sample_uid);
 }
 
@@ -288,10 +310,14 @@ export async function readNormalizedPair(workbookFile: File, pointsFile: File): 
     if (!sheet) throw new Error(`Feuille ${name} absente du classeur.`);
     return XLSX.utils.sheet_to_json<UnknownRow>(sheet, { defval: null, raw: true });
   };
+  const optionalRows = (name: string): UnknownRow[] => {
+    const sheet = workbook.Sheets[name];
+    return sheet ? XLSX.utils.sheet_to_json<UnknownRow>(sheet, { defval: null, raw: true }) : [];
+  };
 
   const samples = normalizeSamples(rows("Samples"));
   const recipes = normalizeRecipes(rows("Recipes"));
-  const observations = normalizeObservations(rows("Inventory_Obs"));
+  const observations = [...normalizeObservations(rows("Inventory_Obs")), ...normalizeOutdoorDaily(optionalRows("Outdoor_Daily"))];
   const files = normalizeFiles(rows("IV_Files"));
   const measurements = normalizeMeasurements(rows("IV_Measurements"));
   const curves = await parseCurves(pointsFile);
@@ -334,6 +360,9 @@ export const METRICS: Record<MetricKey, { label: string; unit: string; digits: n
   jsc_mA_cm2: { label: "Jsc", unit: "mA/cm²", digits: 2 },
   voc_V: { label: "Voc", unit: "V", digits: 3 },
   ff_pct: { label: "Fill factor", unit: "%", digits: 1 },
+  outdoor_pr_pct: { label: "PR extérieur (médiane/jour)", unit: "%", digits: 1 },
+  outdoor_pmpp_W: { label: "Pmpp extérieur (max/jour)", unit: "W", digits: 2 },
+  outdoor_irradiance_W_m2: { label: "Irradiance (max/jour)", unit: "W/m²", digits: 0 },
 };
 
 export function aggregate(values: number[], method: Aggregation): number {

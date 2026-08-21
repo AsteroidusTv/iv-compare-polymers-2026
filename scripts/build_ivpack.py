@@ -16,6 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 WORKSPACE = ROOT.parent
 NORMALIZED = WORKSPACE / "tmp" / "iv_normalization" / "normalized_small.json"
+OUTDOOR = WORKSPACE / "tmp" / "iv_normalization" / "outdoor_processed.json"
 POINTS = WORKSPACE / "outputs" / "iv-data-normalization-20260821" / "IV_curve_points.tsv"
 PUBLIC_PACK = ROOT / "public" / "data" / "iv-compare-dowsil.ivpack"
 OUTPUT_PACK = WORKSPACE / "outputs" / "iv-data-normalization-20260821" / "IV_Compare_DOWSIL.ivpack"
@@ -33,6 +34,7 @@ def rounded(value: str) -> float | None:
 
 def main() -> None:
     source = json.loads(NORMALIZED.read_text(encoding="utf-8"))
+    outdoor = json.loads(OUTDOOR.read_text(encoding="utf-8"))
 
     samples = [
         keep(
@@ -92,6 +94,26 @@ def main() -> None:
         )
         for row in source["inventory_observations"]
     ]
+    observations.extend(
+        {
+            "observation_uid": row["outdoor_daily_uid"],
+            "sample_uid": row["sample_uid"],
+            "test_type": "Outdoor",
+            "exposure_duration_numeric": row["exposure_days"],
+            "exposure_unit": "days",
+            "efficiency_pct": None,
+            "jsc_mA_cm2": None,
+            "voc_V": None,
+            "ff_pct": None,
+            "outdoor_pr_pct": row["performance_ratio_pct_median"],
+            "outdoor_pmpp_W": row["pmpp_W_max"],
+            "outdoor_irradiance_W_m2": row["irradiance_W_m2_max"],
+            "action_or_status": "outdoor_daily_aggregate",
+            "comments": row["aggregation_protocol"],
+            "data_quality_flag": row["qa_flags"],
+        }
+        for row in outdoor["daily"]
+    )
     files = [
         keep(
             row,
@@ -153,8 +175,8 @@ def main() -> None:
         "reviewFiles": sum(row["match_status"] in {"ambiguous", "unmatched"} for row in files),
     }
     dataset = {
-        "schemaVersion": "1.0",
-        "name": "DOWSIL PV-6326 — jeu IV normalisé",
+        "schemaVersion": "1.1",
+        "name": "DOWSIL PV-6326 — jeu IV et Outdoor normalisé",
         "generatedOn": "2026-08-21",
         "report": report,
         "samples": samples,
