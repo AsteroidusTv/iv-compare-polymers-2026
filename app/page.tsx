@@ -461,7 +461,6 @@ export default function Home() {
           </div>
           <InfoTip text={HELP.retention} align="left" />
           <label className="inline-select"><FieldTitle help={aggregationHelp}>Agrégation</FieldTitle><select value={aggregation} onChange={(event) => setAggregation(event.target.value as Aggregation)}><option value="mean">Moyenne</option><option value="median">Médiane</option><option value="best">Meilleure valeur</option></select></label>
-          {view === "trend" ? <label className="inline-select"><FieldTitle help={HELP.globalReplicate}>Répétitions</FieldTitle><select value={globalTrendMemberIndex === null ? "aggregate" : String(globalTrendMemberIndex)} onChange={(event) => selectAllTrendMembers(event.target.value)}><option value="aggregate">Agrégat (défaut)</option>{Array.from({ length: maxTrendMembers }, (_, index) => <option key={index} value={index}>Patch {index + 1} partout</option>)}</select></label> : null}
           <span className="condition-group"><span className={`condition-chip ${conditionMixed ? "warning" : "ok"}`}>{conditionMixed ? "Conditions mixtes" : "Conditions alignées"}</span><InfoTip text={HELP.conditions} /></span>
           <span className="quality-note">{report ? `${report.matchedFiles}/${report.files} fichiers appariés · ${report.reviewFiles} exclus` : ""}<InfoTip text={HELP.matching} align="right" /></span>
         </div>
@@ -495,7 +494,13 @@ export default function Home() {
               {conditionMixed ? <p className="caution">Pour conclure sur le matériau, choisissez une électrode et une recette identiques.</p> : null}
             </aside>
             <section className="data-table-card">
-              <div className="section-head"><div><p className="eyebrow">Valeurs agrégées</p><h4>Points affichés</h4></div><span>Min–max · cliquez sur n pour voir les patchs. <InfoTip text={`${HELP.minmax} ${HELP.replicates}`} align="right" /></span></div>
+              <div className="section-head">
+                <div><p className="eyebrow">Valeurs agrégées</p><h4>Points affichés</h4></div>
+                <div className="table-head-tools">
+                  <span>Min–max · cliquez sur n pour voir les patchs. <InfoTip text={`${HELP.minmax} ${HELP.replicates}`} align="right" /></span>
+                  <label className="inline-select"><FieldTitle help={HELP.globalReplicate} align="right">Répétitions</FieldTitle><select value={globalTrendMemberIndex === null ? "aggregate" : String(globalTrendMemberIndex)} onChange={(event) => selectAllTrendMembers(event.target.value)}><option value="aggregate">Agrégat (défaut)</option>{Array.from({ length: maxTrendMembers }, (_, index) => <option key={index} value={index}>Patch {index + 1} partout</option>)}</select></label>
+                </div>
+              </div>
               <div className="table-scroll"><table><thead><tr><th>Matériau</th><th>Temps</th><th>Valeur</th><th>Min</th><th>Max</th><th>n</th></tr></thead><tbody>
                 {trendSeries.flatMap((series) => series.points.map((point) => {
                   const rowKey = trendRowKey(series.id, point.x);

@@ -118,6 +118,8 @@ button, a, label { -webkit-tap-highlight-color: transparent; }
 .data-table-card { grid-column: 1 / -1; padding: 20px; }
 .section-head h4 { margin: 4px 0 0; font-size: 18px; }
 .section-head > span { color: var(--muted); font-size: 10px; }
+.table-head-tools { display: flex; align-items: center; justify-content: flex-end; gap: 18px; }
+.table-head-tools > span { color: var(--muted); font-size: 10px; }
 .table-scroll { max-height: 290px; margin-top: 14px; overflow: auto; border: 1px solid #ece9e3; border-radius: 12px; }
 table { width: 100%; border-collapse: collapse; font-size: 11px; }
 th { position: sticky; top: 0; z-index: 1; background: #f2f0eb; color: #6d7480; font-size: 9px; letter-spacing: .08em; text-align: left; text-transform: uppercase; }
@@ -198,6 +200,8 @@ footer { padding: 22px 4px 0; display: flex; justify-content: space-between; col
   .compact-import { width: 100%; justify-content: space-between; }
   .workspace-card { padding: 20px 13px; border-radius: 22px; }
   .workspace-head { align-items: flex-end; }
+  .section-head { align-items: flex-start; }
+  .table-head-tools { align-items: flex-end; flex-direction: column-reverse; gap: 8px; }
   .head-actions { flex-direction: column; }
   .filters { grid-template-columns: 1fr 1fr; }
   .view-tabs button { flex: 1; padding-inline: 6px; }
