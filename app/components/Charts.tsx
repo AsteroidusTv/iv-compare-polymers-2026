@@ -16,14 +16,14 @@ export interface TrendPoint {
 }
 
 export interface TrendSeries {
-  id: "a" | "b";
+  id: string;
   label: string;
   color: string;
   points: TrendPoint[];
 }
 
 export interface CurveSeries {
-  id: "a" | "b";
+  id: string;
   label: string;
   color: string;
   segments: Array<{

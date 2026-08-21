@@ -14,7 +14,7 @@ import {
 } from "./lib/iv-data";
 import { analyzeIVCurve } from "./lib/iv-curve-analysis";
 
-const COLORS = { a: "#ee735e", b: "#3469d4" };
+const SERIES_COLORS = ["#ee735e", "#3469d4", "#2f9b72", "#9a62d4", "#d4932f", "#24a0ad", "#c84f83", "#68717e"];
 const fr = new Intl.NumberFormat("fr-CH", { maximumFractionDigits: 2 });
 
 type View = "trend" | "curves";
@@ -22,7 +22,7 @@ type ValueMode = "absolute" | "retention";
 type CurrentConvention = "instrument" | "pv";
 type SweepView = "primary" | "all";
 type CurveScale = "primary" | "all";
-type SeriesId = "a" | "b";
+type SeriesId = string;
 
 const METRIC_HELP: Record<MetricKey, string> = {
   efficiency_pct: "Le rendement est la puissance électrique maximale délivrée divisée par la puissance lumineuse incidente. Il combine les effets de Jsc, Voc et du fill factor.",
@@ -33,6 +33,7 @@ const METRIC_HELP: Record<MetricKey, string> = {
 
 const HELP = {
   polymer: "Famille du polymère d’encapsulation associée au patch dans l’inventaire. Pour isoler son effet, gardez l’électrode et la recette de lamination identiques.",
+  addMaterial: "Ajoute une série de comparaison supplémentaire. Chaque matériau possède sa propre couleur et son propre choix de patch ; les filtres de vieillissement, d’électrode et de recette restent communs à toutes les séries.",
   ageing: "Type de vieillissement appliqué : DH correspond à chaleur humide, TC aux cycles thermiques et Outdoor à l’exposition extérieure. Les durées ne sont comparables qu’au sein d’un même protocole.",
   electrode: "Métal de l’électrode du dispositif. Il peut modifier les contacts, la corrosion et la stabilité ; mélanger plusieurs électrodes introduit un facteur de confusion.",
   recipe: "Conditions de lamination liées au patch : température, pression, durée et séquences. Une recette différente peut modifier l’adhésion, la réticulation et les performances IV.",
@@ -84,6 +85,7 @@ export default function Home() {
   const [view, setView] = useState<View>("trend");
   const [materialA, setMaterialA] = useState("");
   const [materialB, setMaterialB] = useState("");
+  const [extraMaterials, setExtraMaterials] = useState<string[]>([]);
   const [stress, setStress] = useState("DH");
   const [metric, setMetric] = useState<MetricKey>("efficiency_pct");
   const [mode, setMode] = useState<ValueMode>("retention");
@@ -100,7 +102,7 @@ export default function Home() {
   const [hiddenSeries, setHiddenSeries] = useState<Set<SeriesId>>(() => new Set());
   const [expandedTrendRows, setExpandedTrendRows] = useState<Set<string>>(() => new Set());
   const [selectedTrendMembers, setSelectedTrendMembers] = useState<Record<string, string | null>>({});
-  const [globalTrendSamples, setGlobalTrendSamples] = useState<Record<SeriesId, string | null>>({ a: null, b: null });
+  const [globalTrendSamples, setGlobalTrendSamples] = useState<Record<SeriesId, string | null>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const installDataset = useCallback((next: IVDataset, message: string) => {
@@ -112,12 +114,13 @@ export default function Home() {
     const preferredB = materials.includes("POE-2 / TF4") ? "POE-2 / TF4" : materials.find((item) => item !== preferredA) ?? preferredA;
     setMaterialA(preferredA);
     setMaterialB(preferredB);
+    setExtraMaterials([]);
     setElectrode("all");
     setRecipe("all");
     setHiddenSeries(new Set());
     setExpandedTrendRows(new Set());
     setSelectedTrendMembers({});
-    setGlobalTrendSamples({ a: null, b: null });
+    setGlobalTrendSamples({});
   }, []);
 
   useEffect(() => {
@@ -153,9 +156,10 @@ export default function Home() {
   };
 
   const materials = useMemo(() => unique(dataset?.samples.map((sample) => sample.material_family) ?? []), [dataset]);
+  const comparisonMaterials = useMemo(() => [materialA, materialB, ...extraMaterials].filter(Boolean), [materialA, materialB, extraMaterials]);
   const sampleMap = useMemo(() => new Map(dataset?.samples.map((sample) => [sample.sample_uid, sample]) ?? []), [dataset]);
   const recipeMap = useMemo(() => new Map(dataset?.recipes.map((item) => [item.recipe_uid, item]) ?? []), [dataset]);
-  const relevantSamples = useMemo(() => dataset?.samples.filter((sample) => sample.material_family === materialA || sample.material_family === materialB) ?? [], [dataset, materialA, materialB]);
+  const relevantSamples = useMemo(() => dataset?.samples.filter((sample) => comparisonMaterials.includes(sample.material_family)) ?? [], [dataset, comparisonMaterials]);
   const electrodes = useMemo(() => unique(relevantSamples.map((sample) => sample.electrode)), [relevantSamples]);
   const recipes = useMemo(() => {
     const ids = unique(relevantSamples.map((sample) => sample.recipe_uid));
@@ -231,8 +235,8 @@ export default function Home() {
       }).sort((a, b) => a.x - b.x);
       return { id, label: material, color, points };
     };
-    return [build("a", materialA, COLORS.a), build("b", materialB, COLORS.b)];
-  }, [dataset, materialA, materialB, stress, metric, mode, aggregation, samplePasses, baselineBySample, sampleMap]);
+    return comparisonMaterials.map((material, index) => build(String.fromCharCode(97 + index), material, SERIES_COLORS[index % SERIES_COLORS.length]));
+  }, [dataset, comparisonMaterials, stress, metric, mode, aggregation, samplePasses, baselineBySample, sampleMap]);
 
   const eligibleFiles = useCallback((material: string) => {
     if (!dataset) return [];
@@ -246,12 +250,11 @@ export default function Home() {
     const getTimes = (material: string) => eligibleFiles(material)
       .map((file) => stress === "Unaged" ? 0 : file.inferred_exposure_duration)
       .filter(numeric);
-    const a = new Set(getTimes(materialA));
-    const b = new Set(getTimes(materialB));
-    const common = [...a].filter((value) => b.has(value)).sort((x, y) => x - y);
-    const all = [...new Set([...a, ...b])].sort((x, y) => x - y);
+    const sets = comparisonMaterials.map((material) => new Set(getTimes(material)));
+    const common = sets.length ? [...sets[0]].filter((value) => sets.slice(1).every((set) => set.has(value))).sort((x, y) => x - y) : [];
+    const all = [...new Set(sets.flatMap((set) => [...set]))].sort((x, y) => x - y);
     return { all, common };
-  }, [eligibleFiles, materialA, materialB, stress]);
+  }, [eligibleFiles, comparisonMaterials, stress]);
 
   useEffect(() => {
     if (!curveTimes.all.length) {
@@ -293,8 +296,8 @@ export default function Home() {
         analysis,
       };
     };
-    return [pick("a", materialA, COLORS.a), pick("b", materialB, COLORS.b)].filter((item): item is NonNullable<typeof item> => Boolean(item));
-  }, [dataset, curveTime, eligibleFiles, includeQa, materialA, materialB, stress]);
+    return comparisonMaterials.map((material, index) => pick(String.fromCharCode(97 + index), material, SERIES_COLORS[index % SERIES_COLORS.length])).filter((item): item is NonNullable<typeof item> => Boolean(item));
+  }, [dataset, curveTime, eligibleFiles, includeQa, comparisonMaterials, stress]);
 
   const currentPolarity = currentConvention === "instrument" ? -1 : 1;
   const curveSeries: CurveSeries[] = curveSelections.map((selection) => ({
@@ -317,10 +320,10 @@ export default function Home() {
     }));
     return [series.id, [...byUid.values()].sort((left, right) => left.sampleUid.localeCompare(right.sampleUid, "fr"))];
   })) as Record<SeriesId, TrendPoint["members"]>;
-  const activeTrendSamples: Record<SeriesId, string | null> = {
-    a: trendSampleOptions.a?.some((member) => member.sampleUid === globalTrendSamples.a) ? globalTrendSamples.a : null,
-    b: trendSampleOptions.b?.some((member) => member.sampleUid === globalTrendSamples.b) ? globalTrendSamples.b : null,
-  };
+  const activeTrendSamples = Object.fromEntries(trendSeries.map((series) => [
+    series.id,
+    trendSampleOptions[series.id]?.some((member) => member.sampleUid === globalTrendSamples[series.id]) ? globalTrendSamples[series.id] : null,
+  ])) as Record<SeriesId, string | null>;
   const resolveTrendSelection = (seriesId: SeriesId, point: TrendPoint) => {
     const rowKey = trendRowKey(seriesId, point.x);
     if (Object.prototype.hasOwnProperty.call(selectedTrendMembers, rowKey)) {
@@ -380,47 +383,68 @@ export default function Home() {
   const conditionMixed = electrode === "all" || recipe === "all";
 
   const trendInsight = useMemo(() => {
-    const [a, b] = selectedTrendSeries;
-    if (!a || !b) return null;
-    const aByX = new Map(a.points.map((point) => [point.x, point]));
-    const common = b.points.filter((point) => aByX.has(point.x));
-    if (!common.length) return null;
-    const pointB = common[common.length - 1];
-    const pointA = aByX.get(pointB.x)!;
-    const difference = pointB.y - pointA.y;
-    const leader = difference >= 0 ? materialB : materialA;
+    if (selectedTrendSeries.length < 2) return null;
+    const commonTimes = selectedTrendSeries.reduce<number[]>((common, series, index) => {
+      const times = new Set(series.points.map((point) => point.x));
+      return index === 0 ? [...times] : common.filter((time) => times.has(time));
+    }, []).sort((left, right) => left - right);
+    const time = commonTimes[commonTimes.length - 1];
+    if (!numeric(time)) return null;
+    const points = selectedTrendSeries.map((series) => ({ series, point: series.points.find((point) => point.x === time)! }));
+    const ranked = [...points].sort((left, right) => right.point.y - left.point.y);
+    const difference = ranked[0].point.y - ranked[ranked.length - 1].point.y;
     return {
-      title: `${leader} en tête à ${fr.format(pointB.x)} ${xUnit}`,
-      detail: `Écart de ${fr.format(Math.abs(difference))} ${mode === "retention" ? "points de rétention" : METRICS[metric].unit}.`,
-      time: pointB.x,
-      count: pointA.n + pointB.n,
+      title: `${ranked[0].series.label} en tête à ${fr.format(time)} ${xUnit}`,
+      detail: `Écart max–min de ${fr.format(difference)} ${mode === "retention" ? "points de rétention" : METRICS[metric].unit} entre ${points.length} matériaux.`,
+      time,
+      count: points.reduce((total, item) => total + item.point.n, 0),
     };
-  }, [selectedTrendSeries, materialA, materialB, xUnit, mode, metric]);
+  }, [selectedTrendSeries, xUnit, mode, metric]);
 
   const exportTrend = () => {
-    const [a, b] = trendSeries;
-    if (!a || !b) return;
-    const times = [...new Set([...a.points.map((point) => point.x), ...b.points.map((point) => point.x)])].sort((x, y) => x - y);
+    if (selectedTrendSeries.length < 2) return;
+    const times = [...new Set(selectedTrendSeries.flatMap((series) => series.points.map((point) => point.x)))].sort((x, y) => x - y);
     const lookup = (series: TrendSeries, x: number) => series.points.find((point) => point.x === x);
     const rows = [
-      ["temps", "unite_temps", `${materialA}_valeur`, `${materialA}_n`, `${materialB}_valeur`, `${materialB}_n`],
-      ...times.map((time) => {
-        const left = lookup(a, time);
-        const right = lookup(b, time);
-        return [time, xUnit, left?.y ?? "", left?.n ?? "", right?.y ?? "", right?.n ?? ""];
-      }),
+      ["temps", "unite_temps", ...selectedTrendSeries.flatMap((series) => [`${series.label}_valeur`, `${series.label}_n`, `${series.label}_patch`])],
+      ...times.map((time) => [time, xUnit, ...selectedTrendSeries.flatMap((series) => {
+        const point = lookup(series, time);
+        return [point?.y ?? "", point?.n ?? "", point?.selectedLabel ?? (point ? "Agrégat" : "")];
+      })]),
     ];
     const csv = rows.map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(";")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
     const link = document.createElement("a");
     link.href = url;
-    link.download = `comparaison-${materialA}-${materialB}-${stress}.csv`.replaceAll(/[^a-zA-Z0-9.-]+/g, "-");
+    link.download = `comparaison-${comparisonMaterials.join("-")}-${stress}.csv`.replaceAll(/[^a-zA-Z0-9.-]+/g, "-");
     link.click();
     URL.revokeObjectURL(url);
   };
 
   const report = dataset?.report;
-  const comparisonCount = trendSeries.reduce((total, series) => total + series.points.reduce((sum, point) => sum + point.n, 0), 0);
+  const comparisonCount = selectedTrendSeries.reduce((total, series) => total + series.points.reduce((sum, point) => sum + point.n, 0), 0);
+  const nextMaterial = materials.find((material) => !comparisonMaterials.includes(material));
+  const resetSeriesChoices = () => {
+    setGlobalTrendSamples({});
+    setSelectedTrendMembers({});
+    setExpandedTrendRows(new Set());
+    setHiddenSeries(new Set());
+  };
+  const setComparisonMaterial = (index: number, material: string) => {
+    if (index === 0) setMaterialA(material);
+    else if (index === 1) setMaterialB(material);
+    else setExtraMaterials((current) => current.map((item, extraIndex) => extraIndex === index - 2 ? material : item));
+    resetSeriesChoices();
+  };
+  const addComparisonMaterial = () => {
+    if (!nextMaterial) return;
+    setExtraMaterials((current) => [...current, nextMaterial]);
+    resetSeriesChoices();
+  };
+  const removeComparisonMaterial = (index: number) => {
+    setExtraMaterials((current) => current.filter((_, extraIndex) => extraIndex !== index - 2));
+    resetSeriesChoices();
+  };
   const aggregationHelp = {
     mean: "La moyenne utilise toutes les valeurs et reste sensible aux mesures extrêmes.",
     median: "La médiane retient la valeur centrale et résiste mieux aux valeurs extrêmes, mais masque une éventuelle dispersion bimodale.",
@@ -463,9 +487,18 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="filters">
-          <label><FieldTitle help={HELP.polymer}>Polymère A</FieldTitle><select value={materialA} onChange={(event) => setMaterialA(event.target.value)}>{materials.map((item) => <option key={item}>{item}</option>)}</select></label>
-          <label><FieldTitle help={HELP.polymer}>Polymère B</FieldTitle><select value={materialB} onChange={(event) => setMaterialB(event.target.value)}>{materials.map((item) => <option key={item}>{item}</option>)}</select></label>
+        <div className="materials-panel">
+          <div className="materials-panel-title"><FieldTitle help={`${HELP.polymer} ${HELP.addMaterial}`}>Matériaux comparés</FieldTitle><span>{comparisonMaterials.length} séries</span></div>
+          <div className="material-selectors">
+            {comparisonMaterials.map((material, index) => <div className="material-selector" key={`${index}-${material}`} style={{ borderTopColor: SERIES_COLORS[index % SERIES_COLORS.length] }}>
+              <label><span className="material-slot"><i style={{ background: SERIES_COLORS[index % SERIES_COLORS.length] }} />Matériau {String.fromCharCode(65 + index)}</span><select value={material} onChange={(event) => setComparisonMaterial(index, event.target.value)}>{materials.map((item) => <option key={item} disabled={item !== material && comparisonMaterials.includes(item)}>{item}</option>)}</select></label>
+              {index >= 2 ? <button type="button" className="remove-material" onClick={() => removeComparisonMaterial(index)} aria-label={`Retirer le matériau ${String.fromCharCode(65 + index)}`} title="Retirer cette série">×</button> : null}
+            </div>)}
+            <button type="button" className="add-material" onClick={addComparisonMaterial} disabled={!nextMaterial}><span aria-hidden="true">+</span> Ajouter un matériau <InfoTip text={nextMaterial ? HELP.addMaterial : "Tous les matériaux disponibles sont déjà affichés."} align="right" /></button>
+          </div>
+        </div>
+
+        <div className="filters context-filters">
           <label><FieldTitle help={HELP.ageing}>Vieillissement</FieldTitle><select value={stress} onChange={(event) => setStress(event.target.value)}>{stresses.map((item) => <option key={item}>{item}</option>)}</select></label>
           <label><FieldTitle help={METRIC_HELP[metric]}>Mesure</FieldTitle><select value={metric} onChange={(event) => setMetric(event.target.value as MetricKey)}>{Object.entries(METRICS).map(([key, item]) => <option key={key} value={key}>{item.label}</option>)}</select></label>
           <label><FieldTitle help={HELP.electrode} align="right">Électrode</FieldTitle><select value={electrode} onChange={(event) => setElectrode(event.target.value)}><option value="all">Toutes</option>{electrodes.map((item) => <option key={item}>{item}</option>)}</select></label>
