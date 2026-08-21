@@ -91,8 +91,13 @@ button, a, label { -webkit-tap-highlight-color: transparent; }
 .axis-line { stroke: #9ca3af; stroke-width: 1.2; }
 .tick-line { stroke: #9ca3af; stroke-width: 1; }
 .zero-line { stroke: #b7bac0; stroke-width: 1.5; stroke-dasharray: 5 5; }
+.zero-axis { stroke: #687180; stroke-width: 1.35; }
+.zero-axis.vertical { stroke-width: 1.1; }
 .axis-label { fill: #858c98; font-size: 10px; }
 .axis-title { fill: #6c7480; font-size: 10px; font-weight: 700; }
+.landmark-guide { stroke-width: 1; stroke-dasharray: 4 4; opacity: .5; }
+.landmark-point { stroke-width: 1.5; }
+.landmark-label { font-size: 8px; font-weight: 800; paint-order: stroke; stroke: white; stroke-width: 3px; stroke-linejoin: round; }
 .empty-chart { min-height: 325px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--muted); text-align: center; }
 .empty-chart strong { color: var(--ink); font-size: 17px; }
 .empty-chart span { margin-top: 7px; font-size: 12px; }
@@ -116,13 +121,17 @@ tbody tr:last-child td { border-bottom: 0; }
 tbody tr:hover { background: #faf9f6; }
 
 .curve-workspace { display: grid; gap: 18px; }
-.curve-toolbar { min-height: 68px; padding: 12px 14px; display: flex; align-items: center; gap: 20px; border-radius: 14px; background: #f2f0eb; }
-.curve-toolbar > label:not(.check-control) { min-width: 190px; }
+.curve-toolbar { min-height: 68px; padding: 14px; display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); align-items: end; gap: 12px; border-radius: 14px; background: #f2f0eb; }
+.curve-toolbar > label:not(.check-control) { min-width: 0; }
 .curve-toolbar select { margin-top: 4px; padding-top: 7px; padding-bottom: 7px; background: white; }
-.curve-toolbar > span { margin-left: auto; max-width: 460px; color: var(--muted); font-size: 10px; line-height: 1.45; text-align: right; }
+.curve-checks { grid-column: 1 / -1; display: flex; gap: 18px; align-items: center; flex-wrap: wrap; padding-top: 2px; }
 .check-control { display: flex; gap: 8px; align-items: center; color: #5f6773; font-size: 11px; font-weight: 700; }
 .check-control input { width: 15px; height: 15px; accent-color: var(--blue); }
 .curve-chart-card { padding-bottom: 10px; }
+.curve-audit { margin: 14px 0 4px; padding: 10px 12px; display: flex; gap: 12px; align-items: center; justify-content: space-between; border: 1px solid #ead9ac; border-radius: 11px; background: #fff9e9; color: #75551f; font-size: 10px; }
+.curve-audit.clean { border-color: #c9e4d3; background: #f1faf4; color: #35634a; }
+.curve-audit strong { font-size: 11px; }
+.curve-audit span { text-align: right; }
 .measurement-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 .measurement-card { padding: 19px; border-top-width: 4px; }
 .measurement-card h4 { margin: 7px 0 15px; font-size: 16px; }
@@ -130,6 +139,7 @@ tbody tr:hover { background: #faf9f6; }
 .measurement-card dl div { padding: 10px; border-radius: 10px; background: #f6f4ef; }
 .measurement-card dt { color: var(--muted); font-size: 9px; text-transform: uppercase; }
 .measurement-card dd { margin: 5px 0 0; font-size: 12px; font-weight: 800; }
+.curve-segment-note { margin: 13px 0 0; padding: 9px 10px; border-radius: 9px; background: #f6f4ef; color: #626b78; font-size: 10px; font-weight: 700; }
 .measurement-card small { display: block; margin-top: 14px; overflow: hidden; color: #7c8490; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
 .missing-selection { grid-column: 1 / -1; padding: 40px; border: 1px dashed var(--line); border-radius: 16px; color: var(--muted); text-align: center; }
 
@@ -142,6 +152,7 @@ footer { padding: 22px 4px 0; display: flex; justify-content: space-between; col
   .insight-card .eyebrow, .insight-card > strong, .insight-card > p { grid-column: 1; }
   .insight-card dl { grid-column: 2; grid-row: 1 / span 3; margin-top: 0; }
   .caution { grid-column: 1 / -1 !important; }
+  .curve-toolbar { grid-template-columns: repeat(2, minmax(150px, 1fr)); }
 }
 
 @media (max-width: 860px) {
@@ -150,8 +161,7 @@ footer { padding: 22px 4px 0; display: flex; justify-content: space-between; col
   .import-card { min-height: 210px; }
   .quality-note { width: 100%; margin-left: 0; }
   .measurement-grid { grid-template-columns: 1fr; }
-  .curve-toolbar { align-items: flex-start; flex-wrap: wrap; }
-  .curve-toolbar > span { width: 100%; max-width: none; margin-left: 0; text-align: left; }
+  .curve-toolbar { align-items: start; }
 }
 
 @media (max-width: 600px) {
@@ -171,6 +181,10 @@ footer { padding: 22px 4px 0; display: flex; justify-content: space-between; col
   .insight-card { display: block; }
   .insight-card dl { margin-top: 22px; }
   .measurement-card dl { grid-template-columns: 1fr 1fr; }
+  .curve-toolbar { grid-template-columns: 1fr; }
+  .curve-checks { gap: 12px; }
+  .curve-audit { align-items: flex-start; flex-direction: column; }
+  .curve-audit span { text-align: left; }
   footer { display: grid; gap: 4px; }
 }
 

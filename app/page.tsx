@@ -11,6 +11,7 @@ import {
   METRICS,
   MetricKey,
 } from "./lib/iv-data";
+import { analyzeIVCurve } from "./lib/iv-curve-analysis";
 
 const COLORS = { a: "#ee735e", b: "#3469d4" };
 const fr = new Intl.NumberFormat("fr-CH", { maximumFractionDigits: 2 });
@@ -18,6 +19,8 @@ const fr = new Intl.NumberFormat("fr-CH", { maximumFractionDigits: 2 });
 type View = "trend" | "curves";
 type ValueMode = "absolute" | "retention";
 type CurrentConvention = "instrument" | "pv";
+type SweepView = "primary" | "all";
+type CurveScale = "primary" | "all";
 
 function unique(values: Array<string | null | undefined>): string[] {
   return [...new Set(values.filter((value): value is string => Boolean(value)))].sort((a, b) => a.localeCompare(b, "fr"));
@@ -49,6 +52,10 @@ export default function Home() {
   const [includeQa, setIncludeQa] = useState(false);
   const [curveTime, setCurveTime] = useState<number | null>(null);
   const [currentConvention, setCurrentConvention] = useState<CurrentConvention>("instrument");
+  const [sweepView, setSweepView] = useState<SweepView>("primary");
+  const [curveScale, setCurveScale] = useState<CurveScale>("primary");
+  const [showCurvePoints, setShowCurvePoints] = useState(false);
+  const [showLandmarks, setShowLandmarks] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const installDataset = useCallback((next: IVDataset, message: string) => {
@@ -212,6 +219,7 @@ export default function Home() {
       const curve = dataset.curves[measurement.measurement_uid];
       const points = curve.v.map((x, index) => ({ x, y: curve.j[index] }))
         .filter((point): point is { x: number; y: number } => numeric(point.x) && numeric(point.y));
+      const analysis = analyzeIVCurve(points, measurement.voc_V);
       return {
         material,
         color,
@@ -219,6 +227,7 @@ export default function Home() {
         file,
         actualTime: stress === "Unaged" ? 0 : file.inferred_exposure_duration as number,
         points,
+        analysis,
       };
     };
     return [pick(materialA, COLORS.a), pick(materialB, COLORS.b)].filter((item): item is NonNullable<typeof item> => Boolean(item));
@@ -228,8 +237,22 @@ export default function Home() {
   const curveSeries: CurveSeries[] = curveSelections.map((selection) => ({
     label: selection.material,
     color: selection.color,
-    points: selection.points.map((point) => ({ x: point.x, y: point.y * currentPolarity })),
+    segments: (sweepView === "primary"
+      ? [selection.analysis.segments[selection.analysis.primaryIndex]]
+      : selection.analysis.segments
+    ).filter(Boolean).map((segment) => ({
+      id: `${selection.measurement.measurement_uid}-${segment.id}`,
+      isPrimary: segment.id === selection.analysis.segments[selection.analysis.primaryIndex]?.id,
+      points: segment.points.map((point) => ({ x: point.x, y: point.y * currentPolarity, sourceIndex: point.sourceIndex })),
+    })),
   }));
+  const curveAudit = curveSelections.reduce((summary, selection) => {
+    summary.raw += selection.analysis.rawPointCount;
+    summary.primary += selection.analysis.primaryPointCount;
+    summary.segments += selection.analysis.segments.length;
+    return summary;
+  }, { raw: 0, primary: 0, segments: 0 });
+  const displayedPointCount = sweepView === "primary" ? curveAudit.primary : curveAudit.raw;
   const xUnit = timeUnit(stress);
   const yUnit = mode === "retention" ? "% de l’état initial" : METRICS[metric].unit;
   const conditionMixed = electrode === "all" || recipe === "all";
@@ -376,18 +399,24 @@ export default function Home() {
             <div className="curve-toolbar">
               <label>Temps cible<select value={curveTime ?? ""} onChange={(event) => setCurveTime(Number(event.target.value))} disabled={!curveTimes.all.length}>{curveTimes.all.length ? curveTimes.all.map((time) => <option key={time} value={time}>{fr.format(time)} {xUnit}{curveTimes.common.includes(time) ? " · commun" : ""}</option>) : <option>Aucun temps disponible</option>}</select></label>
               <label>Convention du courant<select value={currentConvention} onChange={(event) => setCurrentConvention(event.target.value as CurrentConvention)}><option value="instrument">Logiciel · J négatif</option><option value="pv">PV · J produit positif</option></select></label>
-              <label className="check-control"><input type="checkbox" checked={includeQa} onChange={(event) => setIncludeQa(event.target.checked)} /> Inclure les mesures signalées QA</label>
-              <span>La meilleure courbe disponible est retenue pour chaque matériau, au temps commun ou le plus proche.</span>
+              <label>Balayage<select value={sweepView} onChange={(event) => setSweepView(event.target.value as SweepView)}><option value="primary">Principal · recommandé</option><option value="all">Tous les segments</option></select></label>
+              <label>Échelle<select value={curveScale} onChange={(event) => setCurveScale(event.target.value as CurveScale)}><option value="primary">Segments principaux</option><option value="all">Toutes les données</option></select></label>
+              <div className="curve-checks">
+                <label className="check-control"><input type="checkbox" checked={showCurvePoints} onChange={(event) => setShowCurvePoints(event.target.checked)} /> Points mesurés</label>
+                <label className="check-control"><input type="checkbox" checked={showLandmarks} onChange={(event) => setShowLandmarks(event.target.checked)} /> Repères IV</label>
+                <label className="check-control"><input type="checkbox" checked={includeQa} onChange={(event) => setIncludeQa(event.target.checked)} /> Mesures signalées QA</label>
+              </div>
             </div>
             <section className="chart-card curve-chart-card">
               <div className="chart-title">
                 {curveSelections.map((selection) => <div key={selection.material}><span className="legend-dot" style={{ background: selection.color }} />{selection.material} · {fr.format(selection.actualTime)} {xUnit}</div>)}
                 <span>{currentConvention === "instrument" ? "Convention logiciel · photocourant négatif" : "Convention PV · courant produit positif"}</span>
               </div>
-              <CurveChart series={curveSeries} yAxisLabel={currentConvention === "instrument" ? "J instrument (mA/cm²)" : "J produit (mA/cm²)"} />
+              {curveAudit.raw ? <div className={`curve-audit ${curveAudit.raw === curveAudit.primary ? "clean" : "segmented"}`} role="status"><strong>{displayedPointCount}/{curveAudit.raw} points affichés</strong><span>{curveAudit.raw === curveAudit.primary ? "Balayage continu" : `${curveAudit.raw - curveAudit.primary} points supplémentaires conservés · ${curveAudit.segments} segments détectés`}</span></div> : null}
+              <CurveChart series={curveSeries} yAxisLabel={currentConvention === "instrument" ? "J instrument (mA/cm²)" : "J produit (mA/cm²)"} currentConvention={currentConvention} showPoints={showCurvePoints} showLandmarks={showLandmarks} scaleMode={curveScale} />
             </section>
             <div className="measurement-grid">
-              {curveSelections.map((selection) => <article className="measurement-card" key={selection.material} style={{ borderTopColor: selection.color }}><p className="eyebrow">{selection.material}</p><h4>{fr.format(selection.actualTime)} {xUnit} · {selection.measurement.measurement_uid}</h4><dl><div><dt>Rendement</dt><dd>{numeric(selection.measurement.efficiency_pct) ? `${fr.format(selection.measurement.efficiency_pct)} %` : "—"}</dd></div><div><dt>Voc</dt><dd>{numeric(selection.measurement.voc_V) ? `${fr.format(selection.measurement.voc_V)} V` : "—"}</dd></div><div><dt>Jsc</dt><dd>{numeric(selection.measurement.jsc_mA_cm2) ? `${fr.format(selection.measurement.jsc_mA_cm2)} mA/cm²` : "—"}</dd></div><div><dt>FF</dt><dd>{numeric(selection.measurement.ff_pct) ? `${fr.format(selection.measurement.ff_pct)} %` : "—"}</dd></div></dl><small>{selection.file.source_file}</small></article>)}
+              {curveSelections.map((selection) => <article className="measurement-card" key={selection.material} style={{ borderTopColor: selection.color }}><p className="eyebrow">{selection.material}</p><h4>{fr.format(selection.actualTime)} {xUnit} · {selection.measurement.measurement_uid}</h4><dl><div><dt>Rendement</dt><dd>{numeric(selection.measurement.efficiency_pct) ? `${fr.format(selection.measurement.efficiency_pct)} %` : "—"}</dd></div><div><dt>Voc</dt><dd>{numeric(selection.measurement.voc_V) ? `${fr.format(selection.measurement.voc_V)} V` : "—"}</dd></div><div><dt>Jsc</dt><dd>{numeric(selection.measurement.jsc_mA_cm2) ? `${fr.format(selection.measurement.jsc_mA_cm2)} mA/cm²` : "—"}</dd></div><div><dt>FF</dt><dd>{numeric(selection.measurement.ff_pct) ? `${fr.format(selection.measurement.ff_pct)} %` : "—"}</dd></div></dl><p className="curve-segment-note">Segment principal : {selection.analysis.primaryPointCount}/{selection.analysis.rawPointCount} points · {selection.analysis.segments.length} segment{selection.analysis.segments.length > 1 ? "s" : ""} conservé{selection.analysis.segments.length > 1 ? "s" : ""}</p><small>{selection.file.source_file}</small></article>)}
               {!curveSelections.length ? <div className="missing-selection">Aucune mesure répondant à ces filtres.</div> : null}
             </div>
           </div>
