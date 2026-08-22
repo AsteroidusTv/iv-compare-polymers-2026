@@ -123,7 +123,7 @@ function trendRowKey(seriesId: SeriesId, time: number): string {
 export default function Home() {
   const [dataset, setDataset] = useState<IVDataset | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
-  const [loadMessage, setLoadMessage] = useState("Loading the DOWSIL dataset…");
+  const [loadMessage, setLoadMessage] = useState("Loading dataset…");
   const [view, setView] = useState<View>("trend");
   const [materialA, setMaterialA] = useState("");
   const [materialB, setMaterialB] = useState("");
@@ -168,7 +168,7 @@ export default function Home() {
   useEffect(() => {
     let active = true;
     fetchDefaultDataset()
-      .then((next) => active && installDataset(next, "DOWSIL dataset loaded"))
+      .then((next) => active && installDataset(next, "Dataset loaded"))
       .catch((error: Error) => {
         if (!active) return;
         setLoadState("error");
