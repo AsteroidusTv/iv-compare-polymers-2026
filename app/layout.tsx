@@ -14,17 +14,17 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.SITE_ORIGIN ?? "http://localhost:3000"),
-  title: "IV Compare — Polymères & vieillissement",
-  description: "Comparer les performances et les courbes IV après vieillissement DH, TC ou Outdoor.",
+  title: "IV Compare — Polymers & ageing",
+  description: "Compare performance and IV curves after DH, TC, or outdoor ageing.",
   openGraph: {
     title: "IV Compare",
-    description: "Polymères • Lamination • Vieillissement",
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: "IV Compare — Polymères, lamination et vieillissement" }],
+    description: "Polymers • Lamination • Ageing",
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "IV Compare — Polymers, lamination, and ageing" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "IV Compare",
-    description: "Polymères • Lamination • Vieillissement",
+    description: "Polymers • Lamination • Ageing",
     images: ["/og.png"],
   },
   icons: {
@@ -39,7 +39,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr">
+    <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

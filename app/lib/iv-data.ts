@@ -127,11 +127,11 @@ function asIsoDate(value: unknown): string | null {
 }
 
 function validateDataset(value: unknown): IVDataset {
-  if (!value || typeof value !== "object") throw new Error("Le fichier ne contient pas un jeu IV valide.");
+  if (!value || typeof value !== "object") throw new Error("The file does not contain a valid IV dataset.");
   const dataset = value as Partial<IVDataset>;
   const required = [dataset.samples, dataset.observations, dataset.files, dataset.measurements];
   if (required.some((entry) => !Array.isArray(entry)) || !dataset.curves || typeof dataset.curves !== "object") {
-    throw new Error("Structure incomplète : Samples, observations, fichiers, mesures ou courbes manquants.");
+    throw new Error("Incomplete structure: samples, observations, files, measurements, or curves are missing.");
   }
   return dataset as IVDataset;
 }
@@ -141,7 +141,7 @@ async function decodeBlob(blob: Blob): Promise<string> {
   const isGzip = bytes[0] === 0x1f && bytes[1] === 0x8b;
   if (!isGzip) return new TextDecoder().decode(bytes);
   if (!("DecompressionStream" in globalThis)) {
-    throw new Error("Ce navigateur ne peut pas décompresser le paquet .ivpack.");
+    throw new Error("This browser cannot decompress the .ivpack package.");
   }
   const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
   return new Response(stream).text();
@@ -153,7 +153,7 @@ export async function readPack(blob: Blob): Promise<IVDataset> {
 
 export async function fetchDefaultDataset(): Promise<IVDataset> {
   const response = await fetch("/data/iv-compare-dowsil.ivpack", { cache: "no-store" });
-  if (!response.ok) throw new Error("Le jeu de données fourni n’a pas pu être chargé.");
+  if (!response.ok) throw new Error("The supplied dataset could not be loaded.");
   return readPack(await response.blob());
 }
 
@@ -164,7 +164,7 @@ function normalizeSamples(rows: UnknownRow[]): Sample[] {
     electrode: asText(row.electrode),
     encapsulation_date: asIsoDate(row.encapsulation_date),
     material_raw: asText(row.material_raw),
-    material_family: String(row.material_family ?? row.material_raw ?? "Non classé"),
+    material_family: String(row.material_family ?? row.material_raw ?? "Unclassified"),
     sample_id_raw: asText(row.sample_id_raw),
     sample_label: asText(row.sample_label),
     recipe_uid: asText(row.recipe_uid),
@@ -277,7 +277,7 @@ async function parseCurves(tsv: File): Promise<Record<string, Curve>> {
       voltageIndex = headers.indexOf("voltage_V");
       currentIndex = headers.indexOf("generated_current_density_mA_cm2");
       if (uidIndex < 0 || voltageIndex < 0 || currentIndex < 0) {
-        throw new Error("Colonnes TSV requises absentes.");
+        throw new Error("Required TSV columns are missing.");
       }
       return;
     }
@@ -307,7 +307,7 @@ export async function readNormalizedPair(workbookFile: File, pointsFile: File): 
   const workbook = XLSX.read(await workbookFile.arrayBuffer(), { type: "array", cellDates: true });
   const rows = (name: string): UnknownRow[] => {
     const sheet = workbook.Sheets[name];
-    if (!sheet) throw new Error(`Feuille ${name} absente du classeur.`);
+    if (!sheet) throw new Error(`Sheet ${name} is missing from the workbook.`);
     return XLSX.utils.sheet_to_json<UnknownRow>(sheet, { defval: null, raw: true });
   };
   const optionalRows = (name: string): UnknownRow[] => {
@@ -352,17 +352,17 @@ export async function importDatasetFiles(files: File[]): Promise<IVDataset> {
   const workbook = files.find((file) => /\.xlsx$/i.test(file.name));
   const points = files.find((file) => /\.tsv$/i.test(file.name));
   if (workbook && points) return readNormalizedPair(workbook, points);
-  throw new Error("Sélectionnez un paquet .ivpack, ou ensemble le classeur .xlsx et le fichier de points .tsv.");
+  throw new Error("Select an .ivpack package, or select both the .xlsx workbook and the .tsv points file.");
 }
 
 export const METRICS: Record<MetricKey, { label: string; unit: string; digits: number }> = {
-  efficiency_pct: { label: "Rendement", unit: "%", digits: 2 },
+  efficiency_pct: { label: "Efficiency", unit: "%", digits: 2 },
   jsc_mA_cm2: { label: "Jsc", unit: "mA/cm²", digits: 2 },
   voc_V: { label: "Voc", unit: "V", digits: 3 },
   ff_pct: { label: "Fill factor", unit: "%", digits: 1 },
-  outdoor_pr_pct: { label: "PR extérieur (médiane/jour)", unit: "%", digits: 1 },
-  outdoor_pmpp_W: { label: "Pmpp extérieur (max/jour)", unit: "W", digits: 2 },
-  outdoor_irradiance_W_m2: { label: "Irradiance (max/jour)", unit: "W/m²", digits: 0 },
+  outdoor_pr_pct: { label: "Outdoor PR (daily median)", unit: "%", digits: 1 },
+  outdoor_pmpp_W: { label: "Outdoor Pmpp (daily max)", unit: "W", digits: 2 },
+  outdoor_irradiance_W_m2: { label: "Irradiance (daily max)", unit: "W/m²", digits: 0 },
 };
 
 export function aggregate(values: number[], method: Aggregation): number {
