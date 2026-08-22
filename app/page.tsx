@@ -556,7 +556,7 @@ export default function Home() {
                   const hidden = hiddenSeries.has(series.id);
                   return <button type="button" className={`legend-toggle ${hidden ? "hidden" : ""}`} key={series.id} aria-pressed={!hidden} onClick={() => toggleSeries(series.id)} title={`${hidden ? "Show" : "Hide"} ${series.label} — calculations remain unchanged`}><span className="legend-dot" style={{ background: series.color }} />{series.label}</button>;
                 })}
-                <span>{METRICS[metric].label} · {yUnit}<InfoTip text={METRIC_HELP[metric]} align="right" /></span>
+                <span>{METRICS[metric].label} · {yUnit}{" "}<InfoTip text={METRIC_HELP[metric]} align="right" /></span>
               </div>
               <TrendChart series={plottedTrendSeries} xUnit={xUnit} yUnit={yUnit} />
             </section>
