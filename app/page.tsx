@@ -11,6 +11,7 @@ import {
   IVDataset,
   METRICS,
   MetricKey,
+  Observation,
 } from "./lib/iv-data";
 import { analyzeIVCurve } from "./lib/iv-curve-analysis";
 
@@ -26,6 +27,13 @@ type CurrentConvention = "instrument" | "pv";
 type SweepView = "primary" | "all";
 type CurveScale = "primary" | "all";
 type SeriesId = string;
+type OutdoorQualityIssue = {
+  observationId: string;
+  sampleUid: string;
+  time: number | null;
+  value: number;
+  reason: string;
+};
 
 const METRIC_HELP: Record<MetricKey, string> = {
   efficiency_pct: "Efficiency is the maximum electrical power delivered divided by the incident light power. It combines the effects of Jsc, Voc, and fill factor.",
@@ -58,6 +66,7 @@ const HELP = {
   rawPoints: "Shows every measured point. No interpolation or smoothing is used to draw the line between successive points in a segment.",
   landmarks: "Jsc is interpolated at V = 0, Voc at J = 0, and MPP is the measured point that maximises delivered power. These landmarks help read the curve; they do not replace values from the source software.",
   qa: "Also includes measurements with an automatic flag, such as an extreme value, ambiguous metadata, or another inconsistency. They are hidden by default to avoid fragile conclusions.",
+  outdoorQa: "Outdoor values are checked against conservative physical bounds and against the history of the same sample. Only extreme high-side spikes are detected statistically, so a genuine performance loss is not hidden. Flagged values stay in the source data and can be restored with this control.",
   pointAudit: "The numerator is the number of points plotted in the selected mode; the denominator is the total number of points in the files. Hidden points are never deleted.",
   segmentation: "The primary segment is selected automatically based on sweep continuity, inclusion of V = 0, and consistency with Voc. Every segment keeps its original acquisition order.",
   efficiency: "Maximum power extracted under illumination, divided by incident power and expressed as a percentage.",
@@ -78,6 +87,33 @@ function timeUnit(stress: string): string {
 
 function numeric(value: number | null | undefined): value is number {
   return typeof value === "number" && Number.isFinite(value);
+}
+
+function median(values: number[]): number {
+  return aggregate(values, "median");
+}
+
+function outdoorQualityReason(observation: Observation, metric: MetricKey, peers: number[]): string | null {
+  const value = observation[metric];
+  if (!numeric(value)) return null;
+  if (observation.data_quality_flag) return `Source QA flag: ${observation.data_quality_flag}`;
+  if (metric === "outdoor_pr_pct" && (value < 0 || value > 150)) {
+    return `PR of ${numberFormat.format(value)}% is outside the conservative 0–150% plausibility range.`;
+  }
+  if (metric === "outdoor_irradiance_W_m2" && (value < 0 || value > 1600)) {
+    return `Irradiance of ${numberFormat.format(value)} W/m² is outside the conservative 0–1,600 W/m² sensor range.`;
+  }
+  if (metric === "outdoor_pmpp_W" && value < 0) return "Outdoor Pmpp cannot be negative.";
+  if (peers.length < 14) return null;
+  const centre = median(peers);
+  if (centre <= 0) return null;
+  const mad = median(peers.map((peer) => Math.abs(peer - centre)));
+  const robustSigma = mad * 1.4826;
+  const upperLimit = centre + Math.max(6 * robustSigma, centre * 1.5);
+  if (value > upperLimit) {
+    return `${numberFormat.format(value)} ${METRICS[metric].unit} is an extreme high-side spike (${numberFormat.format(value / centre)}× the ${numberFormat.format(centre)} ${METRICS[metric].unit} sample median).`;
+  }
+  return null;
 }
 
 function trendRowKey(seriesId: SeriesId, time: number): string {
@@ -195,6 +231,39 @@ export default function Home() {
     return true;
   }, [sampleMap, electrode, recipe]);
 
+  const outdoorQualityByObservation = useMemo(() => {
+    const issues = new Map<string, OutdoorQualityIssue>();
+    if (!dataset || stress !== "Outdoor") return issues;
+    const peersBySample = new Map<string, number[]>();
+    dataset.observations.forEach((observation) => {
+      const value = observation[metric];
+      if (observation.test_type !== "Outdoor" || !numeric(value) || observation.data_quality_flag) return;
+      const peers = peersBySample.get(observation.sample_uid) ?? [];
+      peers.push(value);
+      peersBySample.set(observation.sample_uid, peers);
+    });
+    dataset.observations.forEach((observation) => {
+      if (observation.test_type !== "Outdoor") return;
+      const value = observation[metric];
+      if (!numeric(value)) return;
+      const reason = outdoorQualityReason(observation, metric, peersBySample.get(observation.sample_uid) ?? []);
+      if (!reason) return;
+      issues.set(observation.observation_uid, {
+        observationId: observation.observation_uid,
+        sampleUid: observation.sample_uid,
+        time: observation.exposure_duration_numeric ?? null,
+        value,
+        reason,
+      });
+    });
+    return issues;
+  }, [dataset, metric, stress]);
+
+  const relevantOutdoorIssues = useMemo(() => {
+    if (!dataset || stress !== "Outdoor") return [];
+    return [...outdoorQualityByObservation.values()].filter((issue) => comparisonMaterials.some((material) => samplePasses(issue.sampleUid, material)));
+  }, [dataset, stress, outdoorQualityByObservation, comparisonMaterials, samplePasses]);
+
   const baselineBySample = useMemo(() => {
     const result = new Map<string, number>();
     const observations = [...(dataset?.observations ?? [])].sort((left, right) => (left.exposure_duration_numeric ?? Number.POSITIVE_INFINITY) - (right.exposure_duration_numeric ?? Number.POSITIVE_INFINITY));
@@ -202,7 +271,7 @@ export default function Home() {
       const firstSeven = new Map<string, number[]>();
       observations.forEach((observation) => {
         const value = observation[metric];
-        if (observation.test_type !== "Outdoor" || !numeric(value)) return;
+        if (observation.test_type !== "Outdoor" || !numeric(value) || outdoorQualityByObservation.has(observation.observation_uid)) return;
         const values = firstSeven.get(observation.sample_uid) ?? [];
         if (values.length < 7) values.push(value);
         firstSeven.set(observation.sample_uid, values);
@@ -215,7 +284,7 @@ export default function Home() {
       if (observation.test_type === "Unaged" && numeric(value) && !result.has(observation.sample_uid)) result.set(observation.sample_uid, value);
     });
     return result;
-  }, [dataset, metric, stress]);
+  }, [dataset, metric, stress, outdoorQualityByObservation]);
 
   const trendSeries = useMemo<TrendSeries[]>(() => {
     if (!dataset) return [];
@@ -225,6 +294,7 @@ export default function Home() {
         if (observation.test_type !== stress || !samplePasses(observation.sample_uid, material)) return;
         const raw = observation[metric];
         if (!numeric(raw)) return;
+        if (!includeQa && outdoorQualityByObservation.has(observation.observation_uid)) return;
         const x = stress === "Unaged" ? 0 : observation.exposure_duration_numeric;
         if (!numeric(x)) return;
         let value = raw;
@@ -260,7 +330,7 @@ export default function Home() {
       return { id, label: material, color, points };
     };
     return comparisonMaterials.map((material, index) => build(String.fromCharCode(97 + index), material, SERIES_COLORS[index % SERIES_COLORS.length]));
-  }, [dataset, comparisonMaterials, stress, metric, mode, aggregation, samplePasses, baselineBySample, sampleMap]);
+  }, [dataset, comparisonMaterials, stress, metric, mode, aggregation, samplePasses, baselineBySample, sampleMap, includeQa, outdoorQualityByObservation]);
 
   const eligibleFiles = useCallback((material: string) => {
     if (!dataset) return [];
@@ -446,6 +516,8 @@ export default function Home() {
   };
 
   const report = dataset?.report;
+  const outdoorIssueExample = relevantOutdoorIssues[0];
+  const outdoorIssueSample = outdoorIssueExample ? sampleMap.get(outdoorIssueExample.sampleUid) : undefined;
   const comparisonCount = selectedTrendSeries.reduce((total, series) => total + series.points.reduce((sum, point) => sum + point.n, 0), 0);
   const nextMaterial = materials.find((material) => !comparisonMaterials.includes(material));
   const resetSeriesChoices = () => {
@@ -540,6 +612,7 @@ export default function Home() {
           <InfoTip text={HELP.retention} align="left" />
           <label className="inline-select"><FieldTitle help={aggregationHelp}>Aggregation</FieldTitle><select value={aggregation} onChange={(event) => setAggregation(event.target.value as Aggregation)}><option value="mean">Mean</option><option value="median">Median</option><option value="best">Best value</option></select></label>
           <span className="condition-group"><span className={`condition-chip ${conditionMixed ? "warning" : "ok"}`}>{conditionMixed ? "Mixed conditions" : "Aligned conditions"}</span><InfoTip text={HELP.conditions} /></span>
+          {stress === "Outdoor" && relevantOutdoorIssues.length ? <span className="check-item outdoor-quality-toggle"><label className="check-control"><input type="checkbox" checked={includeQa} onChange={(event) => setIncludeQa(event.target.checked)} /> Include {relevantOutdoorIssues.length} flagged outdoor point{relevantOutdoorIssues.length > 1 ? "s" : ""}</label><InfoTip text={HELP.outdoorQa} align="right" /></span> : null}
           <span className="quality-note">{report ? `${report.matchedFiles}/${report.files} files matched · ${report.reviewFiles} excluded` : ""}<InfoTip text={HELP.matching} align="right" /></span>
         </div>
 
@@ -569,6 +642,7 @@ export default function Home() {
                 <div><dt>Mode <InfoTip text={HELP.retention} align="left" /></dt><dd>{mode === "retention" ? (stress === "Outdoor" ? "vs 7-day median" : "vs initial") : "absolute"}</dd></div>
                 <div><dt>Aggregation <InfoTip text={aggregationHelp} align="left" /></dt><dd>{{ mean: "mean", median: "median", best: "best" }[aggregation]}</dd></div>
               </dl>
+              {outdoorIssueExample ? <div className="quality-alert" role="status"><strong>{relevantOutdoorIssues.length} outdoor anomal{relevantOutdoorIssues.length > 1 ? "ies" : "y"} {includeQa ? "included for review" : "excluded from analysis"}</strong><span>{outdoorIssueSample?.material_family ?? outdoorIssueExample.sampleUid}{numeric(outdoorIssueExample.time) ? ` · day ${fr.format(outdoorIssueExample.time)}` : ""}: {outdoorIssueExample.reason}{relevantOutdoorIssues.length > 1 ? ` ${relevantOutdoorIssues.length - 1} additional flagged value${relevantOutdoorIssues.length > 2 ? "s" : ""}.` : ""}</span></div> : null}
               {conditionMixed ? <p className="caution">To draw conclusions about the material, select an identical electrode and recipe.</p> : null}
             </aside>
             <section className="data-table-card">

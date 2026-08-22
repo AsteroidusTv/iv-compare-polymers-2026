@@ -127,6 +127,8 @@ button, a, label { -webkit-tap-highlight-color: transparent; }
 .insight-card dl { margin: 24px 0 0; }
 .insight-card dl div { padding: 12px 0; display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid #bddbc9; }
 .insight-card dt { color: #60776a; font-size: 11px; }.insight-card dd { margin: 0; text-align: right; font-size: 11px; font-weight: 800; }
+.quality-alert { margin: 16px -8px -8px; padding: 12px; display: grid; gap: 5px; border: 1px solid #e1c58c; border-radius: 11px; background: #fff8e8; color: #6f5422; font-size: 11px; line-height: 1.45; }
+.quality-alert strong { font-size: 11px; }
 .caution { margin: 16px -8px -8px; padding: 12px; border-radius: 11px; background: rgba(255,255,255,.55); color: #52675b; font-size: 11px; line-height: 1.45; }
 
 .data-table-card { grid-column: 1 / -1; padding: 20px; }
