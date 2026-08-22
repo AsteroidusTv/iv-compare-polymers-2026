@@ -631,7 +631,7 @@ export default function Home() {
                 })}
                 <span>{METRICS[metric].label} · {yUnit}{" "}<InfoTip text={METRIC_HELP[metric]} align="right" /></span>
               </div>
-              <TrendChart series={plottedTrendSeries} xUnit={xUnit} yUnit={yUnit} />
+              <TrendChart key={`${stress}-${metric}-${mode}-${aggregation}-${comparisonMaterials.join("|")}-${includeQa}`} series={plottedTrendSeries} xUnit={xUnit} yUnit={yUnit} />
             </section>
             <aside className="insight-card">
               <p className="eyebrow">Quick read</p>

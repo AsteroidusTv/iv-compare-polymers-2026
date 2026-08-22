@@ -1,3 +1,7 @@
+"use client";
+
+import { PointerEvent as ReactPointerEvent, useRef, useState, WheelEvent as ReactWheelEvent } from "react";
+
 export interface TrendPoint {
   x: number;
   y: number;
@@ -36,6 +40,22 @@ export interface CurveSeries {
 type CurrentConvention = "instrument" | "pv";
 
 const numberFormat = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 });
+const MAX_TREND_ZOOM = 12;
+
+type TrendViewport = { zoom: number; centreX: number; centreY: number };
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function clampViewport(viewport: TrendViewport): TrendViewport {
+  const halfSpan = 0.5 / viewport.zoom;
+  return {
+    ...viewport,
+    centreX: clamp(viewport.centreX, halfSpan, 1 - halfSpan),
+    centreY: clamp(viewport.centreY, halfSpan, 1 - halfSpan),
+  };
+}
 
 function extent(values: number[], includeZero = false): [number, number] {
   if (!values.length) return [0, 1];
@@ -55,6 +75,8 @@ function ticks(min: number, max: number, count = 5): number[] {
 }
 
 export function TrendChart({ series, xUnit, yUnit }: { series: TrendSeries[]; xUnit: string; yUnit: string }) {
+  const [viewport, setViewport] = useState<TrendViewport>({ zoom: 1, centreX: 0.5, centreY: 0.5 });
+  const dragRef = useRef<{ clientX: number; clientY: number; centreX: number; centreY: number } | null>(null);
   if (!series.length) {
     return <div className="empty-chart"><strong>All curves are hidden</strong><span>Select a legend item to show a series again.</span></div>;
   }
@@ -62,25 +84,91 @@ export function TrendChart({ series, xUnit, yUnit }: { series: TrendSeries[]; xU
   if (!all.length) {
     return <div className="empty-chart"><strong>No comparable points</strong><span>Broaden the filters or choose another condition.</span></div>;
   }
-  const [xMin, xMax] = extent(all.map((point) => point.x));
-  const [yMin, yMax] = extent(all.flatMap((point) => [point.min, point.max]), true);
+  const [fullXMin, fullXMax] = extent(all.map((point) => point.x));
+  const [fullYMin, fullYMax] = extent(all.flatMap((point) => [point.min, point.max]), true);
   const width = 900;
   const height = 360;
   const margin = { left: 64, right: 22, top: 24, bottom: 50 };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  const xSpan = (fullXMax - fullXMin) / viewport.zoom;
+  const ySpan = (fullYMax - fullYMin) / viewport.zoom;
+  const xMin = fullXMin + (viewport.centreX - 0.5 / viewport.zoom) * (fullXMax - fullXMin);
+  const xMax = xMin + xSpan;
+  const yMin = fullYMin + (viewport.centreY - 0.5 / viewport.zoom) * (fullYMax - fullYMin);
+  const yMax = yMin + ySpan;
   const sx = (value: number) => margin.left + ((value - xMin) / (xMax - xMin || 1)) * (width - margin.left - margin.right);
   const sy = (value: number) => height - margin.bottom - ((value - yMin) / (yMax - yMin || 1)) * (height - margin.top - margin.bottom);
   const xTicks = ticks(xMin, xMax);
   const yTicks = ticks(yMin, yMax);
 
+  const changeZoom = (nextZoom: number, anchorX = 0.5, anchorY = 0.5) => {
+    setViewport((current) => {
+      const zoom = clamp(nextZoom, 1, MAX_TREND_ZOOM);
+      const visibleStartX = current.centreX - 0.5 / current.zoom;
+      const visibleStartY = current.centreY - 0.5 / current.zoom;
+      const anchorDataX = visibleStartX + anchorX / current.zoom;
+      const anchorDataY = visibleStartY + anchorY / current.zoom;
+      return clampViewport({
+        zoom,
+        centreX: anchorDataX - (anchorX - 0.5) / zoom,
+        centreY: anchorDataY - (anchorY - 0.5) / zoom,
+      });
+    });
+  };
+
+  const onWheel = (event: ReactWheelEvent<SVGSVGElement>) => {
+    event.preventDefault();
+    const rect = event.currentTarget.getBoundingClientRect();
+    const svgX = ((event.clientX - rect.left) / rect.width) * width;
+    const svgY = ((event.clientY - rect.top) / rect.height) * height;
+    const anchorX = clamp((svgX - margin.left) / plotWidth, 0, 1);
+    const anchorY = 1 - clamp((svgY - margin.top) / plotHeight, 0, 1);
+    changeZoom(viewport.zoom * (event.deltaY < 0 ? 1.3 : 1 / 1.3), anchorX, anchorY);
+  };
+
+  const onPointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
+    if (viewport.zoom === 1) return;
+    dragRef.current = { clientX: event.clientX, clientY: event.clientY, centreX: viewport.centreX, centreY: viewport.centreY };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const onPointerMove = (event: ReactPointerEvent<SVGSVGElement>) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const deltaX = (event.clientX - drag.clientX) / (rect.width * (plotWidth / width));
+    const deltaY = (event.clientY - drag.clientY) / (rect.height * (plotHeight / height));
+    setViewport(clampViewport({
+      zoom: viewport.zoom,
+      centreX: drag.centreX - deltaX / viewport.zoom,
+      centreY: drag.centreY + deltaY / viewport.zoom,
+    }));
+  };
+
+  const endPointerDrag = (event: ReactPointerEvent<SVGSVGElement>) => {
+    dragRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+
   return (
-    <figure className="data-figure">
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Comparative evolution chart">
+    <div className="zoomable-chart">
+      <div className="chart-zoom-controls" aria-label="Chart zoom controls">
+        <span>Scroll to zoom · drag to pan</span>
+        <button type="button" onClick={() => changeZoom(viewport.zoom / 1.5)} disabled={viewport.zoom === 1} aria-label="Zoom out">−</button>
+        <output aria-live="polite">{Math.round(viewport.zoom * 100)}%</output>
+        <button type="button" onClick={() => changeZoom(viewport.zoom * 1.5)} disabled={viewport.zoom === MAX_TREND_ZOOM} aria-label="Zoom in">+</button>
+        <button type="button" onClick={() => setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 })} disabled={viewport.zoom === 1}>Reset</button>
+      </div>
+      <figure className="data-figure">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Zoomable comparative evolution chart" onWheel={onWheel} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={endPointerDrag} onPointerCancel={endPointerDrag} onDoubleClick={() => setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 })}>
+        <defs><clipPath id="trend-plot-clip"><rect x={margin.left} y={margin.top} width={plotWidth} height={plotHeight} /></clipPath></defs>
         {yTicks.map((tick) => <g key={`y-${tick}`}><line className="grid-line" x1={margin.left} x2={width - margin.right} y1={sy(tick)} y2={sy(tick)} /><text className="axis-label" x={margin.left - 12} y={sy(tick) + 4} textAnchor="end">{numberFormat.format(tick)}</text></g>)}
         {xTicks.map((tick) => <g key={`x-${tick}`}><line className="tick-line" x1={sx(tick)} x2={sx(tick)} y1={height - margin.bottom} y2={height - margin.bottom + 6} /><text className="axis-label" x={sx(tick)} y={height - 20} textAnchor="middle">{numberFormat.format(tick)}</text></g>)}
         <line className="axis-line" x1={margin.left} x2={width - margin.right} y1={height - margin.bottom} y2={height - margin.bottom} />
         <text className="axis-title" x={width - margin.right} y={height - 5} textAnchor="end">Time ({xUnit})</text>
         <text className="axis-title" x={margin.left} y={14}>{yUnit}</text>
-        {series.map((item) => {
+        <g clipPath="url(#trend-plot-clip)">{series.map((item) => {
           const ordered = [...item.points].sort((a, b) => a.x - b.x);
           const path = ordered.map((point, index) => `${index ? "L" : "M"}${sx(point.x)},${sy(point.y)}`).join(" ");
           return <g key={item.label}>
@@ -88,9 +176,10 @@ export function TrendChart({ series, xUnit, yUnit }: { series: TrendSeries[]; xU
             <path d={path} fill="none" stroke={item.color} strokeWidth="4" strokeLinejoin="round" strokeLinecap="round" />
             {ordered.map((point) => <circle key={`point-${point.x}`} cx={sx(point.x)} cy={sy(point.y)} r={point.selectedLabel ? "6.5" : "5.5"} fill={point.selectedLabel ? item.color : "white"} stroke={item.color} strokeWidth="3"><title>{`${item.label} — ${numberFormat.format(point.x)} ${xUnit}: ${numberFormat.format(point.y)} ${yUnit}${point.selectedLabel ? ` · ${point.selectedLabel}` : ` (n=${point.n})`}`}</title></circle>)}
           </g>;
-        })}
+        })}</g>
       </svg>
-    </figure>
+      </figure>
+    </div>
   );
 }
 
