@@ -266,7 +266,7 @@ export function TrendChart({ series, xUnit, yUnit }: { series: TrendSeries[]; xU
               const path = chunk.map((point, index) => `${index ? "L" : "M"}${sx(point.x)},${sy(point.y)}`).join(" ");
               return <path key={`path-${chunkIndex}`} d={path} fill="none" stroke={item.color} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />;
             })}
-            {visiblePoints.map((point) => <circle className="trend-point" key={`point-${point.x}`} cx={sx(point.x)} cy={sy(point.y)} r={point.selectedLabel ? "5" : "3"} fill={point.selectedLabel ? item.color : "white"} stroke={item.color} strokeWidth={point.selectedLabel ? "2.5" : "1.8"}><title>{`${item.label} — ${numberFormat.format(point.x)} ${xUnit}: ${numberFormat.format(point.y)} ${yUnit}${point.selectedLabel ? ` · ${point.selectedLabel}` : ` (n=${point.n})`}`}</title></circle>)}
+            {visiblePoints.map((point) => <circle className={`trend-point${point.selectedLabel ? " selected" : ""}`} key={`point-${point.x}`} cx={sx(point.x)} cy={sy(point.y)} r={point.selectedLabel ? "2.25" : "3"} fill={point.selectedLabel ? item.color : "white"} stroke={item.color} strokeWidth={point.selectedLabel ? "1.2" : "1.8"}><title>{`${item.label} — ${numberFormat.format(point.x)} ${xUnit}: ${numberFormat.format(point.y)} ${yUnit}${point.selectedLabel ? ` · ${point.selectedLabel}` : ` (n=${point.n})`}`}</title></circle>)}
           </g>;
         })}</g>
       </svg>
