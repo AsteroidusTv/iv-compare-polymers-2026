@@ -1,6 +1,6 @@
 "use client";
 
-import { PointerEvent as ReactPointerEvent, useRef, useState, WheelEvent as ReactWheelEvent } from "react";
+import { PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
 
 import { InfoTip } from "./InfoTip";
 
@@ -43,6 +43,9 @@ type CurrentConvention = "instrument" | "pv";
 
 const numberFormat = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 });
 const MAX_TREND_ZOOM = 12;
+const TREND_CHART_WIDTH = 900;
+const TREND_CHART_HEIGHT = 360;
+const TREND_CHART_MARGIN = { left: 64, right: 22, top: 24, bottom: 50 };
 
 type TrendViewport = { zoom: number; centreX: number; centreY: number };
 type TrendRangeMode = "readable" | "all";
@@ -122,6 +125,43 @@ export function TrendChart({ series, xUnit, yUnit }: { series: TrendSeries[]; xU
   const [viewport, setViewport] = useState<TrendViewport>({ zoom: 1, centreX: 0.5, centreY: 0.5 });
   const [rangeMode, setRangeMode] = useState<TrendRangeMode>("readable");
   const dragRef = useRef<{ clientX: number; clientY: number; centreX: number; centreY: number } | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.deltaY === 0) return;
+
+      const rect = svg.getBoundingClientRect();
+      const svgX = ((event.clientX - rect.left) / rect.width) * TREND_CHART_WIDTH;
+      const svgY = ((event.clientY - rect.top) / rect.height) * TREND_CHART_HEIGHT;
+      const plotWidth = TREND_CHART_WIDTH - TREND_CHART_MARGIN.left - TREND_CHART_MARGIN.right;
+      const plotHeight = TREND_CHART_HEIGHT - TREND_CHART_MARGIN.top - TREND_CHART_MARGIN.bottom;
+      const anchorX = clamp((svgX - TREND_CHART_MARGIN.left) / plotWidth, 0, 1);
+      const anchorY = 1 - clamp((svgY - TREND_CHART_MARGIN.top) / plotHeight, 0, 1);
+
+      setViewport((current) => {
+        const zoom = clamp(current.zoom * (event.deltaY < 0 ? 1.3 : 1 / 1.3), 1, MAX_TREND_ZOOM);
+        const visibleStartX = current.centreX - 0.5 / current.zoom;
+        const visibleStartY = current.centreY - 0.5 / current.zoom;
+        const anchorDataX = visibleStartX + anchorX / current.zoom;
+        const anchorDataY = visibleStartY + anchorY / current.zoom;
+        return clampViewport({
+          zoom,
+          centreX: anchorDataX - (anchorX - 0.5) / zoom,
+          centreY: anchorDataY - (anchorY - 0.5) / zoom,
+        });
+      });
+    };
+
+    svg.addEventListener("wheel", handleWheel, { passive: false });
+    return () => svg.removeEventListener("wheel", handleWheel);
+  }, [series.length]);
+
   if (!series.length) {
     return <div className="empty-chart"><strong>All curves are hidden</strong><span>Select a legend item to show a series again.</span></div>;
   }
@@ -137,9 +177,9 @@ export function TrendChart({ series, xUnit, yUnit }: { series: TrendSeries[]; xU
   const [fullYMin, fullYMax] = rangeMode === "readable"
     ? extent(scalePoints.map((point) => point.y))
     : extent(all.flatMap((point) => [point.min, point.max]), true);
-  const width = 900;
-  const height = 360;
-  const margin = { left: 64, right: 22, top: 24, bottom: 50 };
+  const width = TREND_CHART_WIDTH;
+  const height = TREND_CHART_HEIGHT;
+  const margin = TREND_CHART_MARGIN;
   const plotWidth = width - margin.left - margin.right;
   const plotHeight = height - margin.top - margin.bottom;
   const xSpan = (fullXMax - fullXMin) / viewport.zoom;
@@ -166,16 +206,6 @@ export function TrendChart({ series, xUnit, yUnit }: { series: TrendSeries[]; xU
         centreY: anchorDataY - (anchorY - 0.5) / zoom,
       });
     });
-  };
-
-  const onWheel = (event: ReactWheelEvent<SVGSVGElement>) => {
-    event.preventDefault();
-    const rect = event.currentTarget.getBoundingClientRect();
-    const svgX = ((event.clientX - rect.left) / rect.width) * width;
-    const svgY = ((event.clientY - rect.top) / rect.height) * height;
-    const anchorX = clamp((svgX - margin.left) / plotWidth, 0, 1);
-    const anchorY = 1 - clamp((svgY - margin.top) / plotHeight, 0, 1);
-    changeZoom(viewport.zoom * (event.deltaY < 0 ? 1.3 : 1 / 1.3), anchorX, anchorY);
   };
 
   const onPointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
@@ -218,7 +248,7 @@ export function TrendChart({ series, xUnit, yUnit }: { series: TrendSeries[]; xU
         <button type="button" onClick={() => setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 })} disabled={viewport.zoom === 1}>Reset</button>
       </div>
       <figure className="data-figure">
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Zoomable comparative evolution chart" onWheel={onWheel} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={endPointerDrag} onPointerCancel={endPointerDrag} onDoubleClick={() => setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 })}>
+      <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Zoomable comparative evolution chart" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={endPointerDrag} onPointerCancel={endPointerDrag} onDoubleClick={() => setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 })}>
         <defs><clipPath id="trend-plot-clip"><rect x={margin.left} y={margin.top} width={plotWidth} height={plotHeight} /></clipPath></defs>
         {yTicks.map((tick) => <g key={`y-${tick}`}><line className="grid-line" x1={margin.left} x2={width - margin.right} y1={sy(tick)} y2={sy(tick)} /><text className="axis-label" x={margin.left - 12} y={sy(tick) + 4} textAnchor="end">{numberFormat.format(tick)}</text></g>)}
         {xTicks.map((tick) => <g key={`x-${tick}`}><line className="tick-line" x1={sx(tick)} x2={sx(tick)} y1={height - margin.bottom} y2={height - margin.bottom + 6} /><text className="axis-label" x={sx(tick)} y={height - 20} textAnchor="middle">{numberFormat.format(tick)}</text></g>)}
