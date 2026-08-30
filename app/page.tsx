@@ -616,7 +616,7 @@ export default function Home() {
                   const panelTitle = panel.length > 1 ? (sharedMetric ? METRICS[sharedMetric].label : "Normalised retention") : `${first.label} · ${METRICS[first.config.metric].label}`;
                   const helpMetric = panel.length === 1 || sharedMetric ? (sharedMetric ?? first.config.metric) : null;
                   return <section className="trend-panel" key={panel.map((series) => series.id).join("-")}>
-                    <div className="trend-panel-head"><div><strong>{panelTitle}</strong><span>{panel.length > 1 ? `${panel.length} compatible series · ${first.xUnit}` : first.contextLabel}</span></div>{helpMetric ? <InfoTip text={METRIC_HELP[helpMetric]} align="right" /> : null}</div>
+                    <div className="trend-panel-head"><div><span className="trend-panel-title"><strong>{panelTitle}</strong>{helpMetric ? <InfoTip text={METRIC_HELP[helpMetric]} align="left" /> : null}</span><span className="trend-panel-context">{panel.length > 1 ? `${panel.length} compatible series · ${first.xUnit}` : first.contextLabel}</span></div></div>
                     <TrendChart key={`${panel.map((series) => `${series.id}-${series.config.stress}-${series.config.metric}`).join("|")}-${mode}-${aggregation}-${includeQa}`} series={visiblePanel} xUnit={first.xUnit} yUnit={first.yUnit} />
                   </section>;
                 })}
