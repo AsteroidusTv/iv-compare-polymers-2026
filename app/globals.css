@@ -120,6 +120,10 @@ button, a, label { -webkit-tap-highlight-color: transparent; }
 .chart-zoom-controls > span { margin-right: 4px; }
 .chart-zoom-controls button { min-width: 28px; height: 27px; padding: 0 8px; border: 1px solid var(--line); border-radius: 7px; background: #faf9f6; color: var(--ink); cursor: pointer; font-size: 12px; font-weight: 800; }
 .chart-zoom-controls button:last-child { min-width: 50px; font-size: 9px; text-transform: uppercase; }
+.chart-zoom-controls .chart-range-mode { margin-right: auto; display: inline-flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.chart-zoom-controls .chart-range-mode button { min-width: auto; height: 27px; padding: 0 9px; font-size: 9px; text-transform: none; }
+.chart-zoom-controls .chart-range-mode button.active { border-color: #9aabc9; background: #eef3ff; color: var(--blue); }
+.chart-zoom-controls .chart-range-mode small { margin-left: 4px; color: #7b8491; font-size: 8px; }
 .chart-zoom-controls button:disabled { opacity: .4; cursor: default; }
 .chart-zoom-controls button:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
 .chart-zoom-controls output { min-width: 34px; color: var(--muted); font-size: 9px; text-align: center; }
@@ -136,6 +140,8 @@ button, a, label { -webkit-tap-highlight-color: transparent; }
 .zero-axis.vertical { stroke-width: 1.1; }
 .axis-label { fill: #858c98; font-size: 10px; }
 .axis-title { fill: #6c7480; font-size: 10px; font-weight: 700; }
+.trend-point { transition: r .12s ease, stroke-width .12s ease; }
+.trend-point:hover { r: 5px; stroke-width: 2.5px; }
 .landmark-guide { stroke-width: 1; stroke-dasharray: 4 4; opacity: .5; }
 .landmark-point { stroke-width: 1.5; }
 .landmark-label { font-size: 8px; font-weight: 800; paint-order: stroke; stroke: white; stroke-width: 3px; stroke-linejoin: round; }

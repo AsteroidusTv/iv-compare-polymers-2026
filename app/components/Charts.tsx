@@ -2,6 +2,8 @@
 
 import { PointerEvent as ReactPointerEvent, useRef, useState, WheelEvent as ReactWheelEvent } from "react";
 
+import { InfoTip } from "./InfoTip";
+
 export interface TrendPoint {
   x: number;
   y: number;
@@ -43,6 +45,7 @@ const numberFormat = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 }
 const MAX_TREND_ZOOM = 12;
 
 type TrendViewport = { zoom: number; centreX: number; centreY: number };
+type TrendRangeMode = "readable" | "all";
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -74,8 +77,50 @@ function ticks(min: number, max: number, count = 5): number[] {
   return Array.from({ length: count }, (_, index) => min + ((max - min) * index) / (count - 1));
 }
 
+function quantile(sortedValues: number[], percentile: number): number {
+  if (sortedValues.length === 1) return sortedValues[0];
+  const position = (sortedValues.length - 1) * percentile;
+  const lower = Math.floor(position);
+  const fraction = position - lower;
+  return sortedValues[lower] + (sortedValues[Math.min(lower + 1, sortedValues.length - 1)] - sortedValues[lower]) * fraction;
+}
+
+function readableOutlierKeys(series: TrendSeries[]): Set<string> {
+  const keys = new Set<string>();
+  series.forEach((item) => {
+    const values = item.points.map((point) => point.y).filter(Number.isFinite).sort((left, right) => left - right);
+    if (values.length < 8) return;
+    const q1 = quantile(values, 0.25);
+    const q3 = quantile(values, 0.75);
+    const iqr = q3 - q1;
+    if (iqr <= 0) return;
+    const lowerFence = q1 - 1.5 * iqr;
+    const upperFence = q3 + 1.5 * iqr;
+    item.points.forEach((point) => {
+      if (!point.selectedLabel && (point.y < lowerFence || point.y > upperFence)) keys.add(`${item.id}:${point.x}`);
+    });
+  });
+  return keys;
+}
+
+function splitVisibleTrendPoints(points: TrendPoint[], isHidden: (point: TrendPoint) => boolean): TrendPoint[][] {
+  const chunks: TrendPoint[][] = [];
+  let current: TrendPoint[] = [];
+  points.forEach((point) => {
+    if (isHidden(point)) {
+      if (current.length) chunks.push(current);
+      current = [];
+      return;
+    }
+    current.push(point);
+  });
+  if (current.length) chunks.push(current);
+  return chunks;
+}
+
 export function TrendChart({ series, xUnit, yUnit }: { series: TrendSeries[]; xUnit: string; yUnit: string }) {
   const [viewport, setViewport] = useState<TrendViewport>({ zoom: 1, centreX: 0.5, centreY: 0.5 });
+  const [rangeMode, setRangeMode] = useState<TrendRangeMode>("readable");
   const dragRef = useRef<{ clientX: number; clientY: number; centreX: number; centreY: number } | null>(null);
   if (!series.length) {
     return <div className="empty-chart"><strong>All curves are hidden</strong><span>Select a legend item to show a series again.</span></div>;
@@ -84,8 +129,14 @@ export function TrendChart({ series, xUnit, yUnit }: { series: TrendSeries[]; xU
   if (!all.length) {
     return <div className="empty-chart"><strong>No comparable points</strong><span>Broaden the filters or choose another condition.</span></div>;
   }
+  const outlierKeys = readableOutlierKeys(series);
+  const isOutlier = (seriesId: string, point: TrendPoint) => outlierKeys.has(`${seriesId}:${point.x}`);
+  const readablePoints = series.flatMap((item) => item.points.filter((point) => !isOutlier(item.id, point)));
+  const scalePoints = rangeMode === "readable" && readablePoints.length ? readablePoints : all;
   const [fullXMin, fullXMax] = extent(all.map((point) => point.x));
-  const [fullYMin, fullYMax] = extent(all.flatMap((point) => [point.min, point.max]), true);
+  const [fullYMin, fullYMax] = rangeMode === "readable"
+    ? extent(scalePoints.map((point) => point.y))
+    : extent(all.flatMap((point) => [point.min, point.max]), true);
   const width = 900;
   const height = 360;
   const margin = { left: 64, right: 22, top: 24, bottom: 50 };
@@ -154,6 +205,12 @@ export function TrendChart({ series, xUnit, yUnit }: { series: TrendSeries[]; xU
   return (
     <div className="zoomable-chart">
       <div className="chart-zoom-controls" aria-label="Chart zoom controls">
+        <span className="chart-range-mode" role="group" aria-label="Displayed value range">
+          <button type="button" className={rangeMode === "readable" ? "active" : ""} aria-pressed={rangeMode === "readable"} onClick={() => { setRangeMode("readable"); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }}>Readable range</button>
+          <button type="button" className={rangeMode === "all" ? "active" : ""} aria-pressed={rangeMode === "all"} onClick={() => { setRangeMode("all"); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }}>All values</button>
+          <InfoTip text="Readable range hides only statistically isolated points from the chart using Tukey's 1.5×IQR rule, calculated separately for each series. No source value is deleted: all observations remain in the table and reappear with ‘All values’." align="left" />
+          {rangeMode === "readable" && outlierKeys.size ? <small>{outlierKeys.size} isolated point{outlierKeys.size > 1 ? "s" : ""} retained outside this view</small> : null}
+        </span>
         <span>Scroll to zoom · drag to pan</span>
         <button type="button" onClick={() => changeZoom(viewport.zoom / 1.5)} disabled={viewport.zoom === 1} aria-label="Zoom out">−</button>
         <output aria-live="polite">{Math.round(viewport.zoom * 100)}%</output>
@@ -170,11 +227,16 @@ export function TrendChart({ series, xUnit, yUnit }: { series: TrendSeries[]; xU
         <text className="axis-title" x={margin.left} y={14}>{yUnit}</text>
         <g clipPath="url(#trend-plot-clip)">{series.map((item) => {
           const ordered = [...item.points].sort((a, b) => a.x - b.x);
-          const path = ordered.map((point, index) => `${index ? "L" : "M"}${sx(point.x)},${sy(point.y)}`).join(" ");
+          const hidden = (point: TrendPoint) => rangeMode === "readable" && isOutlier(item.id, point);
+          const chunks = splitVisibleTrendPoints(ordered, hidden);
+          const visiblePoints = ordered.filter((point) => !hidden(point));
           return <g key={item.label}>
-            {ordered.map((point) => <line key={`range-${point.x}`} x1={sx(point.x)} x2={sx(point.x)} y1={sy(point.min)} y2={sy(point.max)} stroke={item.color} strokeWidth="2" opacity=".25" />)}
-            <path d={path} fill="none" stroke={item.color} strokeWidth="4" strokeLinejoin="round" strokeLinecap="round" />
-            {ordered.map((point) => <circle key={`point-${point.x}`} cx={sx(point.x)} cy={sy(point.y)} r={point.selectedLabel ? "6.5" : "5.5"} fill={point.selectedLabel ? item.color : "white"} stroke={item.color} strokeWidth="3"><title>{`${item.label} — ${numberFormat.format(point.x)} ${xUnit}: ${numberFormat.format(point.y)} ${yUnit}${point.selectedLabel ? ` · ${point.selectedLabel}` : ` (n=${point.n})`}`}</title></circle>)}
+            {visiblePoints.map((point) => <line key={`range-${point.x}`} x1={sx(point.x)} x2={sx(point.x)} y1={sy(point.min)} y2={sy(point.max)} stroke={item.color} strokeWidth="1.5" opacity=".22" />)}
+            {chunks.map((chunk, chunkIndex) => {
+              const path = chunk.map((point, index) => `${index ? "L" : "M"}${sx(point.x)},${sy(point.y)}`).join(" ");
+              return <path key={`path-${chunkIndex}`} d={path} fill="none" stroke={item.color} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />;
+            })}
+            {visiblePoints.map((point) => <circle className="trend-point" key={`point-${point.x}`} cx={sx(point.x)} cy={sy(point.y)} r={point.selectedLabel ? "5" : "3"} fill={point.selectedLabel ? item.color : "white"} stroke={item.color} strokeWidth={point.selectedLabel ? "2.5" : "1.8"}><title>{`${item.label} — ${numberFormat.format(point.x)} ${xUnit}: ${numberFormat.format(point.y)} ${yUnit}${point.selectedLabel ? ` · ${point.selectedLabel}` : ` (n=${point.n})`}`}</title></circle>)}
           </g>;
         })}</g>
       </svg>
