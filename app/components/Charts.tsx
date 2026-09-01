@@ -1,14 +1,15 @@
 "use client";
 
-import { PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
-
-import { InfoTip } from "./InfoTip";
+import { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
 
 export interface TrendPoint {
   x: number;
   y: number;
   min: number;
   max: number;
+  intervalLow: number;
+  intervalHigh: number;
+  intervalLabel: "95% CI" | "IQR" | "single value";
   n: number;
   members: Array<{
     observationId: string;
@@ -46,10 +47,11 @@ const MAX_TREND_ZOOM = 12;
 const TREND_CHART_WIDTH = 900;
 const TREND_CHART_HEIGHT = 360;
 const TREND_CHART_MARGIN = { left: 64, right: 22, top: 24, bottom: 50 };
+const CURVE_CHART_WIDTH = 900;
+const CURVE_CHART_HEIGHT = 360;
+const CURVE_CHART_MARGIN = { left: 64, right: 22, top: 24, bottom: 50 };
 
 type TrendViewport = { zoom: number; centreX: number; centreY: number };
-type TrendRangeMode = "readable" | "all";
-
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
@@ -80,50 +82,8 @@ function ticks(min: number, max: number, count = 5): number[] {
   return Array.from({ length: count }, (_, index) => min + ((max - min) * index) / (count - 1));
 }
 
-function quantile(sortedValues: number[], percentile: number): number {
-  if (sortedValues.length === 1) return sortedValues[0];
-  const position = (sortedValues.length - 1) * percentile;
-  const lower = Math.floor(position);
-  const fraction = position - lower;
-  return sortedValues[lower] + (sortedValues[Math.min(lower + 1, sortedValues.length - 1)] - sortedValues[lower]) * fraction;
-}
-
-function readableOutlierKeys(series: TrendSeries[]): Set<string> {
-  const keys = new Set<string>();
-  series.forEach((item) => {
-    const values = item.points.map((point) => point.y).filter(Number.isFinite).sort((left, right) => left - right);
-    if (values.length < 8) return;
-    const q1 = quantile(values, 0.25);
-    const q3 = quantile(values, 0.75);
-    const iqr = q3 - q1;
-    if (iqr <= 0) return;
-    const lowerFence = q1 - 1.5 * iqr;
-    const upperFence = q3 + 1.5 * iqr;
-    item.points.forEach((point) => {
-      if (!point.selectedLabel && (point.y < lowerFence || point.y > upperFence)) keys.add(`${item.id}:${point.x}`);
-    });
-  });
-  return keys;
-}
-
-function splitVisibleTrendPoints(points: TrendPoint[], isHidden: (point: TrendPoint) => boolean): TrendPoint[][] {
-  const chunks: TrendPoint[][] = [];
-  let current: TrendPoint[] = [];
-  points.forEach((point) => {
-    if (isHidden(point)) {
-      if (current.length) chunks.push(current);
-      current = [];
-      return;
-    }
-    current.push(point);
-  });
-  if (current.length) chunks.push(current);
-  return chunks;
-}
-
 export function TrendChart({ series, xUnit, yUnit }: { series: TrendSeries[]; xUnit: string; yUnit: string }) {
   const [viewport, setViewport] = useState<TrendViewport>({ zoom: 1, centreX: 0.5, centreY: 0.5 });
-  const [rangeMode, setRangeMode] = useState<TrendRangeMode>("readable");
   const dragRef = useRef<{ clientX: number; clientY: number; centreX: number; centreY: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -169,14 +129,8 @@ export function TrendChart({ series, xUnit, yUnit }: { series: TrendSeries[]; xU
   if (!all.length) {
     return <div className="empty-chart"><strong>No comparable points</strong><span>Broaden the filters or choose another condition.</span></div>;
   }
-  const outlierKeys = readableOutlierKeys(series);
-  const isOutlier = (seriesId: string, point: TrendPoint) => outlierKeys.has(`${seriesId}:${point.x}`);
-  const readablePoints = series.flatMap((item) => item.points.filter((point) => !isOutlier(item.id, point)));
-  const scalePoints = rangeMode === "readable" && readablePoints.length ? readablePoints : all;
   const [fullXMin, fullXMax] = extent(all.map((point) => point.x));
-  const [fullYMin, fullYMax] = rangeMode === "readable"
-    ? extent(scalePoints.map((point) => point.y))
-    : extent(all.flatMap((point) => [point.min, point.max]), true);
+  const [fullYMin, fullYMax] = extent(all.flatMap((point) => [point.y, point.intervalLow, point.intervalHigh]));
   const width = TREND_CHART_WIDTH;
   const height = TREND_CHART_HEIGHT;
   const margin = TREND_CHART_MARGIN;
@@ -232,23 +186,31 @@ export function TrendChart({ series, xUnit, yUnit }: { series: TrendSeries[]; xU
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   };
 
+  const onKeyDown = (event: ReactKeyboardEvent<SVGSVGElement>) => {
+    const panStep = 0.12 / viewport.zoom;
+    if (event.key === "+" || event.key === "=") changeZoom(viewport.zoom * 1.5);
+    else if (event.key === "-") changeZoom(viewport.zoom / 1.5);
+    else if (event.key === "0" || event.key === "Home") setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 });
+    else if (event.key === "ArrowLeft") setViewport((current) => clampViewport({ ...current, centreX: current.centreX - panStep }));
+    else if (event.key === "ArrowRight") setViewport((current) => clampViewport({ ...current, centreX: current.centreX + panStep }));
+    else if (event.key === "ArrowUp") setViewport((current) => clampViewport({ ...current, centreY: current.centreY + panStep }));
+    else if (event.key === "ArrowDown") setViewport((current) => clampViewport({ ...current, centreY: current.centreY - panStep }));
+    else return;
+    event.preventDefault();
+  };
+
   return (
     <div className="zoomable-chart">
       <div className="chart-zoom-controls" aria-label="Chart zoom controls">
-        <span className="chart-range-mode" role="group" aria-label="Displayed value range">
-          <button type="button" className={rangeMode === "readable" ? "active" : ""} aria-pressed={rangeMode === "readable"} onClick={() => { setRangeMode("readable"); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }}>Readable range</button>
-          <button type="button" className={rangeMode === "all" ? "active" : ""} aria-pressed={rangeMode === "all"} onClick={() => { setRangeMode("all"); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }}>All values</button>
-          <InfoTip text="Readable range hides only statistically isolated points from the chart using Tukey's 1.5×IQR rule, calculated separately for each series. No source value is deleted: all observations remain in the table and reappear with ‘All values’." align="left" />
-          {rangeMode === "readable" && outlierKeys.size ? <small>{outlierKeys.size} isolated point{outlierKeys.size > 1 ? "s" : ""} retained outside this view</small> : null}
-        </span>
-        <span>Scroll to zoom · drag to pan</span>
+        <span className="chart-data-policy">All QA-valid values shown</span>
+        <span>Scroll or +/− to zoom · drag or arrows to pan</span>
         <button type="button" onClick={() => changeZoom(viewport.zoom / 1.5)} disabled={viewport.zoom === 1} aria-label="Zoom out">−</button>
         <output aria-live="polite">{Math.round(viewport.zoom * 100)}%</output>
         <button type="button" onClick={() => changeZoom(viewport.zoom * 1.5)} disabled={viewport.zoom === MAX_TREND_ZOOM} aria-label="Zoom in">+</button>
         <button type="button" onClick={() => setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 })} disabled={viewport.zoom === 1}>Reset</button>
       </div>
       <figure className="data-figure">
-      <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Zoomable comparative evolution chart" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={endPointerDrag} onPointerCancel={endPointerDrag} onDoubleClick={() => setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 })}>
+      <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} role="img" tabIndex={0} aria-label="Zoomable comparative evolution chart. All QA-valid values are displayed." onKeyDown={onKeyDown} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={endPointerDrag} onPointerCancel={endPointerDrag} onDoubleClick={() => setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 })}>
         <defs><clipPath id="trend-plot-clip"><rect x={margin.left} y={margin.top} width={plotWidth} height={plotHeight} /></clipPath></defs>
         {yTicks.map((tick) => <g key={`y-${tick}`}><line className="grid-line" x1={margin.left} x2={width - margin.right} y1={sy(tick)} y2={sy(tick)} /><text className="axis-label" x={margin.left - 12} y={sy(tick) + 4} textAnchor="end">{numberFormat.format(tick)}</text></g>)}
         {xTicks.map((tick) => <g key={`x-${tick}`}><line className="tick-line" x1={sx(tick)} x2={sx(tick)} y1={height - margin.bottom} y2={height - margin.bottom + 6} /><text className="axis-label" x={sx(tick)} y={height - 20} textAnchor="middle">{numberFormat.format(tick)}</text></g>)}
@@ -257,19 +219,15 @@ export function TrendChart({ series, xUnit, yUnit }: { series: TrendSeries[]; xU
         <text className="axis-title" x={margin.left} y={14}>{yUnit}</text>
         <g clipPath="url(#trend-plot-clip)">{series.map((item) => {
           const ordered = [...item.points].sort((a, b) => a.x - b.x);
-          const hidden = (point: TrendPoint) => rangeMode === "readable" && isOutlier(item.id, point);
-          const chunks = splitVisibleTrendPoints(ordered, hidden);
-          const visiblePoints = ordered.filter((point) => !hidden(point));
+          const path = ordered.map((point, index) => `${index ? "L" : "M"}${sx(point.x)},${sy(point.y)}`).join(" ");
           return <g key={item.label}>
-            {visiblePoints.map((point) => <line key={`range-${point.x}`} x1={sx(point.x)} x2={sx(point.x)} y1={sy(point.min)} y2={sy(point.max)} stroke={item.color} strokeWidth="1.5" opacity=".22" />)}
-            {chunks.map((chunk, chunkIndex) => {
-              const path = chunk.map((point, index) => `${index ? "L" : "M"}${sx(point.x)},${sy(point.y)}`).join(" ");
-              return <path key={`path-${chunkIndex}`} d={path} fill="none" stroke={item.color} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />;
-            })}
-            {visiblePoints.map((point) => <circle className={`trend-point${point.selectedLabel ? " selected" : ""}`} key={`point-${point.x}`} cx={sx(point.x)} cy={sy(point.y)} r={point.selectedLabel ? "2.25" : "3"} fill={point.selectedLabel ? item.color : "white"} stroke={item.color} strokeWidth={point.selectedLabel ? "1.2" : "1.8"}><title>{`${item.label} — ${numberFormat.format(point.x)} ${xUnit}: ${numberFormat.format(point.y)} ${yUnit}${point.selectedLabel ? ` · ${point.selectedLabel}` : ` (n=${point.n})`}`}</title></circle>)}
+            {ordered.map((point) => <line key={`range-${point.x}`} x1={sx(point.x)} x2={sx(point.x)} y1={sy(point.intervalLow)} y2={sy(point.intervalHigh)} stroke={item.color} strokeWidth="1.5" opacity=".3"><title>{`${point.intervalLabel}: ${numberFormat.format(point.intervalLow)}–${numberFormat.format(point.intervalHigh)} ${yUnit}`}</title></line>)}
+            <path d={path} fill="none" stroke={item.color} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
+            {ordered.map((point) => <circle className={`trend-point${point.selectedLabel ? " selected" : ""}`} key={`point-${point.x}`} cx={sx(point.x)} cy={sy(point.y)} r={point.selectedLabel ? "2.75" : "3.5"} fill={point.selectedLabel ? item.color : "white"} stroke={item.color} strokeWidth={point.selectedLabel ? "1.4" : "1.9"} tabIndex={0} role="img" aria-label={`${item.label}, ${numberFormat.format(point.x)} ${xUnit}, ${numberFormat.format(point.y)} ${yUnit}, ${point.selectedLabel ?? `n ${point.n}`}`}><title>{`${item.label} — ${numberFormat.format(point.x)} ${xUnit}: ${numberFormat.format(point.y)} ${yUnit}${point.selectedLabel ? ` · ${point.selectedLabel}` : ` (${point.intervalLabel} ${numberFormat.format(point.intervalLow)}–${numberFormat.format(point.intervalHigh)}, n=${point.n})`}`}</title></circle>)}
           </g>;
         })}</g>
       </svg>
+      <figcaption className="visually-hidden">The line connects aggregate values by ageing duration. Vertical ranges show the 95% confidence interval for means or the interquartile range for medians. No statistical outlier is hidden.</figcaption>
       </figure>
     </div>
   );
@@ -327,6 +285,38 @@ export function CurveChart({
   showLandmarks: boolean;
   scaleMode: "primary" | "all";
 }) {
+  const [viewport, setViewport] = useState<TrendViewport>({ zoom: 1, centreX: 0.5, centreY: 0.5 });
+  const dragRef = useRef<{ clientX: number; clientY: number; centreX: number; centreY: number } | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const width = CURVE_CHART_WIDTH;
+  const height = CURVE_CHART_HEIGHT;
+  const margin = CURVE_CHART_MARGIN;
+
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.deltaY === 0) return;
+      const rect = svg.getBoundingClientRect();
+      const plotWidth = width - margin.left - margin.right;
+      const plotHeight = height - margin.top - margin.bottom;
+      const anchorX = clamp((((event.clientX - rect.left) / rect.width) * width - margin.left) / plotWidth, 0, 1);
+      const anchorY = 1 - clamp((((event.clientY - rect.top) / rect.height) * height - margin.top) / plotHeight, 0, 1);
+      setViewport((current) => {
+        const zoom = clamp(current.zoom * (event.deltaY < 0 ? 1.3 : 1 / 1.3), 1, MAX_TREND_ZOOM);
+        const visibleStartX = current.centreX - 0.5 / current.zoom;
+        const visibleStartY = current.centreY - 0.5 / current.zoom;
+        const anchorDataX = visibleStartX + anchorX / current.zoom;
+        const anchorDataY = visibleStartY + anchorY / current.zoom;
+        return clampViewport({ zoom, centreX: anchorDataX - (anchorX - 0.5) / zoom, centreY: anchorDataY - (anchorY - 0.5) / zoom });
+      });
+    };
+    svg.addEventListener("wheel", handleWheel, { passive: false });
+    return () => svg.removeEventListener("wheel", handleWheel);
+  }, [series.length, height, margin.bottom, margin.left, margin.right, margin.top, width]);
+
   if (!series.length) {
     return <div className="empty-chart"><strong>All curves are hidden</strong><span>Select a legend item to show a series again.</span></div>;
   }
@@ -336,19 +326,66 @@ export function CurveChart({
   }
   const primary = series.flatMap((item) => item.segments.filter((segment) => segment.isPrimary).flatMap((segment) => segment.points));
   const scalePoints = scaleMode === "primary" && primary.length ? primary : all;
-  const [xMin, xMax] = extent(scalePoints.map((point) => point.x));
-  const [yMin, yMax] = extent(scalePoints.map((point) => point.y), true);
-  const width = 900;
-  const height = 360;
-  const margin = { left: 64, right: 22, top: 24, bottom: 50 };
+  const [fullXMin, fullXMax] = extent(scalePoints.map((point) => point.x));
+  const [fullYMin, fullYMax] = extent(scalePoints.map((point) => point.y), true);
+  const xSpan = (fullXMax - fullXMin) / viewport.zoom;
+  const ySpan = (fullYMax - fullYMin) / viewport.zoom;
+  const xMin = fullXMin + (viewport.centreX - 0.5 / viewport.zoom) * (fullXMax - fullXMin);
+  const xMax = xMin + xSpan;
+  const yMin = fullYMin + (viewport.centreY - 0.5 / viewport.zoom) * (fullYMax - fullYMin);
+  const yMax = yMin + ySpan;
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
   const sx = (value: number) => margin.left + ((value - xMin) / (xMax - xMin || 1)) * (width - margin.left - margin.right);
   const sy = (value: number) => height - margin.bottom - ((value - yMin) / (yMax - yMin || 1)) * (height - margin.top - margin.bottom);
   const xTicks = ticks(xMin, xMax);
   const yTicks = ticks(yMin, yMax);
 
+  const changeZoom = (nextZoom: number) => setViewport((current) => clampViewport({ ...current, zoom: clamp(nextZoom, 1, MAX_TREND_ZOOM) }));
+  const onPointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
+    if (viewport.zoom === 1) return;
+    dragRef.current = { clientX: event.clientX, clientY: event.clientY, centreX: viewport.centreX, centreY: viewport.centreY };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const onPointerMove = (event: ReactPointerEvent<SVGSVGElement>) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    setViewport(clampViewport({
+      zoom: viewport.zoom,
+      centreX: drag.centreX - (event.clientX - drag.clientX) / (rect.width * (plotWidth / width) * viewport.zoom),
+      centreY: drag.centreY + (event.clientY - drag.clientY) / (rect.height * (plotHeight / height) * viewport.zoom),
+    }));
+  };
+  const endPointerDrag = (event: ReactPointerEvent<SVGSVGElement>) => {
+    dragRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+  const onKeyDown = (event: ReactKeyboardEvent<SVGSVGElement>) => {
+    const panStep = 0.12 / viewport.zoom;
+    if (event.key === "+" || event.key === "=") changeZoom(viewport.zoom * 1.5);
+    else if (event.key === "-") changeZoom(viewport.zoom / 1.5);
+    else if (event.key === "0" || event.key === "Home") setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 });
+    else if (event.key === "ArrowLeft") setViewport((current) => clampViewport({ ...current, centreX: current.centreX - panStep }));
+    else if (event.key === "ArrowRight") setViewport((current) => clampViewport({ ...current, centreX: current.centreX + panStep }));
+    else if (event.key === "ArrowUp") setViewport((current) => clampViewport({ ...current, centreY: current.centreY + panStep }));
+    else if (event.key === "ArrowDown") setViewport((current) => clampViewport({ ...current, centreY: current.centreY - panStep }));
+    else return;
+    event.preventDefault();
+  };
+
   return (
-    <figure className="data-figure">
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Compared current–voltage curves, ${currentConvention === "instrument" ? "instrument" : "photovoltaic"} convention`}>
+    <div className="zoomable-chart">
+      <div className="chart-zoom-controls" aria-label="IV chart zoom controls">
+        <span className="chart-data-policy">No smoothing · acquisition order retained</span>
+        <span>Scroll or +/− to zoom · drag or arrows to pan</span>
+        <button type="button" onClick={() => changeZoom(viewport.zoom / 1.5)} disabled={viewport.zoom === 1} aria-label="Zoom out">−</button>
+        <output aria-live="polite">{Math.round(viewport.zoom * 100)}%</output>
+        <button type="button" onClick={() => changeZoom(viewport.zoom * 1.5)} disabled={viewport.zoom === MAX_TREND_ZOOM} aria-label="Zoom in">+</button>
+        <button type="button" onClick={() => setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 })} disabled={viewport.zoom === 1}>Reset</button>
+      </div>
+      <figure className="data-figure">
+      <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} role="img" tabIndex={0} aria-label={`Zoomable compared current–voltage curves, ${currentConvention === "instrument" ? "instrument" : "photovoltaic"} convention`} onKeyDown={onKeyDown} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={endPointerDrag} onPointerCancel={endPointerDrag} onDoubleClick={() => setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 })}>
         <defs><clipPath id="curve-plot-clip"><rect x={margin.left} y={margin.top} width={width - margin.left - margin.right} height={height - margin.top - margin.bottom} /></clipPath></defs>
         {yTicks.map((tick) => <g key={`y-${tick}`}><line className="grid-line" x1={margin.left} x2={width - margin.right} y1={sy(tick)} y2={sy(tick)} /><text className="axis-label" x={margin.left - 12} y={sy(tick) + 4} textAnchor="end">{numberFormat.format(tick)}</text></g>)}
         {xTicks.map((tick) => <g key={`x-${tick}`}><line className="tick-line" x1={sx(tick)} x2={sx(tick)} y1={height - margin.bottom} y2={height - margin.bottom + 6} /><text className="axis-label" x={sx(tick)} y={height - 20} textAnchor="middle">{numberFormat.format(tick)}</text></g>)}
@@ -377,6 +414,8 @@ export function CurveChart({
           }) : null}
         </g>
       </svg>
+      <figcaption className="visually-hidden">Measured IV points are connected in acquisition order without smoothing. Use the controls, wheel, keyboard, or drag gesture to inspect the curve.</figcaption>
     </figure>
+    </div>
   );
 }

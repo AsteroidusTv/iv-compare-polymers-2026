@@ -72,12 +72,27 @@ export function createInitialSeries(dataset: IVDataset): SeriesConfig[] {
   const materials = unique(dataset.samples.map((sample) => sample.material_family));
   const preferredA = materials.includes("POE-1 / Mitsui") ? "POE-1 / Mitsui" : materials[0] ?? "";
   const preferredB = materials.includes("POE-2 / TF4") ? "POE-2 / TF4" : materials.find((item) => item !== preferredA) ?? preferredA;
+  const selectedMaterials = [preferredA, preferredB];
+  const sampleIdsWithDhEfficiency = new Set(dataset.observations
+    .filter((observation) => observation.test_type === "DH" && typeof observation.efficiency_pct === "number" && Number.isFinite(observation.efficiency_pct))
+    .map((observation) => observation.sample_uid));
+  const samplesByMaterial = selectedMaterials.map((material) => dataset.samples.filter((sample) => (
+    sample.material_family === material && sampleIdsWithDhEfficiency.has(sample.sample_uid)
+  )));
+  const commonElectrodes = unique(samplesByMaterial[0]?.map((sample) => sample.electrode) ?? [])
+    .filter((electrode) => samplesByMaterial.every((samples) => samples.some((sample) => sample.electrode === electrode)));
+  const electrode = commonElectrodes
+    .sort((left, right) => samplesByMaterial.reduce((sum, samples) => sum + samples.filter((sample) => sample.electrode === right).length, 0)
+      - samplesByMaterial.reduce((sum, samples) => sum + samples.filter((sample) => sample.electrode === left).length, 0))[0] ?? "all";
+  const commonRecipes = unique(samplesByMaterial[0]?.filter((sample) => electrode === "all" || sample.electrode === electrode).map((sample) => sample.recipe_uid) ?? [])
+    .filter((recipe) => samplesByMaterial.every((samples) => samples.some((sample) => (electrode === "all" || sample.electrode === electrode) && sample.recipe_uid === recipe)));
+  const recipe = commonRecipes[0] ?? "all";
   return [preferredA, preferredB].map((material, index) => normalizeSeriesConfig(dataset, {
     id: String.fromCharCode(97 + index),
     material,
     stress: "DH",
     metric: "efficiency_pct",
-    electrode: "all",
-    recipe: "all",
+    electrode,
+    recipe,
   }));
 }

@@ -1,0 +1,29 @@
+{
+  "pipelineVersion": "2.0.0",
+  "generatedOn": "2026-08-31",
+  "inventory": {
+    "source": "data/raw/IV/Summary.xlsx",
+    "rule": "Forward-fill batch, electrode, owner, encapsulation date and material only inside a sample block. A non-empty Sample ID starts a sample; following rows contain additional observations until the next Sample ID.",
+    "manualDateOverrides": [
+      "Ambiguous source dates are resolved in the normalized workbook and retained with their original text in encapsulation_date_raw."
+    ]
+  },
+  "iv": {
+    "voltage": "Legacy simple V-I exports contain millivolt values even when the header says V [V]; curve_voltage_scale_to_V records the applied 0.001 conversion.",
+    "current": "Simple V-I current is divided by cell area; multi-cell V-J exports already contain current density. Generated-current density reverses the instrument sign.",
+    "matching": "All file-to-sample decisions, alternative scores, reasons and margins are versioned in the IV_Files and Match_Review sheets. Ambiguous and unmatched files remain excluded by default.",
+    "qa": "Source flags and conservative physical plausibility checks are additive; no raw value is deleted."
+  },
+  "outdoor": {
+    "daylightThreshold_W_m2": 200,
+    "dailyPR": "Median PR for rows with irradiance >= 200 W/m2.",
+    "dailyPmpp": "Median Pmpp over the same daylight rows. For electrical-only files without irradiance, median positive Pmpp is retained with an explicit QA flag.",
+    "dailyIrradiance": "Median irradiance over the same daylight rows.",
+    "retentionBaseline": "Median of the first 3 to 7 QA-valid daily values for the same sample and metric; 3/7/14-day sensitivity is reported when enough data exist."
+  },
+  "notes": [
+    "Raw files are immutable and their aggregate SHA-256 is embedded in every .ivpack.",
+    "The processed workbook remains the auditable normalization decision ledger.",
+    "The compact browser package is rebuilt deterministically from versioned processed artifacts."
+  ]
+}

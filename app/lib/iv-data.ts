@@ -1,5 +1,5 @@
 export type MetricKey = "efficiency_pct" | "jsc_mA_cm2" | "voc_V" | "ff_pct" | "outdoor_pr_pct" | "outdoor_pmpp_W" | "outdoor_irradiance_W_m2";
-export type Aggregation = "mean" | "median" | "best";
+export type Aggregation = "mean" | "median";
 
 export interface Sample {
   sample_uid: string;
@@ -45,6 +45,11 @@ export interface Observation {
   action_or_status?: string | null;
   comments?: string | null;
   data_quality_flag?: string | null;
+  source_file?: string | null;
+  source_row?: number | null;
+  aggregation_protocol?: string | null;
+  raw_count?: number | null;
+  daylight_count?: number | null;
 }
 
 export interface IVFile {
@@ -58,6 +63,9 @@ export interface IVFile {
   sample_uid?: string | null;
   match_status: string;
   match_score?: number | null;
+  match_margin?: number | null;
+  match_reasons?: string | null;
+  matched_observation_uid?: string | null;
 }
 
 export interface Measurement {
@@ -87,6 +95,15 @@ export interface IVDataset {
   schemaVersion: string;
   name: string;
   generatedOn?: string;
+  provenance?: {
+    pipelineVersion: string;
+    rawTreeSha256?: string;
+    normalizedWorkbookSha256?: string;
+    curvePointsSha256?: string;
+    outdoorRawSha256?: string;
+    rawFileCount?: number;
+    notes?: string[];
+  };
   report: {
     samples: number;
     recipes: number;
@@ -107,6 +124,12 @@ export interface IVDataset {
 
 type UnknownRow = Record<string, unknown>;
 
+const MAX_PACK_BYTES = 64 * 1024 * 1024;
+const MAX_WORKBOOK_BYTES = 32 * 1024 * 1024;
+const MAX_POINTS_BYTES = 256 * 1024 * 1024;
+const MAX_ROWS = 2_000_000;
+const SUPPORTED_SCHEMA_VERSIONS = new Set(["1.1", "1.2"]);
+
 function asNumber(value: unknown): number | null {
   if (value === null || value === undefined || value === "") return null;
   const parsed = typeof value === "number" ? value : Number(String(value).replace(",", "."));
@@ -126,17 +149,74 @@ function asIsoDate(value: unknown): string | null {
   return asText(value);
 }
 
-function validateDataset(value: unknown): IVDataset {
+function assertUnique(values: string[], label: string): void {
+  const seen = new Set<string>();
+  for (const value of values) {
+    if (!value) throw new Error(`${label} contains an empty identifier.`);
+    if (seen.has(value)) throw new Error(`${label} contains duplicate identifier ${value}.`);
+    seen.add(value);
+  }
+}
+
+export function validateDataset(value: unknown): IVDataset {
   if (!value || typeof value !== "object") throw new Error("The file does not contain a valid IV dataset.");
   const dataset = value as Partial<IVDataset>;
   const required = [dataset.samples, dataset.observations, dataset.files, dataset.measurements];
   if (required.some((entry) => !Array.isArray(entry)) || !dataset.curves || typeof dataset.curves !== "object") {
     throw new Error("Incomplete structure: samples, observations, files, measurements, or curves are missing.");
   }
+  if (!dataset.schemaVersion || !SUPPORTED_SCHEMA_VERSIONS.has(dataset.schemaVersion)) {
+    throw new Error(`Unsupported dataset schema ${dataset.schemaVersion ?? "(missing)"}. Expected version 1.1 or 1.2.`);
+  }
+  if (!dataset.report || typeof dataset.report !== "object") throw new Error("The dataset report is missing.");
+  if (required.some((entry) => (entry?.length ?? 0) > MAX_ROWS) || Object.keys(dataset.curves).length > MAX_ROWS) {
+    throw new Error("The dataset exceeds the supported row limit.");
+  }
+
+  const samples = dataset.samples as Sample[];
+  const observations = dataset.observations as Observation[];
+  const files = dataset.files as IVFile[];
+  const measurements = dataset.measurements as Measurement[];
+  assertUnique(samples.map((row) => row.sample_uid), "Samples");
+  assertUnique(observations.map((row) => row.observation_uid), "Observations");
+  assertUnique(files.map((row) => row.file_uid), "IV files");
+  assertUnique(measurements.map((row) => row.measurement_uid), "Measurements");
+
+  const sampleIds = new Set(samples.map((row) => row.sample_uid));
+  const fileIds = new Set(files.map((row) => row.file_uid));
+  observations.forEach((row) => {
+    if (!sampleIds.has(row.sample_uid)) throw new Error(`Observation ${row.observation_uid} references unknown sample ${row.sample_uid}.`);
+  });
+  files.forEach((row) => {
+    if (row.sample_uid && !sampleIds.has(row.sample_uid)) throw new Error(`File ${row.file_uid} references unknown sample ${row.sample_uid}.`);
+  });
+  let pointCount = 0;
+  measurements.forEach((row) => {
+    if (!fileIds.has(row.file_uid)) throw new Error(`Measurement ${row.measurement_uid} references unknown file ${row.file_uid}.`);
+    if (row.sample_uid && !sampleIds.has(row.sample_uid)) throw new Error(`Measurement ${row.measurement_uid} references unknown sample ${row.sample_uid}.`);
+    const curve = dataset.curves?.[row.measurement_uid];
+    if (!curve) return;
+    if (!Array.isArray(curve.v) || !Array.isArray(curve.j) || curve.v.length !== curve.j.length) {
+      throw new Error(`Curve ${row.measurement_uid} has inconsistent voltage/current arrays.`);
+    }
+    if (numericCount(curve.v) !== curve.v.length || numericCount(curve.j) !== curve.j.length) throw new Error(`Curve ${row.measurement_uid} contains a non-finite point.`);
+    if (row.point_count !== null && row.point_count !== undefined && row.point_count !== curve.v.length) {
+      throw new Error(`Curve ${row.measurement_uid} has ${curve.v.length} points; metadata reports ${row.point_count}.`);
+    }
+    pointCount += curve.v.length;
+  });
+  if (dataset.report.samples !== samples.length || dataset.report.observations !== observations.length || dataset.report.files !== files.length || dataset.report.measurements !== measurements.length || dataset.report.points !== pointCount) {
+    throw new Error("Dataset report counts do not match the imported records.");
+  }
   return dataset as IVDataset;
 }
 
+function numericCount(values: Array<number | null>): number {
+  return values.filter((item) => item === null || (typeof item === "number" && Number.isFinite(item))).length;
+}
+
 async function decodeBlob(blob: Blob): Promise<string> {
+  if (blob.size > MAX_PACK_BYTES) throw new Error("The package is larger than the 64 MB safety limit.");
   const bytes = new Uint8Array(await blob.arrayBuffer());
   const isGzip = bytes[0] === 0x1f && bytes[1] === 0x8b;
   if (!isGzip) return new TextDecoder().decode(bytes);
@@ -206,6 +286,7 @@ function normalizeObservations(rows: UnknownRow[]): Observation[] {
     action_or_status: asText(row.action_or_status),
     comments: asText(row.comments),
     data_quality_flag: asText(row.data_quality_flag),
+    source_row: asNumber(row.source_inventory_row),
   })).filter((row) => row.observation_uid && row.sample_uid);
 }
 
@@ -217,11 +298,15 @@ function normalizeOutdoorDaily(rows: UnknownRow[]): Observation[] {
     exposure_duration_numeric: asNumber(row.exposure_days),
     exposure_unit: "days",
     outdoor_pr_pct: asNumber(row.performance_ratio_pct_median),
-    outdoor_pmpp_W: asNumber(row.pmpp_W_max),
-    outdoor_irradiance_W_m2: asNumber(row.irradiance_W_m2_max),
+    outdoor_pmpp_W: asNumber(row.pmpp_W_daylight_median ?? row.pmpp_W_max),
+    outdoor_irradiance_W_m2: asNumber(row.irradiance_W_m2_daylight_median ?? row.irradiance_W_m2_max),
     action_or_status: "outdoor_daily_aggregate",
     comments: asText(row.aggregation_protocol),
     data_quality_flag: asText(row.qa_flags),
+    source_file: asText(row.source_file),
+    aggregation_protocol: asText(row.aggregation_protocol),
+    raw_count: asNumber(row.raw_count),
+    daylight_count: asNumber(row.daylight_count_irr_ge_200),
   })).filter((row) => row.observation_uid && row.sample_uid);
 }
 
@@ -237,6 +322,9 @@ function normalizeFiles(rows: UnknownRow[]): IVFile[] {
     sample_uid: asText(row.sample_uid),
     match_status: String(row.match_status ?? "unmatched"),
     match_score: asNumber(row.match_score),
+    match_margin: asNumber(row.match_margin),
+    match_reasons: asText(row.match_reasons),
+    matched_observation_uid: asText(row.matched_observation_uid),
   })).filter((row) => row.file_uid);
 }
 
@@ -303,6 +391,8 @@ async function parseCurves(tsv: File): Promise<Record<string, Curve>> {
 }
 
 export async function readNormalizedPair(workbookFile: File, pointsFile: File): Promise<IVDataset> {
+  if (workbookFile.size > MAX_WORKBOOK_BYTES) throw new Error("The workbook is larger than the 32 MB safety limit.");
+  if (pointsFile.size > MAX_POINTS_BYTES) throw new Error("The points file is larger than the 256 MB safety limit.");
   const XLSX = await import("xlsx");
   const workbook = XLSX.read(await workbookFile.arrayBuffer(), { type: "array", cellDates: true });
   const rows = (name: string): UnknownRow[] => {
@@ -324,7 +414,7 @@ export async function readNormalizedPair(workbookFile: File, pointsFile: File): 
   const points = Object.values(curves).reduce((total, curve) => total + curve.v.length, 0);
 
   return validateDataset({
-    schemaVersion: "1.0",
+    schemaVersion: "1.2",
     name: workbookFile.name.replace(/\.xlsx$/i, ""),
     generatedOn: new Date().toISOString().slice(0, 10),
     report: {
@@ -361,16 +451,8 @@ export const METRICS: Record<MetricKey, { label: string; unit: string; digits: n
   voc_V: { label: "Voc", unit: "V", digits: 3 },
   ff_pct: { label: "Fill factor", unit: "%", digits: 1 },
   outdoor_pr_pct: { label: "Outdoor PR (daily median)", unit: "%", digits: 1 },
-  outdoor_pmpp_W: { label: "Outdoor Pmpp (daily max)", unit: "W", digits: 2 },
-  outdoor_irradiance_W_m2: { label: "Irradiance (daily max)", unit: "W/m²", digits: 0 },
+  outdoor_pmpp_W: { label: "Outdoor Pmpp (daylight median)", unit: "W", digits: 2 },
+  outdoor_irradiance_W_m2: { label: "Irradiance (daylight median)", unit: "W/m²", digits: 0 },
 };
 
-export function aggregate(values: number[], method: Aggregation): number {
-  const sorted = [...values].sort((a, b) => a - b);
-  if (method === "best") return sorted[sorted.length - 1];
-  if (method === "median") {
-    const middle = Math.floor(sorted.length / 2);
-    return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
-  }
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
-}
+export { aggregate } from "./science";

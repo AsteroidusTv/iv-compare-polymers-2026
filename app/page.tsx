@@ -5,15 +5,22 @@ import { CurveChart, CurveSeries, TrendChart, TrendPoint, TrendSeries } from "./
 import { FieldTitle, InfoTip } from "./components/InfoTip";
 import {
   Aggregation,
-  aggregate,
   fetchDefaultDataset,
   importDatasetFiles,
   IVDataset,
   METRICS,
   MetricKey,
-  Observation,
 } from "./lib/iv-data";
 import { analyzeIVCurve } from "./lib/iv-curve-analysis";
+import {
+  chooseRepresentativeMeasurement,
+  measurementQualityReasons,
+  numeric,
+  outdoorBaseline,
+  outdoorQualityReason,
+  summarise,
+  TimedValue,
+} from "./lib/science";
 import {
   createInitialSeries,
   electrodesForConfig,
@@ -46,6 +53,8 @@ type ContextTrendSeries = TrendSeries & {
   xUnit: string;
   yUnit: string;
   contextLabel: string;
+  baselineWarnings: string[];
+  sampleSetChanges: boolean;
 };
 
 const METRIC_HELP: Record<MetricKey, string> = {
@@ -54,8 +63,8 @@ const METRIC_HELP: Record<MetricKey, string> = {
   voc_V: "Voc is the open-circuit voltage measured when current is zero. It is sensitive to recombination losses and interface quality.",
   ff_pct: "Fill factor measures how rectangular the IV curve is: FF = Pmax / (Voc × Jsc). A decrease often indicates greater resistive or recombination losses.",
   outdoor_pr_pct: "Performance Ratio (PR) reported by the logger, summarised as the daily median of measurements recorded at irradiance levels of at least 200 W/m². This threshold excludes night-time and very low light levels, where the ratio becomes unstable.",
-  outdoor_pmpp_W: "Power measured at the maximum power point outdoors. The daily maximum is shown to track each day’s best production capacity without removing the raw measurements from the workbook.",
-  outdoor_irradiance_W_m2: "Incident solar irradiance. The daily maximum describes the available light level for that day and helps interpret Pmpp; by itself, it is not a measure of device stability.",
+  outdoor_pmpp_W: "Power measured at the maximum power point outdoors, summarised as the median of measurements acquired at irradiance levels of at least 200 W/m². Files without irradiance use the median of positive Pmpp values and are explicitly flagged.",
+  outdoor_irradiance_W_m2: "Median incident irradiance for the same daylight observations used to summarise PR and Pmpp. It provides measurement context and is not itself a stability metric.",
 };
 
 const HELP = {
@@ -64,15 +73,16 @@ const HELP = {
   ageing: "Applied ageing protocol: DH means damp heat, TC means thermal cycling, and Outdoor means outdoor exposure. Durations are comparable only within the same protocol.",
   electrode: "Device electrode metal. It can affect contacts, corrosion, and stability; mixing electrodes introduces a confounding factor.",
   recipe: "Lamination conditions associated with the sample: temperature, pressure, duration, and sequences. A different recipe can change adhesion, cross-linking, and IV performance.",
-  retention: "Retention = value at time t / reference value for the same sample × 100. For DH/TC, the reference is the initial state. For Outdoor, the robust reference is the median of the logger’s first seven valid days for the selected metric.",
+  retention: "Retention = value at time t / reference value for the same sample × 100. For DH/TC, the reference is the initial state. For Outdoor, at least three valid days are required and the reference is the median of up to the first seven valid days. Sensitivity to 3-, 7-, and 14-day windows is reported when possible.",
   conditions: "Each series owns its material, electrode, recipe, ageing protocol, and metric. ‘All’ mixes samples within that series; choose explicit conditions when you need an attributable comparison.",
   matching: "Matching links each IV file to an inventory sample using its metadata. Excluded files remain in the source dataset but do not participate in comparisons by default.",
   observations: "Total number of individual measurements contributing to the points currently shown. This is not the number of durations or averages.",
-  minmax: "For each duration, the main line shows the aggregated value. Thin ranges cover the minimum and maximum retained observations.",
+  interval: "For each duration, the main line shows the selected aggregate. Mean values carry a 95% confidence interval; median values carry an interquartile range. Min and max remain available in the export.",
   replicates: "When n > 1, select n to open the individual observations. Choosing a sample changes only the plotted point; the aggregate, calculations, and exports remain unchanged.",
   globalReplicate: "Selectors A and B are independent: for example, you can plot sample 1 of polymer A against sample 2 of polymer B. Each choice maps to a specific sample reference from the Excel inventory. Durations without a measurement for that sample are not plotted. A row-level choice creates a local override.",
   patchReference: "Sample name and reference from the Excel inventory. In aggregate mode, the cell lists the samples contributing to the point; in individual mode, it identifies the exact plotted sample.",
-  targetTime: "The site looks for this duration for every material. If there is no exact match, it uses the nearest available time and indicates it in the legend.",
+  targetTime: "Only measurements acquired at this exact ageing duration are eligible. This prevents curves from different ageing times being overlaid as if they were equivalent.",
+  curveChoice: "Representative selects the QA-valid curve whose efficiency is closest to the median of the eligible measurements. Choose a named measurement to make the selection fully explicit; the site never selects the maximum efficiency automatically.",
   convention: "The instrument convention displays negative photocurrent, matching the raw solar simulator values. The PV convention only reverses the sign to show positive generated current; the underlying physics does not change.",
   sweep: "The point sequence is split when a voltage jump or sweep reversal is detected. The primary segment normally covers V = 0 and the Voc crossing; other segments are retained.",
   scale: "The ‘Primary segments’ scale stays readable for material comparisons. ‘All data’ expands the axes to secondary segments without changing any values.",
@@ -98,37 +108,6 @@ function timeUnit(stress: string): string {
   return "h";
 }
 
-function numeric(value: number | null | undefined): value is number {
-  return typeof value === "number" && Number.isFinite(value);
-}
-
-function median(values: number[]): number {
-  return aggregate(values, "median");
-}
-
-function outdoorQualityReason(observation: Observation, metric: MetricKey, peers: number[]): string | null {
-  const value = observation[metric];
-  if (!numeric(value)) return null;
-  if (observation.data_quality_flag) return `Source QA flag: ${observation.data_quality_flag}`;
-  if (metric === "outdoor_pr_pct" && (value < 0 || value > 150)) {
-    return `PR of ${numberFormat.format(value)}% is outside the conservative 0–150% plausibility range.`;
-  }
-  if (metric === "outdoor_irradiance_W_m2" && (value < 0 || value > 1600)) {
-    return `Irradiance of ${numberFormat.format(value)} W/m² is outside the conservative 0–1,600 W/m² sensor range.`;
-  }
-  if (metric === "outdoor_pmpp_W" && value < 0) return "Outdoor Pmpp cannot be negative.";
-  if (peers.length < 14) return null;
-  const centre = median(peers);
-  if (centre <= 0) return null;
-  const mad = median(peers.map((peer) => Math.abs(peer - centre)));
-  const robustSigma = mad * 1.4826;
-  const upperLimit = centre + Math.max(6 * robustSigma, centre * 1.5);
-  if (value > upperLimit) {
-    return `${numberFormat.format(value)} ${METRICS[metric].unit} is an extreme high-side spike (${numberFormat.format(value / centre)}× the ${numberFormat.format(centre)} ${METRICS[metric].unit} sample median).`;
-  }
-  return null;
-}
-
 function trendRowKey(seriesId: SeriesId, time: number): string {
   return `${seriesId}:${time}`;
 }
@@ -152,6 +131,7 @@ export default function Home() {
   const [expandedTrendRows, setExpandedTrendRows] = useState<Set<string>>(() => new Set());
   const [selectedTrendMembers, setSelectedTrendMembers] = useState<Record<string, string | null>>({});
   const [globalTrendSamples, setGlobalTrendSamples] = useState<Record<SeriesId, string | null>>({});
+  const [curveMeasurementIds, setCurveMeasurementIds] = useState<Record<SeriesId, string | null>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const nextSeriesIdRef = useRef(2);
 
@@ -165,6 +145,7 @@ export default function Home() {
     setExpandedTrendRows(new Set());
     setSelectedTrendMembers({});
     setGlobalTrendSamples({});
+    setCurveMeasurementIds({});
   }, []);
 
   useEffect(() => {
@@ -203,6 +184,7 @@ export default function Home() {
   const comparisonMaterials = useMemo(() => seriesConfigs.map((config) => config.material).filter(Boolean), [seriesConfigs]);
   const sampleMap = useMemo(() => new Map(dataset?.samples.map((sample) => [sample.sample_uid, sample]) ?? []), [dataset]);
   const recipeMap = useMemo(() => new Map(dataset?.recipes.map((item) => [item.recipe_uid, item]) ?? []), [dataset]);
+  const observationMap = useMemo(() => new Map(dataset?.observations.map((item) => [item.observation_uid, item]) ?? []), [dataset]);
   const samplePasses = useCallback((sampleId: string | null | undefined, config: SeriesConfig) => dataset ? seriesSamplePasses(dataset, sampleId, config) : false, [dataset]);
 
   const outdoorQualityByMetric = useMemo(() => {
@@ -210,12 +192,13 @@ export default function Home() {
     if (!dataset) return result;
     (["outdoor_pr_pct", "outdoor_pmpp_W", "outdoor_irradiance_W_m2"] as MetricKey[]).forEach((metric) => {
       const issues = new Map<string, OutdoorQualityIssue>();
-      const peersBySample = new Map<string, number[]>();
+      const peersBySample = new Map<string, TimedValue[]>();
       dataset.observations.forEach((observation) => {
         const value = observation[metric];
-        if (observation.test_type !== "Outdoor" || !numeric(value) || observation.data_quality_flag) return;
+        const time = observation.exposure_duration_numeric;
+        if (observation.test_type !== "Outdoor" || !numeric(value) || !numeric(time) || observation.data_quality_flag) return;
         const peers = peersBySample.get(observation.sample_uid) ?? [];
-        peers.push(value);
+        peers.push({ time, value });
         peersBySample.set(observation.sample_uid, peers);
       });
       dataset.observations.forEach((observation) => {
@@ -242,37 +225,40 @@ export default function Home() {
   const trendSeries = useMemo<ContextTrendSeries[]>(() => {
     if (!dataset) return [];
     const observations = [...dataset.observations].sort((left, right) => (left.exposure_duration_numeric ?? Number.POSITIVE_INFINITY) - (right.exposure_duration_numeric ?? Number.POSITIVE_INFINITY));
-    const baselineCache = new Map<string, number | null>();
-    const baselineFor = (config: SeriesConfig, sampleUid: string): number | null => {
+    const baselineCache = new Map<string, ReturnType<typeof outdoorBaseline>>();
+    const baselineFor = (config: SeriesConfig, sampleUid: string): ReturnType<typeof outdoorBaseline> => {
       const key = `${config.id}:${sampleUid}`;
-      if (baselineCache.has(key)) return baselineCache.get(key) ?? null;
+      if (baselineCache.has(key)) return baselineCache.get(key)!;
       if (config.stress === "Outdoor") {
         const qualityIssues = outdoorQualityByMetric.get(config.metric);
-        const values = observations.filter((observation) => observation.sample_uid === sampleUid && observation.test_type === "Outdoor" && !qualityIssues?.has(observation.observation_uid)).map((observation) => observation[config.metric]).filter(numeric).slice(0, 7);
-        const baseline = values.length ? aggregate(values, "median") : null;
+        const values = observations.filter((observation) => observation.sample_uid === sampleUid && observation.test_type === "Outdoor" && !qualityIssues?.has(observation.observation_uid)).map((observation) => observation[config.metric]).filter(numeric).slice(0, 14);
+        const baseline = outdoorBaseline(values);
         baselineCache.set(key, baseline);
         return baseline;
       }
       const baseline = observations.find((observation) => observation.sample_uid === sampleUid && observation.test_type === "Unaged" && numeric(observation[config.metric]))?.[config.metric];
       const value = numeric(baseline) ? baseline : null;
-      baselineCache.set(key, value);
-      return value;
+      const result = { value, count: value === null ? 0 : 1, sensitivityPct: null };
+      baselineCache.set(key, result);
+      return result;
     };
     const build = (config: SeriesConfig, index: number): ContextTrendSeries => {
       const color = SERIES_COLORS[index % SERIES_COLORS.length];
       const groups = new Map<number, TrendPoint["members"]>();
+      const baselineWarnings = new Set<string>();
       dataset.observations.forEach((observation) => {
         if (observation.test_type !== config.stress || !samplePasses(observation.sample_uid, config)) return;
         const raw = observation[config.metric];
         if (!numeric(raw)) return;
-        if (!includeQa && outdoorQualityByMetric.get(config.metric)?.has(observation.observation_uid)) return;
+        if (!includeQa && (observation.data_quality_flag || outdoorQualityByMetric.get(config.metric)?.has(observation.observation_uid))) return;
         const x = config.stress === "Unaged" ? 0 : observation.exposure_duration_numeric;
         if (!numeric(x)) return;
         let value = raw;
         if (mode === "retention") {
           const baseline = baselineFor(config, observation.sample_uid);
-          if (!numeric(baseline) || baseline === 0) return;
-          value = config.stress === "Unaged" ? 100 : (raw / baseline) * 100;
+          if (!numeric(baseline.value) || baseline.value === 0) return;
+          if (numeric(baseline.sensitivityPct) && baseline.sensitivityPct > 5) baselineWarnings.add(`${observation.sample_uid}: ${numberFormat.format(baseline.sensitivityPct)}% baseline-window sensitivity`);
+          value = config.stress === "Unaged" ? 100 : (raw / baseline.value) * 100;
         }
         const members = groups.get(x) ?? [];
         const sample = sampleMap.get(observation.sample_uid);
@@ -289,18 +275,23 @@ export default function Home() {
       const points: TrendPoint[] = [...groups.entries()].map(([x, members]) => {
         const orderedMembers = [...members].sort((left, right) => left.sampleUid.localeCompare(right.sampleUid, "fr") || left.observationId.localeCompare(right.observationId, "fr"));
         const values = orderedMembers.map((member) => member.value);
+        const summary = summarise(values, aggregation);
         return {
           x,
-          y: aggregate(values, aggregation),
-          min: Math.min(...values),
-          max: Math.max(...values),
-          n: values.length,
+          y: summary.value,
+          min: summary.min,
+          max: summary.max,
+          intervalLow: summary.intervalLow,
+          intervalHigh: summary.intervalHigh,
+          intervalLabel: summary.intervalLabel,
+          n: summary.n,
           members: orderedMembers,
         };
       }).sort((a, b) => a.x - b.x);
+      const signatures = new Set(points.map((point) => point.members.map((member) => member.sampleUid).sort().join("|")));
       const recipeLabel = config.recipe === "all" ? "All recipes" : recipeMap.get(config.recipe)?.recipe_raw || config.recipe;
       const contextLabel = `${config.stress} · ${config.electrode === "all" ? "All electrodes" : config.electrode} · ${recipeLabel} · ${METRICS[config.metric].label}`;
-      return { id: config.id, label: `${String.fromCharCode(65 + index)} · ${config.material}`, color, points, config, xUnit: timeUnit(config.stress), yUnit: mode === "retention" ? "% of reference" : METRICS[config.metric].unit, contextLabel };
+      return { id: config.id, label: `${String.fromCharCode(65 + index)} · ${config.material}`, color, points, config, xUnit: timeUnit(config.stress), yUnit: mode === "retention" ? "% of reference" : METRICS[config.metric].unit, contextLabel, baselineWarnings: [...baselineWarnings], sampleSetChanges: signatures.size > 1 };
     };
     return seriesConfigs.map(build);
   }, [dataset, seriesConfigs, mode, aggregation, samplePasses, sampleMap, includeQa, outdoorQualityByMetric, recipeMap]);
@@ -326,42 +317,48 @@ export default function Home() {
     return { all, common };
   }, [eligibleFiles, seriesConfigs, sharedCurveStress]);
 
-  const resolvedCurveTime = curveTimes.all.includes(curveTime as number) ? curveTime : curveTimes.common[curveTimes.common.length - 1] ?? curveTimes.all[curveTimes.all.length - 1] ?? null;
+  const selectableCurveTimes = curveTimes.common.length ? curveTimes.common : curveTimes.all;
+  const resolvedCurveTime = selectableCurveTimes.includes(curveTime as number) ? curveTime : selectableCurveTimes[selectableCurveTimes.length - 1] ?? null;
 
-  const curveSelections = useMemo(() => {
+  const curveCandidateGroups = useMemo(() => {
     if (!dataset || resolvedCurveTime === null) return [];
     if (!sharedCurveStress) return [];
-    const pick = (config: SeriesConfig, index: number) => {
+    return seriesConfigs.map((config, index) => {
       const color = SERIES_COLORS[index % SERIES_COLORS.length];
-      const files = eligibleFiles(config).filter((file) => numeric(config.stress === "Unaged" ? 0 : file.inferred_exposure_duration));
-      if (!files.length) return null;
-      const distance = Math.min(...files.map((file) => Math.abs((config.stress === "Unaged" ? 0 : file.inferred_exposure_duration as number) - resolvedCurveTime)));
-      const nearest = files.filter((file) => Math.abs((config.stress === "Unaged" ? 0 : file.inferred_exposure_duration as number) - resolvedCurveTime) === distance);
-      const fileIds = new Set(nearest.map((file) => file.file_uid));
+      const files = eligibleFiles(config).filter((file) => (config.stress === "Unaged" ? 0 : file.inferred_exposure_duration) === resolvedCurveTime);
+      const fileIds = new Set(files.map((file) => file.file_uid));
       const candidates = dataset.measurements
-        .filter((measurement) => fileIds.has(measurement.file_uid) && (includeQa || !measurement.qa_flags) && dataset.curves[measurement.measurement_uid])
-        .sort((left, right) => (right.efficiency_pct ?? -Infinity) - (left.efficiency_pct ?? -Infinity));
-      const measurement = candidates[0];
-      if (!measurement) return null;
-      const file = nearest.find((item) => item.file_uid === measurement.file_uid)!;
+        .filter((measurement) => fileIds.has(measurement.file_uid) && dataset.curves[measurement.measurement_uid] && (includeQa || measurementQualityReasons(measurement).length === 0))
+        .sort((left, right) => left.measurement_uid.localeCompare(right.measurement_uid));
+      return { seriesId: config.id, material: config.material, config, color, files, candidates };
+    });
+  }, [dataset, resolvedCurveTime, eligibleFiles, includeQa, seriesConfigs, sharedCurveStress]);
+
+  const curveSelections = useMemo(() => curveCandidateGroups.flatMap((group) => {
+      if (!dataset) return [];
+      const requested = curveMeasurementIds[group.seriesId];
+      const measurement = requested
+        ? group.candidates.find((candidate) => candidate.measurement_uid === requested) ?? chooseRepresentativeMeasurement(group.candidates)
+        : chooseRepresentativeMeasurement(group.candidates);
+      if (!measurement) return [];
+      const file = group.files.find((item) => item.file_uid === measurement.file_uid);
+      if (!file) return [];
       const curve = dataset.curves[measurement.measurement_uid];
       const points = curve.v.map((x, index) => ({ x, y: curve.j[index] }))
         .filter((point): point is { x: number; y: number } => numeric(point.x) && numeric(point.y));
       const analysis = analyzeIVCurve(points, measurement.voc_V);
-      return {
-        seriesId: config.id,
-        material: config.material,
-        config,
-        color,
+      return [{
+        seriesId: group.seriesId,
+        material: group.material,
+        config: group.config,
+        color: group.color,
         measurement,
         file,
-        actualTime: config.stress === "Unaged" ? 0 : file.inferred_exposure_duration as number,
+        actualTime: group.config.stress === "Unaged" ? 0 : file.inferred_exposure_duration as number,
         points,
         analysis,
-      };
-    };
-    return seriesConfigs.map(pick).filter((item): item is NonNullable<typeof item> => Boolean(item));
-  }, [dataset, resolvedCurveTime, eligibleFiles, includeQa, seriesConfigs, sharedCurveStress]);
+      }];
+    }), [curveCandidateGroups, curveMeasurementIds, dataset]);
 
   const currentPolarity = currentConvention === "instrument" ? -1 : 1;
   const curveSeries: CurveSeries[] = curveSelections.map((selection) => ({
@@ -410,6 +407,9 @@ export default function Home() {
         y: selection.member.value,
         min: selection.member.value,
         max: selection.member.value,
+        intervalLow: selection.member.value,
+        intervalHigh: selection.member.value,
+        intervalLabel: "single value" as const,
         n: 1,
         selectedLabel: `${selection.member.sampleLabel} · ${selection.member.sampleReference}`,
       }] : [point];
@@ -445,7 +445,24 @@ export default function Home() {
   const sharedMetric = seriesConfigs.length && seriesConfigs.every((config) => config.metric === seriesConfigs[0].metric) ? seriesConfigs[0].metric : null;
   const overlayCompatible = Boolean(sharedXUnit && (mode === "retention" || sharedMetric));
   const trendPanels = overlayCompatible ? [selectedTrendSeries] : selectedTrendSeries.map((series) => [series]);
-  const conditionMixed = seriesConfigs.some((config) => config.electrode === "all" || config.recipe === "all");
+  const conditionAssessment = (() => {
+    if (!dataset) return { status: "incomplete" as const, detail: "Dataset not loaded." };
+    let mixed = false;
+    let incomplete = false;
+    seriesConfigs.forEach((config) => {
+      const contributingIds = new Set(trendSeries.find((series) => series.id === config.id)?.points.flatMap((point) => point.members.map((member) => member.sampleUid)) ?? []);
+      const samples = dataset.samples.filter((sample) => contributingIds.has(sample.sample_uid));
+      const electrodes = new Set(samples.map((sample) => sample.electrode).filter(Boolean));
+      const recipes = new Set(samples.map((sample) => sample.recipe_uid).filter(Boolean));
+      if (config.electrode === "all" && electrodes.size > 1) mixed = true;
+      if (config.recipe === "all" && recipes.size > 1) mixed = true;
+      if (samples.some((sample) => !sample.electrode || !sample.recipe_uid)) incomplete = true;
+    });
+    if (mixed) return { status: "mixed" as const, detail: "At least one series contains multiple electrodes or lamination recipes." };
+    if (incomplete) return { status: "incomplete" as const, detail: "At least one contributing sample has no recorded electrode or lamination recipe." };
+    return { status: "aligned" as const, detail: "Electrode and lamination recipe are explicit and aligned within every series." };
+  })();
+  const conditionMixed = conditionAssessment.status !== "aligned";
 
   const trendInsight = (() => {
     if (selectedTrendSeries.length < 2) return null;
@@ -462,21 +479,67 @@ export default function Home() {
     const time = commonTimes[commonTimes.length - 1];
     if (!numeric(time)) return null;
     const points = selectedTrendSeries.map((series) => ({ series, point: series.points.find((point) => point.x === time)! }));
-    const ranked = [...points].sort((left, right) => right.point.y - left.point.y);
-    const difference = ranked[0].point.y - ranked[ranked.length - 1].point.y;
+    const orderedValues = points.map((item) => item.point.y).sort((left, right) => left - right);
+    const difference = orderedValues[orderedValues.length - 1] - orderedValues[0];
+    const limitations = [
+      conditionAssessment.status !== "aligned" ? "conditions are not fully controlled" : null,
+      selectedTrendSeries.some((series) => series.sampleSetChanges) ? "the contributing sample set changes over time" : null,
+      points.some((item) => item.point.n < 2) ? "at least one aggregate contains a single sample" : null,
+    ].filter(Boolean);
     return {
-      title: `${ranked[0].series.label} leads at ${fr.format(time)} ${sharedXUnit}`,
-      detail: `Max–min spread of ${fr.format(difference)} ${mode === "retention" ? "retention points" : METRICS[ranked[0].series.config.metric].unit} across ${points.length} series.`,
+      title: `Latest shared duration: ${fr.format(time)} ${sharedXUnit}`,
+      detail: `Observed aggregate spread: ${fr.format(difference)} ${mode === "retention" ? "retention points" : METRICS[points[0].series.config.metric].unit} across ${points.length} series. Descriptive comparison only${limitations.length ? ` because ${limitations.join(" and ")}` : "; no hypothesis test has been applied"}.`,
       time,
       count: points.reduce((total, item) => total + item.point.n, 0),
     };
   })();
 
   const exportTrend = () => {
-    if (selectedTrendSeries.length < 2) return;
+    if (!dataset || !selectedTrendSeries.length) return;
     const rows = [
-      ["series", "material", "ageing_protocol", "electrode", "recipe", "metric", "time", "time_unit", "value", "value_unit", "n", "sample"],
-      ...selectedTrendSeries.flatMap((series) => series.points.map((point) => [series.label, series.config.material, series.config.stress, series.config.electrode, series.config.recipe, METRICS[series.config.metric].label, point.x, series.xUnit, point.y, series.yUnit, point.n, point.selectedLabel ?? "Aggregate"])),
+      ["dataset", "schema_version", "generated_on", "pipeline_version", "series", "material", "ageing_protocol", "electrode", "recipe_uid", "metric_key", "metric", "time", "time_unit", "value_mode", "aggregation", "aggregate_value", "interval_low", "interval_high", "interval_type", "min", "max", "n", "sample_uid", "sample_label", "sample_reference", "batch", "observation_uid", "member_value", "selected_for_display", "source_file", "source_row", "qa_flag", "baseline_policy", "qa_included"],
+      ...selectedTrendSeries.flatMap((series) => series.points.flatMap((point) => {
+        const selection = resolveTrendSelection(series.id, point);
+        return point.members.map((member) => {
+          const observation = observationMap.get(member.observationId);
+          return [
+            dataset.name,
+            dataset.schemaVersion,
+            dataset.generatedOn ?? "",
+            dataset.provenance?.pipelineVersion ?? "unknown",
+            series.label,
+            series.config.material,
+            series.config.stress,
+            series.config.electrode,
+            series.config.recipe,
+            series.config.metric,
+            METRICS[series.config.metric].label,
+            point.x,
+            series.xUnit,
+            mode,
+            aggregation,
+            point.y,
+            point.intervalLow,
+            point.intervalHigh,
+            point.intervalLabel,
+            point.min,
+            point.max,
+            point.n,
+            member.sampleUid,
+            member.sampleLabel,
+            member.sampleReference,
+            member.batchNo ?? "",
+            member.observationId,
+            member.value,
+            selection.mode === "member" ? selection.member.observationId === member.observationId : selection.mode === "aggregate",
+            observation?.source_file ?? "",
+            observation?.source_row ?? "",
+            observation?.data_quality_flag ?? "",
+            mode === "retention" ? (series.config.stress === "Outdoor" ? "median of first 3–7 QA-valid days; 3/7/14-day sensitivity checked" : "same-sample Unaged reference") : "not applicable",
+            includeQa,
+          ];
+        });
+      })),
     ];
     const csv = rows.map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(";")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
@@ -496,6 +559,7 @@ export default function Home() {
     setSelectedTrendMembers({});
     setExpandedTrendRows(new Set());
     setHiddenSeries(new Set());
+    setCurveMeasurementIds({});
   };
   const updateSeriesConfig = (seriesId: string, patch: Partial<SeriesConfig>) => {
     if (!dataset) return;
@@ -514,9 +578,8 @@ export default function Home() {
     resetSeriesChoices();
   };
   const aggregationHelp = {
-    mean: "The mean uses every value and remains sensitive to extreme measurements.",
-    median: "The median uses the central value and is more robust to extremes, but it can hide a bimodal distribution.",
-    best: "The best value uses the maximum observed at each duration. It shows the achieved potential, not representative group behaviour.",
+    mean: "The mean uses every QA-valid sample. The chart and table report its 95% confidence interval; interpret intervals cautiously when n is small.",
+    median: "The median reports the central QA-valid sample and its interquartile range. It is robust to extremes but does not replace inspection of individual values.",
   }[aggregation];
 
   return (
@@ -587,9 +650,9 @@ export default function Home() {
             <button className={mode === "absolute" ? "active" : ""} onClick={() => setMode("absolute")}>Absolute value</button>
           </div>
           <InfoTip text={HELP.retention} align="left" />
-          <label className="inline-select"><FieldTitle help={aggregationHelp}>Aggregation</FieldTitle><select value={aggregation} onChange={(event) => setAggregation(event.target.value as Aggregation)}><option value="mean">Mean</option><option value="median">Median</option><option value="best">Best value</option></select></label>
-          <span className="condition-group"><span className={`condition-chip ${conditionMixed ? "warning" : "ok"}`}>{conditionMixed ? "Mixed conditions" : "Aligned conditions"}</span><InfoTip text={HELP.conditions} /></span>
-          {relevantOutdoorIssues.length ? <span className="check-item outdoor-quality-toggle"><label className="check-control"><input type="checkbox" checked={includeQa} onChange={(event) => setIncludeQa(event.target.checked)} /> Include {relevantOutdoorIssues.length} flagged outdoor point{relevantOutdoorIssues.length > 1 ? "s" : ""}</label><InfoTip text={HELP.outdoorQa} align="right" /></span> : null}
+          <label className="inline-select"><FieldTitle help={aggregationHelp}>Aggregation</FieldTitle><select value={aggregation} onChange={(event) => setAggregation(event.target.value as Aggregation)}><option value="mean">Mean + 95% CI</option><option value="median">Median + IQR</option></select></label>
+          <span className="condition-group"><span className={`condition-chip ${conditionMixed ? "warning" : "ok"}`}>{{ aligned: "Aligned conditions", mixed: "Mixed conditions", incomplete: "Incomplete metadata" }[conditionAssessment.status]}</span><InfoTip text={`${conditionAssessment.detail} ${HELP.conditions}`} /></span>
+          <span className="check-item outdoor-quality-toggle"><label className="check-control"><input type="checkbox" checked={includeQa} onChange={(event) => setIncludeQa(event.target.checked)} /> Include QA-flagged data{relevantOutdoorIssues.length ? ` (${relevantOutdoorIssues.length} outdoor)` : ""}</label><InfoTip text={`${HELP.qa} ${HELP.outdoorQa}`} align="right" /></span>
           <span className="quality-note">{report ? `${report.matchedFiles}/${report.files} files matched · ${report.reviewFiles} excluded` : ""}<InfoTip text={HELP.matching} align="right" /></span>
         </div>
 
@@ -629,20 +692,21 @@ export default function Home() {
               <dl>
                 <div><dt>Observations <InfoTip text={HELP.observations} align="left" /></dt><dd>{comparisonCount}</dd></div>
                 <div><dt>Mode <InfoTip text={HELP.retention} align="left" /></dt><dd>{mode === "retention" ? "normalised reference" : "absolute"}</dd></div>
-                <div><dt>Aggregation <InfoTip text={aggregationHelp} align="left" /></dt><dd>{{ mean: "mean", median: "median", best: "best" }[aggregation]}</dd></div>
+                <div><dt>Aggregation <InfoTip text={aggregationHelp} align="left" /></dt><dd>{{ mean: "mean + 95% CI", median: "median + IQR" }[aggregation]}</dd></div>
               </dl>
               {outdoorIssueExample ? <div className="quality-alert" role="status"><strong>{relevantOutdoorIssues.length} outdoor anomal{relevantOutdoorIssues.length > 1 ? "ies" : "y"} {includeQa ? "included for review" : "excluded from analysis"}</strong><span>{outdoorIssueSample?.material_family ?? outdoorIssueExample.sampleUid}{numeric(outdoorIssueExample.time) ? ` · day ${fr.format(outdoorIssueExample.time)}` : ""}: {outdoorIssueExample.reason}{relevantOutdoorIssues.length > 1 ? ` ${relevantOutdoorIssues.length - 1} additional flagged value${relevantOutdoorIssues.length > 2 ? "s" : ""}.` : ""}</span></div> : null}
-              {conditionMixed ? <p className="caution">At least one series mixes electrodes or recipes. Select explicit conditions in each series before attributing a difference to the encapsulant.</p> : null}
+              {conditionMixed ? <p className="caution">{conditionAssessment.detail} Treat the comparison as descriptive and do not attribute a difference to the encapsulant alone.</p> : null}
+              {selectedTrendSeries.some((series) => series.sampleSetChanges || series.baselineWarnings.length) ? <p className="caution">{selectedTrendSeries.some((series) => series.sampleSetChanges) ? "The contributing sample set changes between some durations. " : ""}{selectedTrendSeries.flatMap((series) => series.baselineWarnings).slice(0, 2).join(" · ")}</p> : null}
             </aside>
             <section className="data-table-card">
               <div className="section-head">
                 <div><p className="eyebrow">Aggregated values</p><h4>Displayed points</h4></div>
                 <div className="table-head-tools">
-                  <span>Min–max · select n to view samples. <InfoTip text={`${HELP.minmax} ${HELP.replicates}`} align="right" /></span>
+                  <span>{aggregation === "mean" ? "95% CI" : "IQR"} · select n to view samples. <InfoTip text={`${HELP.interval} ${HELP.replicates}`} align="right" /></span>
                   {trendSeries.map((series, seriesIndex) => <label className="inline-select patch-select" key={series.id}><FieldTitle help={HELP.globalReplicate} align="right">Sample {String.fromCharCode(65 + seriesIndex)}</FieldTitle><select value={activeTrendSamples[series.id] ?? "aggregate"} onChange={(event) => selectTrendSample(series.id, event.target.value)} style={{ borderLeftColor: series.color }}><option value="aggregate">Aggregate · all</option>{(trendSampleOptions[series.id] ?? []).map((member, index) => <option key={member.sampleUid} value={member.sampleUid}>Sample {index + 1} · {member.sampleLabel} · {member.sampleReference}</option>)}</select></label>)}
                 </div>
               </div>
-              <div className="table-scroll"><table><thead><tr><th>Series / conditions</th><th>Sample / reference <InfoTip text={HELP.patchReference} align="left" /></th><th>Time</th><th>Plotted value</th><th>Min</th><th>Max</th><th>n</th></tr></thead><tbody>
+              <div className="table-scroll"><table><thead><tr><th>Series / conditions</th><th>Sample / reference <InfoTip text={HELP.patchReference} align="left" /></th><th>Time</th><th>Plotted value</th><th>Interval low</th><th>Interval high</th><th>n</th></tr></thead><tbody>
                 {trendSeries.flatMap((series) => series.points.map((point) => {
                   const rowKey = trendRowKey(series.id, point.x);
                   const expanded = expandedTrendRows.has(rowKey);
@@ -656,15 +720,15 @@ export default function Home() {
                       <td>{selection.mode === "member" ? <span className="patch-reference"><b>{selectedMember!.sampleLabel}</b><small>Excel ref.: {selectedMember!.sampleReference}{selectedMember!.batchNo ? ` · batch ${selectedMember!.batchNo}` : ""}</small></span> : selection.mode === "missing" ? <span className="patch-reference"><b>No measurement at this duration</b><small>{globalTarget?.sampleLabel} · {globalTarget?.sampleReference}</small></span> : <span className="patch-reference"><b>Aggregate · {point.n} sample{point.n > 1 ? "s" : ""}</b><small>{point.members.map((member) => `${member.sampleLabel} (${member.sampleReference})`).join(" · ")}</small></span>}</td>
                       <td>{fr.format(point.x)} {series.xUnit}</td>
                       <td>{selection.mode === "missing" ? "—" : <><b>{fr.format(selectedMember?.value ?? point.y)}</b> {series.yUnit}</>}</td>
-                      <td>{selection.mode === "aggregate" ? fr.format(point.min) : "—"}</td>
-                      <td>{selection.mode === "aggregate" ? fr.format(point.max) : "—"}</td>
+                      <td>{selection.mode === "aggregate" ? fr.format(point.intervalLow) : "—"}</td>
+                      <td>{selection.mode === "aggregate" ? fr.format(point.intervalHigh) : "—"}</td>
                       <td>{point.n > 1 ? <button type="button" className="n-toggle" aria-expanded={expanded} onClick={() => toggleTrendRow(rowKey)} title="Show individual observations">{point.n}<span aria-hidden="true">{expanded ? "−" : "+"}</span></button> : point.n}</td>
                     </tr>
                     {expanded ? <tr className="replicate-detail-row"><td colSpan={7}>
                       <div className="replicate-panel">
                         <div className="replicate-heading"><strong>Value used on the chart</strong><span>{activeTrendSamples[series.id] ? `Global selection ${series.id.toUpperCase()}: ${globalTarget?.sampleLabel}. A choice here creates a local override.` : "The table uses the reference aggregate."}</span></div>
                         <div className="replicate-choices">
-                          <button type="button" className={`replicate-choice ${selection.mode === "aggregate" ? "active" : ""}`} aria-pressed={selection.mode === "aggregate"} onClick={() => selectTrendMember(rowKey)} style={{ borderLeftColor: series.color }}><span><b>Aggregate</b><small>{{ mean: "Mean", median: "Median", best: "Best value" }[aggregation]} · n={point.n}</small></span><strong>{fr.format(point.y)} {series.yUnit}</strong></button>
+                          <button type="button" className={`replicate-choice ${selection.mode === "aggregate" ? "active" : ""}`} aria-pressed={selection.mode === "aggregate"} onClick={() => selectTrendMember(rowKey)} style={{ borderLeftColor: series.color }}><span><b>Aggregate</b><small>{{ mean: "Mean + 95% CI", median: "Median + IQR" }[aggregation]} · n={point.n}</small></span><strong>{fr.format(point.y)} {series.yUnit}</strong></button>
                           {point.members.map((member, index) => <button type="button" className={`replicate-choice ${selectedId === member.observationId ? "active" : ""}`} aria-pressed={selectedId === member.observationId} key={member.observationId} onClick={() => selectTrendMember(rowKey, member.observationId)} style={{ borderLeftColor: series.color }}><span><b>Sample {index + 1} · {member.sampleLabel}</b><small>Excel ref.: {member.sampleReference}{member.batchNo ? ` · batch ${member.batchNo}` : ""} · {member.observationId}</small></span><strong>{fr.format(member.value)} {series.yUnit}</strong></button>)}
                         </div>
                       </div>
@@ -678,7 +742,7 @@ export default function Home() {
           <div className="curve-workspace">
             {!sharedCurveStress ? <div className="missing-selection"><strong>IV curve overlay requires one shared ageing protocol.</strong><span>The performance view still compares these conditions in separate panels. Choose the same protocol in every series to overlay raw IV curves.</span></div> : <>
             <div className="curve-toolbar">
-              <label><FieldTitle help={HELP.targetTime}>Target time</FieldTitle><select value={resolvedCurveTime ?? ""} onChange={(event) => setCurveTime(Number(event.target.value))} disabled={!curveTimes.all.length}>{curveTimes.all.length ? curveTimes.all.map((time) => <option key={time} value={time}>{fr.format(time)} {curveXUnit}{curveTimes.common.includes(time) ? " · common" : ""}</option>) : <option>No time available</option>}</select></label>
+              <label><FieldTitle help={HELP.targetTime}>Target time</FieldTitle><select value={resolvedCurveTime ?? ""} onChange={(event) => { setCurveTime(Number(event.target.value)); setCurveMeasurementIds({}); }} disabled={!selectableCurveTimes.length}>{selectableCurveTimes.length ? selectableCurveTimes.map((time) => <option key={time} value={time}>{fr.format(time)} {curveXUnit}{curveTimes.common.includes(time) ? " · exact for all series" : ""}</option>) : <option>No exact shared time available</option>}</select></label>
               <label><FieldTitle help={HELP.convention}>Current convention</FieldTitle><select value={currentConvention} onChange={(event) => setCurrentConvention(event.target.value as CurrentConvention)}><option value="instrument">Instrument · negative J</option><option value="pv">PV · positive generated J</option></select></label>
               <label><FieldTitle help={HELP.sweep}>Sweep</FieldTitle><select value={sweepView} onChange={(event) => setSweepView(event.target.value as SweepView)}><option value="primary">Primary · recommended</option><option value="all">All segments</option></select></label>
               <label><FieldTitle help={HELP.scale} align="right">Scale</FieldTitle><select value={curveScale} onChange={(event) => setCurveScale(event.target.value as CurveScale)}><option value="primary">Primary segments</option><option value="all">All data</option></select></label>
@@ -687,6 +751,20 @@ export default function Home() {
                 <span className="check-item"><label className="check-control"><input type="checkbox" checked={showLandmarks} onChange={(event) => setShowLandmarks(event.target.checked)} /> IV landmarks</label><InfoTip text={HELP.landmarks} /></span>
                 <span className="check-item"><label className="check-control"><input type="checkbox" checked={includeQa} onChange={(event) => setIncludeQa(event.target.checked)} /> QA-flagged measurements</label><InfoTip text={HELP.qa} align="right" /></span>
               </div>
+            </div>
+            <div className="curve-selection-grid" aria-label="IV measurement selection">
+              {curveCandidateGroups.map((group, index) => <label key={group.seriesId} style={{ borderTopColor: group.color }}>
+                <FieldTitle help={HELP.curveChoice} align={index === curveCandidateGroups.length - 1 ? "right" : "left"}>Series {String.fromCharCode(65 + index)} measurement</FieldTitle>
+                <select value={curveMeasurementIds[group.seriesId] ?? "representative"} disabled={!group.candidates.length} onChange={(event) => setCurveMeasurementIds((current) => ({ ...current, [group.seriesId]: event.target.value === "representative" ? null : event.target.value }))}>
+                  <option value="representative">Representative · closest to median efficiency</option>
+                  {group.candidates.map((measurement) => {
+                    const sample = measurement.sample_uid ? sampleMap.get(measurement.sample_uid) : undefined;
+                    const efficiency = numeric(measurement.efficiency_pct) ? `${fr.format(measurement.efficiency_pct)}%` : "efficiency unavailable";
+                    return <option value={measurement.measurement_uid} key={measurement.measurement_uid}>{sample?.sample_label ?? measurement.sample_uid ?? "Unmatched sample"} · {measurement.measurement_uid} · {efficiency}</option>;
+                  })}
+                  {!group.candidates.length ? <option>No QA-valid measurement at this exact time</option> : null}
+                </select>
+              </label>)}
             </div>
             <section className="chart-card curve-chart-card">
               <div className="chart-title">
@@ -703,6 +781,7 @@ export default function Home() {
               {curveSelections.map((selection) => <article className="measurement-card" key={selection.seriesId} style={{ borderTopColor: selection.color }}>
                 <p className="eyebrow">{selection.material}</p>
                 <h4>{fr.format(selection.actualTime)} {curveXUnit} · {selection.measurement.measurement_uid}</h4>
+                <p className="measurement-selection-mode">{curveMeasurementIds[selection.seriesId] ? "Explicit measurement" : "Representative measurement nearest the median efficiency"}</p>
                 <dl>
                   <div><dt>Efficiency <InfoTip text={HELP.efficiency} align="left" /></dt><dd>{numeric(selection.measurement.efficiency_pct) ? `${fr.format(selection.measurement.efficiency_pct)} %` : "—"}</dd></div>
                   <div><dt>Voc <InfoTip text={HELP.voc} /></dt><dd>{numeric(selection.measurement.voc_V) ? `${fr.format(selection.measurement.voc_V)} V` : "—"}</dd></div>
@@ -710,7 +789,7 @@ export default function Home() {
                   <div><dt>FF <InfoTip text={HELP.ff} align="right" /></dt><dd>{numeric(selection.measurement.ff_pct) ? `${fr.format(selection.measurement.ff_pct)} %` : "—"}</dd></div>
                 </dl>
                 <p className="curve-segment-note">Primary segment: {selection.analysis.primaryPointCount}/{selection.analysis.rawPointCount} points · {selection.analysis.segments.length} segment{selection.analysis.segments.length > 1 ? "s" : ""} retained<InfoTip text={HELP.segmentation} align="right" /></p>
-                <small>{selection.file.source_file}</small>
+                <small>{sampleMap.get(selection.measurement.sample_uid ?? "")?.sample_label ?? selection.measurement.sample_uid ?? "Unmatched sample"} · {selection.file.source_file} · {selection.file.match_status}{numeric(selection.file.match_score) ? ` (${fr.format(selection.file.match_score)})` : ""}</small>
               </article>)}
               {!curveSelections.length ? <div className="missing-selection">No measurement matches these filters.</div> : null}
             </div>

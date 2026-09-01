@@ -1,38 +1,61 @@
 # IV Compare
 
-Application interne de comparaison des polymères d’encapsulation, des courbes IV et des mesures Outdoor après vieillissement DH, TC ou exposition extérieure.
+Internal scientific application for comparing photovoltaic encapsulants, ageing observations, outdoor logger data, and raw IV curves.
 
-## Données acceptées
+## Scientific scope
 
-- un fichier compact `.ivpack` produit par `scripts/build_ivpack.py` ;
-- ou le classeur normalisé `data/processed/IV_dataset_normalise_Outdoor.xlsx` et le fichier `data/processed/IV_curve_points.tsv`, sélectionnés ensemble.
+The application supports exploratory comparison after damp heat (DH), thermal cycling (TC), outdoor exposure, or in the initial state. A comparison is attributable to the encapsulant only when electrode, lamination recipe, ageing protocol, and relevant batch/process conditions are controlled. The interface labels mixed or incomplete conditions and presents its summary as descriptive rather than inferential.
 
-Les imports restent dans le navigateur et ne sont pas envoyés vers un serveur. Les fichiers ambigus ou non appariés sont exclus des comparaisons par défaut, et les mesures portant un indicateur QA restent désactivées tant que l’utilisateur ne les inclut pas.
+- Mean aggregation is shown with a 95% confidence interval.
+- Median aggregation is shown with an interquartile range.
+- The former “best value” aggregation is intentionally unavailable because it stitched different specimens into an artificial trajectory.
+- Every QA-valid point remains visible. Statistical outliers are not hidden merely to improve chart scaling.
+- Outdoor PR, Pmpp, and irradiance are daily medians over measurements with irradiance ≥ 200 W/m². Electrical-only files without irradiance retain median positive Pmpp with an explicit QA flag.
+- Outdoor retention requires at least three valid days and uses the median of up to the first seven days. Sensitivity across 3-, 7-, and 14-day windows is reported when possible.
+- A representative IV curve is closest to the median efficiency of the eligible QA-valid measurements. The user can always select an explicit measurement; the maximum efficiency is never selected automatically.
 
-## Fonctions principales
+## Data and provenance
 
-- comparaison de deux familles de polymères ou davantage ;
-- filtres par vieillissement, électrode et recette de lamination ;
-- rendement, Jsc, Voc ou FF en valeur absolue ou en rétention par rapport à l’état initial ;
-- agrégation par moyenne, médiane ou meilleure valeur ;
-- comparaison des courbes IV au temps commun ou le plus proche ;
-- export CSV de la sélection.
+- `data/raw/IV/`: immutable `Summary.xlsx` inventory and original solar-simulator `.xls` files.
+- `data/raw/Outdoor/`: immutable logger CSV files.
+- `data/processed/IV_dataset_normalise_Outdoor.xlsx`: relational inventory, matching decisions, measurement metadata, and daily Outdoor aggregates.
+- `data/processed/IV_curve_points.tsv`: 743,140 ordered IV points.
+- `data/processed/Outdoor_raw_measurements.tsv`: 203,122 traceable Outdoor measurements.
+- `data/processed/normalization-protocol.json`: versioned transformation rules and scientific assumptions.
+- `data/processed/IV_Compare_DOWSIL.ivpack`: compact browser package.
+- `data/context/`: the publication and project presentation used as scientific context.
 
-## Organisation des données
+The browser package embeds SHA-256 provenance for the complete raw-data tree and each processed input. File-to-sample matching reasons and margins, source rows, raw daily counts, aggregation protocols, and QA flags remain available in the package or workbook.
 
-- `data/raw/IV/` : inventaire `Summary.xlsx` et fichiers `.xls` originaux du simulateur solaire ;
-- `data/raw/Outdoor/` : fichiers CSV originaux des loggers Outdoor ;
-- `data/processed/IV_dataset_normalise_Outdoor.xlsx` : inventaire relationnel, appariements, métadonnées IV et agrégats Outdoor journaliers ;
-- `data/processed/IV_curve_points.tsv` : 743 140 points de courbe IV normalisés ;
-- `data/processed/Outdoor_raw_measurements.tsv` : 203 122 mesures Outdoor brutes normalisées et traçables ;
-- `data/processed/IV_Compare_DOWSIL.ivpack` : paquet compact directement importable dans le site ;
-- `data/context/` : présentation et publication utilisées comme contexte scientifique.
+Rebuild and verify the package:
 
-Les sources ne sont pas modifiées. Chaque observation normalisée conserve les identifiants et chemins nécessaires pour revenir au patch et au fichier d’origine. Les fichiers volumineux sont versionnés avec Git LFS.
+```bash
+pnpm data:build
+pnpm data:verify
+pnpm data:verify:deep
+```
 
-## Développement
+`data:verify` reconciles the recorded source links and row counts, then proves that both committed `.ivpack` files are byte-for-byte reproducible. `data:verify:deep` additionally reads every raw IV workbook and Outdoor CSV and compares all 743,140 IV points and 203,122 Outdoor measurements with the processed values.
+
+## Local development
 
 ```bash
 pnpm install
-pnpm run dev
+pnpm dev
 ```
+
+Validation:
+
+```bash
+pnpm typecheck
+pnpm lint
+pnpm test
+```
+
+Imports are processed locally in the browser. `.ivpack` files are limited to 64 MB, workbooks to 32 MB, and point TSV files to 256 MB. Imported datasets must satisfy schema, uniqueness, referential-integrity, finite-value, curve-length, and report-count checks.
+
+## Hestia deployment
+
+The project uses the standard Vinext Node server and does not require Cloudflare, OpenAI Sites, D1, R2, or Wrangler. Build with `pnpm build`, run with `pnpm start`, and place the Hestia reverse proxy in front of the Node process.
+
+Because the repository contains internal research data, production must protect the entire origin—including `/data/*.ivpack`—with Hestia/Nginx authentication or an equivalent access-control layer. Do not rely on hiding the download link as a security measure.
