@@ -115,10 +115,12 @@ button, a, label { -webkit-tap-highlight-color: transparent; }
 .legend-toggle.hidden .legend-dot { filter: grayscale(1); }
 .legend-dot, .table-dot { display: inline-block; width: 9px; height: 9px; margin-right: 7px; border-radius: 50%; }
 .coral { background: var(--coral); }.blue { background: var(--blue); }
-.chart-zoom-controls { margin-top: 10px; display: flex; gap: 6px; align-items: center; justify-content: flex-end; color: var(--muted); font-size: 11px; }
+.chart-zoom-controls { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; color: var(--muted); font-size: 11px; }
 .chart-zoom-controls > span { margin-right: 4px; }
 .chart-zoom-controls button { min-width: 28px; height: 27px; padding: 0 8px; border: 1px solid var(--line); border-radius: 7px; background: #faf9f6; color: var(--ink); cursor: pointer; font-size: 12px; font-weight: 800; }
-.chart-zoom-controls button:last-child { min-width: 50px; font-size: 9px; text-transform: uppercase; }
+.chart-zoom-controls .chart-reset-button { min-width: 50px; font-size: 9px; text-transform: uppercase; }
+.chart-zoom-controls .chart-export-button { min-width: 74px; border-color: #b8c8e8; background: #f5f8ff; color: var(--blue); font-size: 9px; text-transform: uppercase; }
+.chart-export-divider { width: 1px; height: 20px; margin: 0 2px !important; background: var(--line); }
 .chart-data-policy { margin-right: auto !important; color: #35634a; font-weight: 800; }
 .chart-zoom-controls button:disabled { opacity: .4; cursor: default; }
 .chart-zoom-controls button:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
@@ -274,7 +276,9 @@ footer { padding: 22px 4px 0; display: flex; justify-content: space-between; col
   .chart-title { padding-inline: 8px; }
   .chart-zoom-controls { grid-template-columns: auto minmax(34px, auto) auto auto; display: grid; justify-content: start; }
   .chart-zoom-controls > span { margin-right: 0; }
-  .chart-zoom-controls > span:not(.chart-data-policy), .chart-data-policy { grid-column: 1 / -1; }
+  .chart-zoom-controls > span:not(.chart-data-policy):not(.chart-export-divider), .chart-data-policy { grid-column: 1 / -1; }
+  .chart-export-divider { width: auto; height: 1px; grid-column: 1 / -1; margin: 2px 0 !important; }
+  .chart-zoom-controls .chart-export-button { grid-column: span 2; }
   .chart-data-policy { width: 100%; }
   .axis-label { font-size: 19px; }
   .axis-title { font-size: 19px; }

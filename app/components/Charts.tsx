@@ -50,6 +50,153 @@ const TREND_CHART_MARGIN = { left: 64, right: 22, top: 24, bottom: 50 };
 const CURVE_CHART_WIDTH = 900;
 const CURVE_CHART_HEIGHT = 360;
 const CURVE_CHART_MARGIN = { left: 64, right: 22, top: 24, bottom: 50 };
+const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+const EXPORT_SCALE = 3;
+const EXPORT_COLUMNS = 3;
+const EXPORT_COLUMN_WIDTH = 280;
+const EXPORT_STYLES = `
+  text { font-family: Arial, Helvetica, sans-serif; }
+  .export-title { fill: #15233d; font-size: 16px; font-weight: 700; }
+  .export-subtitle, .export-legend { fill: #5f6875; font-size: 10px; }
+  .grid-line { stroke: #e8e5de; stroke-width: 1; }
+  .axis-line { stroke: #9ca3af; stroke-width: 1.2; }
+  .tick-line { stroke: #9ca3af; stroke-width: 1; }
+  .zero-axis { stroke: #687180; stroke-width: 1.35; }
+  .zero-axis.vertical { stroke-width: 1.1; }
+  .axis-label { fill: #737b88; font-size: 11px; }
+  .axis-title { fill: #5f6875; font-size: 11px; font-weight: 700; }
+  .landmark-guide { stroke-width: 1; stroke-dasharray: 4 4; opacity: .5; }
+  .landmark-point { stroke-width: 1.5; }
+  .landmark-label { font-size: 8px; font-weight: 700; paint-order: stroke; stroke: white; stroke-width: 3px; stroke-linejoin: round; }
+`;
+
+type ExportSeries = Pick<TrendSeries | CurveSeries, "label" | "color">;
+
+function exportFileStem(prefix: string, series: ExportSeries[]): string {
+  const labels = series.map((item) => item.label).join("-vs-");
+  const slug = `${prefix}-${labels}`
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase();
+  return (slug || prefix).slice(0, 120);
+}
+
+function appendSvgText(parent: SVGElement, text: string, x: number, y: number, className: string) {
+  const element = document.createElementNS(SVG_NAMESPACE, "text");
+  element.setAttribute("x", String(x));
+  element.setAttribute("y", String(y));
+  element.setAttribute("class", className);
+  element.textContent = text;
+  parent.appendChild(element);
+}
+
+function serialiseChart(
+  source: SVGSVGElement,
+  title: string,
+  subtitle: string,
+  series: ExportSeries[],
+  width: number,
+  height: number,
+): { content: string; width: number; height: number } {
+  const legendRows = Math.max(1, Math.ceil(series.length / EXPORT_COLUMNS));
+  const headerHeight = 54 + legendRows * 20;
+  const exportHeight = height + headerHeight;
+  const root = document.createElementNS(SVG_NAMESPACE, "svg");
+  root.setAttribute("xmlns", SVG_NAMESPACE);
+  root.setAttribute("viewBox", `0 0 ${width} ${exportHeight}`);
+  root.setAttribute("width", String(width));
+  root.setAttribute("height", String(exportHeight));
+
+  const style = document.createElementNS(SVG_NAMESPACE, "style");
+  style.textContent = EXPORT_STYLES;
+  root.appendChild(style);
+
+  const background = document.createElementNS(SVG_NAMESPACE, "rect");
+  background.setAttribute("width", "100%");
+  background.setAttribute("height", "100%");
+  background.setAttribute("fill", "white");
+  root.appendChild(background);
+
+  appendSvgText(root, title, 24, 24, "export-title");
+  appendSvgText(root, subtitle, 24, 42, "export-subtitle");
+  const legend = document.createElementNS(SVG_NAMESPACE, "g");
+  legend.setAttribute("class", "export-legend");
+  series.forEach((item, index) => {
+    const column = index % EXPORT_COLUMNS;
+    const row = Math.floor(index / EXPORT_COLUMNS);
+    const x = 24 + column * EXPORT_COLUMN_WIDTH;
+    const y = 62 + row * 20;
+    const marker = document.createElementNS(SVG_NAMESPACE, "circle");
+    marker.setAttribute("cx", String(x + 4));
+    marker.setAttribute("cy", String(y - 3));
+    marker.setAttribute("r", "4");
+    marker.setAttribute("fill", item.color);
+    legend.appendChild(marker);
+    appendSvgText(legend, item.label, x + 14, y, "export-legend");
+  });
+  root.appendChild(legend);
+
+  const chart = document.createElementNS(SVG_NAMESPACE, "g");
+  chart.setAttribute("transform", `translate(0 ${headerHeight})`);
+  const clone = source.cloneNode(true) as SVGSVGElement;
+  clone.removeAttribute("aria-label");
+  clone.removeAttribute("role");
+  clone.removeAttribute("tabindex");
+  Array.from(clone.childNodes).forEach((child) => chart.appendChild(child));
+  root.appendChild(chart);
+
+  return {
+    content: new XMLSerializer().serializeToString(root),
+    width,
+    height: exportHeight,
+  };
+}
+
+function downloadBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function exportSvg(source: SVGSVGElement, title: string, subtitle: string, series: ExportSeries[], fileStem: string, width: number, height: number) {
+  const exported = serialiseChart(source, title, subtitle, series, width, height);
+  downloadBlob(new Blob([exported.content], { type: "image/svg+xml;charset=utf-8" }), `${fileStem}.svg`);
+}
+
+async function exportPng(source: SVGSVGElement, title: string, subtitle: string, series: ExportSeries[], fileStem: string, width: number, height: number) {
+  const exported = serialiseChart(source, title, subtitle, series, width, height);
+  const sourceUrl = URL.createObjectURL(new Blob([exported.content], { type: "image/svg+xml;charset=utf-8" }));
+  try {
+    const image = new Image();
+    image.decoding = "async";
+    const loaded = new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error("The chart image could not be generated."));
+    });
+    image.src = sourceUrl;
+    await loaded;
+    const canvas = document.createElement("canvas");
+    canvas.width = exported.width * EXPORT_SCALE;
+    canvas.height = exported.height * EXPORT_SCALE;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Canvas export is unavailable in this browser.");
+    context.fillStyle = "white";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const png = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+    if (!png) throw new Error("The PNG file could not be generated.");
+    downloadBlob(png, `${fileStem}.png`);
+  } finally {
+    URL.revokeObjectURL(sourceUrl);
+  }
+}
 
 type TrendViewport = { zoom: number; centreX: number; centreY: number };
 function clamp(value: number, min: number, max: number): number {
@@ -146,6 +293,9 @@ export function TrendChart({ series, xUnit, yUnit }: { series: TrendSeries[]; xU
   const sy = (value: number) => height - margin.bottom - ((value - yMin) / (yMax - yMin || 1)) * (height - margin.top - margin.bottom);
   const xTicks = ticks(xMin, xMax);
   const yTicks = ticks(yMin, yMax);
+  const exportTitle = `Performance over time — ${yUnit}`;
+  const exportSubtitle = `${series.length} visible series · current view at ${Math.round(viewport.zoom * 100)}% zoom · time in ${xUnit}`;
+  const exportStem = exportFileStem("performance-over-time", series);
 
   const changeZoom = (nextZoom: number, anchorX = 0.5, anchorY = 0.5) => {
     setViewport((current) => {
@@ -207,7 +357,15 @@ export function TrendChart({ series, xUnit, yUnit }: { series: TrendSeries[]; xU
         <button type="button" onClick={() => changeZoom(viewport.zoom / 1.5)} disabled={viewport.zoom === 1} aria-label="Zoom out">−</button>
         <output aria-live="polite">{Math.round(viewport.zoom * 100)}%</output>
         <button type="button" onClick={() => changeZoom(viewport.zoom * 1.5)} disabled={viewport.zoom === MAX_TREND_ZOOM} aria-label="Zoom in">+</button>
-        <button type="button" onClick={() => setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 })} disabled={viewport.zoom === 1}>Reset</button>
+        <button type="button" className="chart-reset-button" onClick={() => setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 })} disabled={viewport.zoom === 1}>Reset</button>
+        <span className="chart-export-divider" aria-hidden="true" />
+        <button type="button" className="chart-export-button" onClick={() => {
+          if (!svgRef.current) return;
+          void exportPng(svgRef.current, exportTitle, exportSubtitle, series, exportStem, width, height).catch((error: unknown) => window.alert(error instanceof Error ? error.message : "The PNG file could not be generated."));
+        }}>Export PNG</button>
+        <button type="button" className="chart-export-button" onClick={() => {
+          if (svgRef.current) exportSvg(svgRef.current, exportTitle, exportSubtitle, series, exportStem, width, height);
+        }}>Export SVG</button>
       </div>
       <figure className="data-figure">
       <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} role="img" tabIndex={0} aria-label="Zoomable comparative evolution chart. All QA-valid values are displayed." onKeyDown={onKeyDown} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={endPointerDrag} onPointerCancel={endPointerDrag} onDoubleClick={() => setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 })}>
@@ -340,6 +498,9 @@ export function CurveChart({
   const sy = (value: number) => height - margin.bottom - ((value - yMin) / (yMax - yMin || 1)) * (height - margin.top - margin.bottom);
   const xTicks = ticks(xMin, xMax);
   const yTicks = ticks(yMin, yMax);
+  const exportTitle = `IV curves — ${yAxisLabel}`;
+  const exportSubtitle = `${series.length} visible series · current view at ${Math.round(viewport.zoom * 100)}% zoom · ${currentConvention} current convention`;
+  const exportStem = exportFileStem("iv-curves", series);
 
   const changeZoom = (nextZoom: number) => setViewport((current) => clampViewport({ ...current, zoom: clamp(nextZoom, 1, MAX_TREND_ZOOM) }));
   const onPointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
@@ -382,7 +543,15 @@ export function CurveChart({
         <button type="button" onClick={() => changeZoom(viewport.zoom / 1.5)} disabled={viewport.zoom === 1} aria-label="Zoom out">−</button>
         <output aria-live="polite">{Math.round(viewport.zoom * 100)}%</output>
         <button type="button" onClick={() => changeZoom(viewport.zoom * 1.5)} disabled={viewport.zoom === MAX_TREND_ZOOM} aria-label="Zoom in">+</button>
-        <button type="button" onClick={() => setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 })} disabled={viewport.zoom === 1}>Reset</button>
+        <button type="button" className="chart-reset-button" onClick={() => setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 })} disabled={viewport.zoom === 1}>Reset</button>
+        <span className="chart-export-divider" aria-hidden="true" />
+        <button type="button" className="chart-export-button" onClick={() => {
+          if (!svgRef.current) return;
+          void exportPng(svgRef.current, exportTitle, exportSubtitle, series, exportStem, width, height).catch((error: unknown) => window.alert(error instanceof Error ? error.message : "The PNG file could not be generated."));
+        }}>Export PNG</button>
+        <button type="button" className="chart-export-button" onClick={() => {
+          if (svgRef.current) exportSvg(svgRef.current, exportTitle, exportSubtitle, series, exportStem, width, height);
+        }}>Export SVG</button>
       </div>
       <figure className="data-figure">
       <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} role="img" tabIndex={0} aria-label={`Zoomable compared current–voltage curves, ${currentConvention === "instrument" ? "instrument" : "photovoltaic"} convention`} onKeyDown={onKeyDown} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={endPointerDrag} onPointerCancel={endPointerDrag} onDoubleClick={() => setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 })}>
