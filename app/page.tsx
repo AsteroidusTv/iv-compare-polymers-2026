@@ -108,6 +108,15 @@ function timeUnit(stress: string): string {
   return "h";
 }
 
+function ageingReportLabel(stress: string): string {
+  if (stress === "DH") return "damp-heat ageing";
+  if (stress === "TC") return "thermal-cycling ageing";
+  if (stress === "DH+TC") return "combined damp-heat and thermal-cycling ageing";
+  if (stress === "Outdoor") return "outdoor exposure";
+  if (stress === "Unaged") return "the initial state";
+  return `${stress} ageing`;
+}
+
 function trendRowKey(seriesId: SeriesId, time: number): string {
   return `${seriesId}:${time}`;
 }
@@ -678,9 +687,17 @@ export default function Home() {
                   const visiblePanel = panel.filter((series) => !hiddenSeries.has(series.id));
                   const panelTitle = panel.length > 1 ? (sharedMetric ? METRICS[sharedMetric].label : "Normalised retention") : `${first.label} · ${METRICS[first.config.metric].label}`;
                   const helpMetric = panel.length === 1 || sharedMetric ? (sharedMetric ?? first.config.metric) : null;
+                  const reportMetric = METRICS[first.config.metric].label;
+                  const reportAgeing = ageingReportLabel(first.config.stress);
+                  const reportTitle = first.config.stress === "Unaged"
+                    ? `${reportMetric} at the initial state`
+                    : `${reportMetric}${mode === "retention" ? " retention" : ""} during ${reportAgeing}`;
+                  const reportReference = first.config.stress === "Outdoor" ? "reference baseline" : "initial value";
+                  const reportYAxisLabel = mode === "retention" ? `${reportMetric} retention (% of ${reportReference})` : `${reportMetric} (${first.yUnit})`;
+                  const reportSubtitle = aggregation === "mean" ? "Mean with 95% CI when estimable" : "Median with IQR when estimable";
                   return <section className="trend-panel" key={panel.map((series) => series.id).join("-")}>
                     <div className="trend-panel-head"><div><span className="trend-panel-title"><strong>{panelTitle}</strong>{helpMetric ? <InfoTip text={METRIC_HELP[helpMetric]} align="left" /> : null}</span><span className="trend-panel-context">{panel.length > 1 ? `${panel.length} compatible series · ${first.xUnit}` : first.contextLabel}</span></div></div>
-                    <TrendChart key={`${panel.map((series) => `${series.id}-${series.config.stress}-${series.config.metric}`).join("|")}-${mode}-${aggregation}-${includeQa}`} series={visiblePanel} xUnit={first.xUnit} yUnit={first.yUnit} />
+                    <TrendChart key={`${panel.map((series) => `${series.id}-${series.config.stress}-${series.config.metric}`).join("|")}-${mode}-${aggregation}-${includeQa}`} series={visiblePanel.map((series) => ({ ...series, exportDetail: series.contextLabel }))} xUnit={first.xUnit} yUnit={first.yUnit} reportTitle={reportTitle} reportSubtitle={reportSubtitle} reportYAxisLabel={reportYAxisLabel} />
                   </section>;
                 })}
               </div>

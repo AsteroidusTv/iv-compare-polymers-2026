@@ -139,6 +139,8 @@ button, a, label { -webkit-tap-highlight-color: transparent; }
 .zero-axis.vertical { stroke-width: 1.1; }
 .axis-label { fill: #737b88; font-size: 11px; }
 .axis-title { fill: #5f6875; font-size: 11px; font-weight: 700; }
+.reference-baseline line { stroke: #737b88; stroke-width: 1.2; stroke-dasharray: 7 5; }
+.reference-baseline text { fill: #5f6875; font-size: 9px; font-weight: 700; }
 .trend-point { transition: r .12s ease, stroke-width .12s ease; }
 .trend-point:hover { r: 5px; stroke-width: 2.5px; }
 .landmark-guide { stroke-width: 1; stroke-dasharray: 4 4; opacity: .5; }

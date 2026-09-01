@@ -27,6 +27,7 @@ export interface TrendSeries {
   label: string;
   color: string;
   points: TrendPoint[];
+  exportDetail?: string;
 }
 
 export interface CurveSeries {
@@ -54,6 +55,7 @@ const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const EXPORT_SCALE = 3;
 const EXPORT_COLUMNS = 3;
 const EXPORT_COLUMN_WIDTH = 280;
+const EXPORT_LINE_PATTERNS = ["", "8 5", "2 4", "10 4 2 4", "12 4", "4 3"];
 const EXPORT_STYLES = `
   text { font-family: Arial, Helvetica, sans-serif; }
   .export-title { fill: #15233d; font-size: 16px; font-weight: 700; }
@@ -65,12 +67,14 @@ const EXPORT_STYLES = `
   .zero-axis.vertical { stroke-width: 1.1; }
   .axis-label { fill: #737b88; font-size: 11px; }
   .axis-title { fill: #5f6875; font-size: 11px; font-weight: 700; }
+  .reference-baseline line { stroke: #737b88; stroke-width: 1.2; stroke-dasharray: 7 5; }
+  .reference-baseline text { fill: #5f6875; font-size: 9px; font-weight: 700; }
   .landmark-guide { stroke-width: 1; stroke-dasharray: 4 4; opacity: .5; }
   .landmark-point { stroke-width: 1.5; }
   .landmark-label { font-size: 8px; font-weight: 700; paint-order: stroke; stroke: white; stroke-width: 3px; stroke-linejoin: round; }
 `;
 
-type ExportSeries = Pick<TrendSeries | CurveSeries, "label" | "color">;
+type ExportSeries = Pick<TrendSeries | CurveSeries, "label" | "color"> & { exportDetail?: string };
 
 function exportFileStem(prefix: string, series: ExportSeries[]): string {
   const labels = series.map((item) => item.label).join("-vs-");
@@ -101,7 +105,8 @@ function serialiseChart(
   height: number,
 ): { content: string; width: number; height: number } {
   const legendRows = Math.max(1, Math.ceil(series.length / EXPORT_COLUMNS));
-  const headerHeight = 54 + legendRows * 20;
+  const legendRowHeight = series.some((item) => item.exportDetail) ? 30 : 20;
+  const headerHeight = 54 + legendRows * legendRowHeight;
   const exportHeight = height + headerHeight;
   const root = document.createElementNS(SVG_NAMESPACE, "svg");
   root.setAttribute("xmlns", SVG_NAMESPACE);
@@ -127,14 +132,19 @@ function serialiseChart(
     const column = index % EXPORT_COLUMNS;
     const row = Math.floor(index / EXPORT_COLUMNS);
     const x = 24 + column * EXPORT_COLUMN_WIDTH;
-    const y = 62 + row * 20;
-    const marker = document.createElementNS(SVG_NAMESPACE, "circle");
-    marker.setAttribute("cx", String(x + 4));
-    marker.setAttribute("cy", String(y - 3));
-    marker.setAttribute("r", "4");
-    marker.setAttribute("fill", item.color);
+    const y = 62 + row * legendRowHeight;
+    const marker = document.createElementNS(SVG_NAMESPACE, "line");
+    marker.setAttribute("x1", String(x));
+    marker.setAttribute("x2", String(x + 16));
+    marker.setAttribute("y1", String(y - 3));
+    marker.setAttribute("y2", String(y - 3));
+    marker.setAttribute("stroke", item.color);
+    marker.setAttribute("stroke-width", "3");
+    const pattern = EXPORT_LINE_PATTERNS[index % EXPORT_LINE_PATTERNS.length];
+    if (pattern) marker.setAttribute("stroke-dasharray", pattern);
     legend.appendChild(marker);
-    appendSvgText(legend, item.label, x + 14, y, "export-legend");
+    appendSvgText(legend, item.label, x + 22, y, "export-legend");
+    if (item.exportDetail) appendSvgText(legend, item.exportDetail.slice(0, 48), x + 22, y + 11, "export-subtitle");
   });
   root.appendChild(legend);
 
@@ -144,6 +154,12 @@ function serialiseChart(
   clone.removeAttribute("aria-label");
   clone.removeAttribute("role");
   clone.removeAttribute("tabindex");
+  clone.querySelectorAll<SVGGElement>("[data-export-series-index]").forEach((group) => {
+    const index = Number(group.dataset.exportSeriesIndex ?? 0);
+    const pattern = EXPORT_LINE_PATTERNS[index % EXPORT_LINE_PATTERNS.length];
+    if (!pattern) return;
+    group.querySelectorAll<SVGPathElement>("path").forEach((path) => path.setAttribute("stroke-dasharray", pattern));
+  });
   Array.from(clone.childNodes).forEach((child) => chart.appendChild(child));
   root.appendChild(chart);
 
@@ -229,7 +245,34 @@ function ticks(min: number, max: number, count = 5): number[] {
   return Array.from({ length: count }, (_, index) => min + ((max - min) * index) / (count - 1));
 }
 
-export function TrendChart({ series, xUnit, yUnit }: { series: TrendSeries[]; xUnit: string; yUnit: string }) {
+function tickSequence(min: number, max: number, step: number): number[] {
+  const count = Math.floor((max - min) / step + 0.5);
+  return Array.from({ length: count + 1 }, (_, index) => min + index * step);
+}
+
+function niceStep(value: number, targetTickCount = 6): number {
+  const roughStep = Math.max(value, Number.EPSILON) / targetTickCount;
+  const magnitude = 10 ** Math.floor(Math.log10(roughStep));
+  const residual = roughStep / magnitude;
+  const factor = residual <= 1 ? 1 : residual <= 2 ? 2 : residual <= 2.5 ? 2.5 : residual <= 5 ? 5 : 10;
+  return factor * magnitude;
+}
+
+export function TrendChart({
+  series,
+  xUnit,
+  yUnit,
+  reportTitle,
+  reportSubtitle,
+  reportYAxisLabel,
+}: {
+  series: TrendSeries[];
+  xUnit: string;
+  yUnit: string;
+  reportTitle?: string;
+  reportSubtitle?: string;
+  reportYAxisLabel?: string;
+}) {
   const [viewport, setViewport] = useState<TrendViewport>({ zoom: 1, centreX: 0.5, centreY: 0.5 });
   const dragRef = useRef<{ clientX: number; clientY: number; centreX: number; centreY: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -276,8 +319,17 @@ export function TrendChart({ series, xUnit, yUnit }: { series: TrendSeries[]; xU
   if (!all.length) {
     return <div className="empty-chart"><strong>No comparable points</strong><span>Broaden the filters or choose another condition.</span></div>;
   }
-  const [fullXMin, fullXMax] = extent(all.map((point) => point.x));
-  const [fullYMin, fullYMax] = extent(all.flatMap((point) => [point.y, point.intervalLow, point.intervalHigh]));
+  const isRetention = yUnit === "% of reference";
+  const allTimes = all.map((point) => point.x);
+  const allValues = all.flatMap((point) => [point.y, point.intervalLow, point.intervalHigh]);
+  const maximumTime = Math.max(...allTimes, 0);
+  const fullXStep = niceStep(maximumTime);
+  const fullXMin = 0;
+  const fullXMax = Math.max(fullXStep, Math.ceil(maximumTime / fullXStep) * fullXStep);
+  const [paddedYMin, paddedYMax] = extent(allValues);
+  const retentionStep = 20;
+  const fullYMin = isRetention ? 0 : paddedYMin;
+  const fullYMax = isRetention ? Math.max(120, Math.ceil(Math.max(...allValues, 100) / retentionStep) * retentionStep) : paddedYMax;
   const width = TREND_CHART_WIDTH;
   const height = TREND_CHART_HEIGHT;
   const margin = TREND_CHART_MARGIN;
@@ -291,10 +343,17 @@ export function TrendChart({ series, xUnit, yUnit }: { series: TrendSeries[]; xU
   const yMax = yMin + ySpan;
   const sx = (value: number) => margin.left + ((value - xMin) / (xMax - xMin || 1)) * (width - margin.left - margin.right);
   const sy = (value: number) => height - margin.bottom - ((value - yMin) / (yMax - yMin || 1)) * (height - margin.top - margin.bottom);
-  const xTicks = ticks(xMin, xMax);
-  const yTicks = ticks(yMin, yMax);
-  const exportTitle = `Performance over time — ${yUnit}`;
-  const exportSubtitle = `${series.length} visible series · current view at ${Math.round(viewport.zoom * 100)}% zoom · time in ${xUnit}`;
+  const xTicks = viewport.zoom === 1 ? tickSequence(fullXMin, fullXMax, fullXStep) : ticks(xMin, xMax);
+  const yTicks = viewport.zoom === 1 && isRetention ? tickSequence(fullYMin, fullYMax, retentionStep) : ticks(yMin, yMax);
+  const sampleCounts = all.map((point) => point.n).filter((count) => count > 0);
+  const minimumN = sampleCounts.length ? Math.min(...sampleCounts) : 0;
+  const maximumN = sampleCounts.length ? Math.max(...sampleCounts) : 0;
+  const sampleDescription = minimumN === maximumN
+    ? `n=${minimumN} per series and duration`
+    : `n=${minimumN}–${maximumN} per series and duration`;
+  const exportTitle = reportTitle ?? `Performance over time — ${yUnit}`;
+  const exportSubtitle = [reportSubtitle, sampleDescription].filter(Boolean).join(" · ");
+  const yAxisLabel = reportYAxisLabel ?? yUnit;
   const exportStem = exportFileStem("performance-over-time", series);
 
   const changeZoom = (nextZoom: number, anchorX = 0.5, anchorY = 0.5) => {
@@ -374,11 +433,12 @@ export function TrendChart({ series, xUnit, yUnit }: { series: TrendSeries[]; xU
         {xTicks.map((tick) => <g key={`x-${tick}`}><line className="tick-line" x1={sx(tick)} x2={sx(tick)} y1={height - margin.bottom} y2={height - margin.bottom + 6} /><text className="axis-label" x={sx(tick)} y={height - 20} textAnchor="middle">{numberFormat.format(tick)}</text></g>)}
         <line className="axis-line" x1={margin.left} x2={width - margin.right} y1={height - margin.bottom} y2={height - margin.bottom} />
         <text className="axis-title" x={width - margin.right} y={height - 5} textAnchor="end">Time ({xUnit})</text>
-        <text className="axis-title" x={margin.left} y={14}>{yUnit}</text>
-        <g clipPath="url(#trend-plot-clip)">{series.map((item) => {
+        <text className="axis-title" x={margin.left} y={14}>{yAxisLabel}</text>
+        {isRetention && yMin <= 100 && yMax >= 100 ? <g className="reference-baseline"><line x1={margin.left} x2={width - margin.right} y1={sy(100)} y2={sy(100)} /><text x={width - margin.right - 4} y={sy(100) - 6} textAnchor="end">Reference · 100%</text></g> : null}
+        <g clipPath="url(#trend-plot-clip)">{series.map((item, seriesIndex) => {
           const ordered = [...item.points].sort((a, b) => a.x - b.x);
           const path = ordered.map((point, index) => `${index ? "L" : "M"}${sx(point.x)},${sy(point.y)}`).join(" ");
-          return <g key={item.label}>
+          return <g key={item.label} data-export-series-index={seriesIndex}>
             {ordered.map((point) => <line key={`range-${point.x}`} x1={sx(point.x)} x2={sx(point.x)} y1={sy(point.intervalLow)} y2={sy(point.intervalHigh)} stroke={item.color} strokeWidth="1.5" opacity=".3"><title>{`${point.intervalLabel}: ${numberFormat.format(point.intervalLow)}–${numberFormat.format(point.intervalHigh)} ${yUnit}`}</title></line>)}
             <path d={path} fill="none" stroke={item.color} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
             {ordered.map((point) => <circle className={`trend-point${point.selectedLabel ? " selected" : ""}`} key={`point-${point.x}`} cx={sx(point.x)} cy={sy(point.y)} r={point.selectedLabel ? "2.75" : "3.5"} fill={point.selectedLabel ? item.color : "white"} stroke={item.color} strokeWidth={point.selectedLabel ? "1.4" : "1.9"} tabIndex={0} role="img" aria-label={`${item.label}, ${numberFormat.format(point.x)} ${xUnit}, ${numberFormat.format(point.y)} ${yUnit}, ${point.selectedLabel ?? `n ${point.n}`}`}><title>{`${item.label} — ${numberFormat.format(point.x)} ${xUnit}: ${numberFormat.format(point.y)} ${yUnit}${point.selectedLabel ? ` · ${point.selectedLabel}` : ` (${point.intervalLabel} ${numberFormat.format(point.intervalLow)}–${numberFormat.format(point.intervalHigh)}, n=${point.n})`}`}</title></circle>)}
@@ -499,7 +559,7 @@ export function CurveChart({
   const xTicks = ticks(xMin, xMax);
   const yTicks = ticks(yMin, yMax);
   const exportTitle = `IV curves — ${yAxisLabel}`;
-  const exportSubtitle = `${series.length} visible series · current view at ${Math.round(viewport.zoom * 100)}% zoom · ${currentConvention} current convention`;
+  const exportSubtitle = `${currentConvention === "instrument" ? "Instrument current convention" : "Photovoltaic current convention"} · measured points connected in acquisition order · no smoothing`;
   const exportStem = exportFileStem("iv-curves", series);
 
   const changeZoom = (nextZoom: number) => setViewport((current) => clampViewport({ ...current, zoom: clamp(nextZoom, 1, MAX_TREND_ZOOM) }));
@@ -564,9 +624,9 @@ export function CurveChart({
         <text className="axis-title" x={width - margin.right} y={height - 5} textAnchor="end">Voltage (V)</text>
         <text className="axis-title" x={margin.left} y={14}>{yAxisLabel}</text>
         <g clipPath="url(#curve-plot-clip)">
-          {series.flatMap((item) => item.segments.map((segment) => {
+          {series.flatMap((item, seriesIndex) => item.segments.map((segment) => {
             const path = segment.points.map((point, index) => `${index ? "L" : "M"}${sx(point.x)},${sy(point.y)}`).join(" ");
-            return <g key={segment.id} opacity={segment.isPrimary ? 1 : .48}>
+            return <g key={segment.id} opacity={segment.isPrimary ? 1 : .48} data-export-series-index={seriesIndex}>
               <path d={path} fill="none" stroke={item.color} strokeWidth={segment.isPrimary ? 3.5 : 2.25} strokeDasharray={segment.isPrimary ? undefined : "7 5"} strokeLinejoin="round" strokeLinecap="round"><title>{`${item.label} — ${segment.isPrimary ? "primary sweep" : "retained segment"}`}</title></path>
               {showPoints ? segment.points.map((point) => <circle key={`${segment.id}-${point.sourceIndex}`} cx={sx(point.x)} cy={sy(point.y)} r={segment.isPrimary ? 2.2 : 1.8} fill="white" stroke={item.color} strokeWidth="1.3"><title>{`${item.label} — point ${point.sourceIndex + 1}: ${numberFormat.format(point.x)} V, ${numberFormat.format(point.y)} mA/cm²`}</title></circle>) : null}
             </g>;
