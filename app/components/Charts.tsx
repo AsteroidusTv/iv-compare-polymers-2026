@@ -2,6 +2,8 @@
 
 import { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
 
+import { describeSeriesSelection, describeTrendExport } from "../lib/chart-export";
+
 export interface TrendPoint {
   x: number;
   y: number;
@@ -74,7 +76,10 @@ const EXPORT_STYLES = `
   .landmark-label { font-size: 8px; font-weight: 700; paint-order: stroke; stroke: white; stroke-width: 3px; stroke-linejoin: round; }
 `;
 
-type ExportSeries = Pick<TrendSeries | CurveSeries, "label" | "color"> & { exportDetail?: string };
+type ExportSeries = Pick<TrendSeries | CurveSeries, "label" | "color"> & {
+  exportDetail?: string;
+  exportSelection?: string;
+};
 
 function exportFileStem(prefix: string, series: ExportSeries[]): string {
   const labels = series.map((item) => item.label).join("-vs-");
@@ -105,7 +110,7 @@ function serialiseChart(
   height: number,
 ): { content: string; width: number; height: number } {
   const legendRows = Math.max(1, Math.ceil(series.length / EXPORT_COLUMNS));
-  const legendRowHeight = series.some((item) => item.exportDetail) ? 30 : 20;
+  const legendRowHeight = series.some((item) => item.exportSelection) ? 40 : series.some((item) => item.exportDetail) ? 30 : 20;
   const headerHeight = 54 + legendRows * legendRowHeight;
   const exportHeight = height + headerHeight;
   const root = document.createElementNS(SVG_NAMESPACE, "svg");
@@ -145,6 +150,7 @@ function serialiseChart(
     legend.appendChild(marker);
     appendSvgText(legend, item.label, x + 22, y, "export-legend");
     if (item.exportDetail) appendSvgText(legend, item.exportDetail.slice(0, 48), x + 22, y + 11, "export-subtitle");
+    if (item.exportSelection) appendSvgText(legend, item.exportSelection.slice(0, 48), x + 22, y + 22, "export-subtitle");
   });
   root.appendChild(legend);
 
@@ -345,16 +351,15 @@ export function TrendChart({
   const sy = (value: number) => height - margin.bottom - ((value - yMin) / (yMax - yMin || 1)) * (height - margin.top - margin.bottom);
   const xTicks = viewport.zoom === 1 ? tickSequence(fullXMin, fullXMax, fullXStep) : ticks(xMin, xMax);
   const yTicks = viewport.zoom === 1 && isRetention ? tickSequence(fullYMin, fullYMax, retentionStep) : ticks(yMin, yMax);
-  const sampleCounts = all.map((point) => point.n).filter((count) => count > 0);
-  const minimumN = sampleCounts.length ? Math.min(...sampleCounts) : 0;
-  const maximumN = sampleCounts.length ? Math.max(...sampleCounts) : 0;
-  const sampleDescription = minimumN === maximumN
-    ? `n=${minimumN} per series and duration`
-    : `n=${minimumN}–${maximumN} per series and duration`;
+  const exportSummary = describeTrendExport(all, reportSubtitle);
+  const exportSeries = series.map((item) => ({
+    ...item,
+    exportSelection: describeSeriesSelection(item.points, exportSummary.mode),
+  }));
   const exportTitle = reportTitle ?? `Performance over time — ${yUnit}`;
-  const exportSubtitle = [reportSubtitle, sampleDescription].filter(Boolean).join(" · ");
+  const exportSubtitle = exportSummary.subtitle;
   const yAxisLabel = reportYAxisLabel ?? yUnit;
-  const exportStem = exportFileStem("performance-over-time", series);
+  const exportStem = exportFileStem("performance-over-time", exportSeries);
 
   const changeZoom = (nextZoom: number, anchorX = 0.5, anchorY = 0.5) => {
     setViewport((current) => {
@@ -420,10 +425,10 @@ export function TrendChart({
         <span className="chart-export-divider" aria-hidden="true" />
         <button type="button" className="chart-export-button" onClick={() => {
           if (!svgRef.current) return;
-          void exportPng(svgRef.current, exportTitle, exportSubtitle, series, exportStem, width, height).catch((error: unknown) => window.alert(error instanceof Error ? error.message : "The PNG file could not be generated."));
+          void exportPng(svgRef.current, exportTitle, exportSubtitle, exportSeries, exportStem, width, height).catch((error: unknown) => window.alert(error instanceof Error ? error.message : "The PNG file could not be generated."));
         }}>Export PNG</button>
         <button type="button" className="chart-export-button" onClick={() => {
-          if (svgRef.current) exportSvg(svgRef.current, exportTitle, exportSubtitle, series, exportStem, width, height);
+          if (svgRef.current) exportSvg(svgRef.current, exportTitle, exportSubtitle, exportSeries, exportStem, width, height);
         }}>Export SVG</button>
       </div>
       <figure className="data-figure">
