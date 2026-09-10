@@ -17,10 +17,10 @@ The application supports exploratory comparison after damp heat (DH), thermal cy
 
 ## Data and provenance
 
-- `data/raw/IV/`: immutable `Summary.xlsx` inventory and original solar-simulator `.xls` files.
+- `data/raw/IV/`: immutable `Summary_v2.xlsx` inventory (also copied as `Summary.xlsx` for the pipeline) and original solar-simulator `.xls` files through 10 September 2026.
 - `data/raw/Outdoor/`: immutable logger CSV files.
 - `data/processed/IV_dataset_normalise_Outdoor.xlsx`: relational inventory, matching decisions, measurement metadata, and daily Outdoor aggregates.
-- `data/processed/IV_curve_points.tsv`: 743,140 ordered IV points.
+- `data/processed/IV_curve_points.tsv`: 1,043,400 ordered IV points.
 - `data/processed/Outdoor_raw_measurements.tsv`: 203,122 traceable Outdoor measurements.
 - `data/processed/normalization-protocol.json`: versioned transformation rules and scientific assumptions.
 - `data/processed/IV_Compare_DOWSIL.ivpack`: compact browser package.
@@ -36,7 +36,7 @@ pnpm data:verify
 pnpm data:verify:deep
 ```
 
-`data:verify` reconciles the recorded source links and row counts, then proves that both committed `.ivpack` files are byte-for-byte reproducible. `data:verify:deep` additionally reads every raw IV workbook and Outdoor CSV and compares all 743,140 IV points and 203,122 Outdoor measurements with the processed values.
+`data:verify` reconciles the recorded source links and row counts, then proves that both committed `.ivpack` files are byte-for-byte reproducible. `data:verify:deep` additionally reads every raw IV workbook and Outdoor CSV and compares all 1,043,400 IV points and 203,122 Outdoor measurements with the processed values.
 
 ## Local development
 

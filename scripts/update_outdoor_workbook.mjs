@@ -9,6 +9,15 @@ const [mode, root, outputDir] = process.argv.slice(2);
 if (!mode || !root || !outputDir) throw new Error("Usage: update_outdoor_workbook.mjs <inspect|edit> <repo-root> <output-dir>");
 const inputPath = path.join(root, "data", "processed", "IV_dataset_normalise_Outdoor.xlsx");
 const workbook = await SpreadsheetFile.importXlsx(await FileBlob.load(inputPath));
+const ivFileCount = workbook.worksheets.getItem("IV_Files").getUsedRange(true).values.length - 1;
+const sampleCount = workbook.worksheets.getItem("Samples").getUsedRange(true).values.length - 1;
+const inventoryObservationCount = workbook.worksheets.getItem("Inventory_Obs").getUsedRange(true).values.length - 1;
+const ivSweepCount = workbook.worksheets.getItem("IV_Measurements").getUsedRange(true).values.length - 1;
+const ivPointCount = Number(workbook.worksheets.getItem("README").getRange("B8").values[0][0]);
+const ivFileMatrix = workbook.worksheets.getItem("IV_Files").getUsedRange(true).values;
+const matchStatusColumn = ivFileMatrix[0].findIndex((value) => value === "match_status");
+const matchedFileCount = ivFileMatrix.slice(1).filter((row) => String(row[matchStatusColumn]).startsWith("matched_")).length;
+const reviewFileCount = ivFileCount - matchedFileCount;
 await fs.mkdir(outputDir, { recursive: true });
 
 async function render(name, range) {
@@ -123,13 +132,13 @@ readme.getRange("A25:E33").format.wrapText = true;
 readme.getRange("A1").values = [["Normalised IV dataset — perovskite encapsulation"]];
 readme.getRange("A3:B10").values = [
   ["Metric", "Value"],
-  ["Samples", 100],
-  ["Inventory observations", 269],
-  ["Binary IV files read", 266],
-  ["IV sweeps", 3230],
-  ["IV points", 743140],
-  ["Matched files (high/medium confidence)", 262],
-  ["Files to review (ambiguous/unmatched)", 4],
+  ["Samples", sampleCount],
+  ["Inventory observations", inventoryObservationCount],
+  ["Binary IV files read", ivFileCount],
+  ["IV sweeps", ivSweepCount],
+  ["IV points", ivPointCount],
+  ["Matched files (high/medium confidence)", matchedFileCount],
+  ["Files to review (ambiguous/unmatched)", reviewFileCount],
 ];
 readme.getRange("D3:E6").values = [
   ["Outdoor", "Value"],
@@ -146,19 +155,19 @@ readme.getRange("D13:D16").values = [
 ];
 readme.getRange("A18").values = [["Transformation protocol and limitations"]];
 readme.getRange("B19:C27").values = [
-  ["Preserved sources", "IV/Summary.xlsx and all 266 .xls files are never modified."],
+  ["Preserved sources", `IV/Summary_v2.xlsx and all ${ivFileCount} .xls files are never modified.`],
   ["Voltage", "Curve values are stored in mV in the source files; voltage_V = source_value × 0.001, including legacy headers labelled V [V]."],
   ["Current", "Simple V-I: density = current_mA / cell_area_cm2. Multi-cell V-J: the source value is already in mA/cm²."],
   ["Sign", "generated_current_density_mA_cm2 = -current_density_mA_cm2 so generated current is positive in the PV convention."],
   ["Dates", "Two m/d-localised serial dates were normalised from the European display/log context (10/4→2026-04-10; 7/5→2026-05-07)."],
   ["Matching", "Scores use material, filename aliases, electrode, batch generation, exposure, chronology, and proximity in efficiency/Jsc/Voc/FF."],
-  ["Uncertainty", "Ambiguous or unmatched files retain an empty sample_uid; Match_Review records the three highest-scoring candidates."],
+  ["Uncertainty", "Ambiguous or unmatched files retain an empty sample_uid; Match_Review records the three highest-scoring candidates. Non-encapsulated reference cells are retained for audit but excluded from polymer comparisons."],
   ["Quality", "Extreme measurements are not deleted. qa_flags preserve physical failures and measurement artefacts for review."],
   ["Outdoor", "Raw measurements are preserved losslessly in Outdoor_raw_measurements.tsv. Outdoor_Daily uses median PR, Pmpp, and irradiance at Irr ≥ 200 W/m². Files without irradiance use median positive Pmpp with an explicit flag. Retention uses the median of the first 3–7 valid days and the application reports 3/7/14-day sensitivity."],
 ];
 readme.getRange("A29:B33").values = [
   ["Source", "Role"],
-  ["IV/Summary.xlsx", "Inventory, recipes, and summary results"],
+  ["IV/Summary_v2.xlsx", "Inventory, recipes, and summary results from both Lami-results sheets"],
   ["IV/**/*.xls", "Electrical parameters and IV/JV curve points"],
   ["Outdoor/**/*.csv", "Outdoor logger measurements exactly matched to 15 samples"],
   ["Ulicna-PVSC-54_2026.pdf + Summary DOWSIL PV-6326.pptx", "Scientific context and conventions; no document instructions were executed"],
@@ -175,7 +184,7 @@ readme.getRange("A18:E18").format.rowHeight = 24;
 const dictionary = workbook.worksheets.getItem("Data_Dictionary");
 const dictionaryValues = dictionary.getUsedRange(true).values;
 const dictionaryDescriptions = {
-  "Samples.sample_uid": "Stable identifier derived from the source row in Summary.xlsx.",
+  "Samples.sample_uid": "Traceable identifier derived from the source sheet and row in Summary_v2.xlsx.",
   "Samples.material_family": "Normalised family: Silicone/PDMS, EVA, POE-1/2/3, TPO-1/2, or Ionomer.",
   "Samples.recipe_uid": "Foreign key to Recipes; the source recipe remains in recipe_raw.",
   "Inventory_Obs.observation_uid": "One summary observation in the Unaged, DH, TC, or Outdoor state.",
@@ -201,7 +210,7 @@ const dictionaryDescriptions = {
   "IV_Points.generated_current_density_mA_cm2": "Negative of current_density_mA_cm2 for a positive generated-current convention.",
   "IV_Points.generated_power_density_mW_cm2": "-voltage_V × current_density_mA_cm2.",
   "Match_Review.candidate_score": "Score of each of the three leading candidates for an unresolved file.",
-  "Source_Rows.col_A…col_AH": "Flat copy of every non-empty inventory workbook row for audit.",
+  "Source_Rows.col_A…col_AI": "Flat copy of every non-empty row from both inventory sheets for audit.",
   "Outdoor_Files.sample_uid": "Inventory sample matched exactly to the Outdoor logger file.",
   "Outdoor_Raw.timestamp": "Normalised source timestamp; every CSV row remains preserved.",
   "Outdoor_Raw.irradiance_W_m2": "Raw incident irradiance from the logger; nullable for electrical-only schemas.",
@@ -225,22 +234,28 @@ dictionary.getRange("D36").format.wrapText = true;
 dictionary.getRange("A36:D36").format.rowHeight = 30;
 
 const rawInventory = await SpreadsheetFile.importXlsx(await FileBlob.load(path.join(root, "data", "raw", "IV", "Summary.xlsx")));
-const rawInventoryValues = rawInventory.worksheets.getItem("Lami-results").getUsedRange(true).values;
+const rawInventoryValues = new Map(rawInventory.worksheets.items.map((sheet) => [sheet.name, sheet.getUsedRange(true).values]));
 const sourceRows = workbook.worksheets.getItem("Source_Rows");
 const sourceValues = sourceRows.getUsedRange(true).values;
+const sourceHeaders = sourceValues[0];
+const sourceSheetColumn = sourceHeaders.indexOf("source_inventory_sheet");
+const sourceRowColumn = sourceHeaders.indexOf("source_inventory_row");
+const firstRawColumn = sourceHeaders.indexOf("col_A");
 for (let rowIndex = 1; rowIndex < sourceValues.length; rowIndex += 1) {
-  const sourceRowNumber = Number(sourceValues[rowIndex][0]);
-  const rawRow = rawInventoryValues[sourceRowNumber - 1] ?? [];
-  for (let column = 1; column < sourceValues[rowIndex].length; column += 1) sourceValues[rowIndex][column] = rawRow[column - 1] ?? null;
+  const sourceSheetName = String(sourceValues[rowIndex][sourceSheetColumn]);
+  const sourceRowNumber = Number(sourceValues[rowIndex][sourceRowColumn]);
+  const rawRow = (rawInventoryValues.get(sourceSheetName) ?? [])[sourceRowNumber - 1] ?? [];
+  for (let column = firstRawColumn; column < sourceValues[rowIndex].length; column += 1) sourceValues[rowIndex][column] = rawRow[column - firstRawColumn] ?? null;
 }
 sourceRows.getUsedRange(true).values = sourceValues;
 
+workbook.recalculate();
 const errors = await workbook.inspect({ kind: "match", searchTerm: "#REF!|#DIV/0!|#VALUE!|#NAME\\?|#N/A", options: { useRegex: true, maxResults: 300 }, summary: "final formula error scan" });
 console.log(errors.ndjson);
 console.log((await workbook.inspect({ kind: "table", sheetId: "Outdoor_Daily", range: "A1:M12", include: "values,formulas", tableMaxRows: 15, tableMaxCols: 15, maxChars: 15_000 })).ndjson);
 
 for (const sheet of [
-  ["README", "A1:F33"], ["Samples", "A1:R15"], ["Recipes", "A1:H20"], ["Inventory_Obs", "A1:S15"], ["IV_Files", "A1:W12"], ["IV_Measurements", "A1:AH10"], ["IV_Points_Schema", "A1:F12"], ["Match_Review", "A1:I13"], ["Source_Rows", "A1:AI10"], ["Outdoor_Files", "A1:I16"], ["Outdoor_Raw_Schema", "A1:F14"], ["Outdoor_Daily", "A1:M25"], ["Data_Dictionary", "A1:D37"],
+  ["README", "A1:F33"], ["Samples", "A1:U15"], ["Recipes", "A1:H20"], ["Inventory_Obs", "A1:T15"], ["IV_Files", "A1:W12"], ["IV_Measurements", "A1:AH10"], ["IV_Points_Schema", "A1:F12"], ["Match_Review", "A1:I13"], ["Source_Rows", "A1:AK10"], ["Outdoor_Files", "A1:I16"], ["Outdoor_Raw_Schema", "A1:F14"], ["Outdoor_Daily", "A1:M25"], ["Data_Dictionary", "A1:D40"],
 ]) await render(sheet[0], sheet[1]);
 
 const output = await SpreadsheetFile.exportXlsx(workbook);

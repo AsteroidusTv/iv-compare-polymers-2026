@@ -2,10 +2,11 @@ import { createReadStream } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import readline from "node:readline";
+import { fileURLToPath } from "node:url";
 
 import XLSX from "xlsx";
 
-const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const rawRoot = path.join(root, "data", "raw");
 const processedRoot = path.join(root, "data", "processed");
 
@@ -185,6 +186,10 @@ async function deepVerifyIV(files, measurements) {
       const area = Number(measurement.cell_area_cm2);
       const densitySource = Boolean(measurement.current_values_are_density);
       const expectedCurve = processedCurves.get(String(measurement.measurement_uid));
+      if (Number(measurement.point_count ?? 0) === 0) {
+        if (expectedCurve) throw new Error(`Unexpected processed curve ${measurement.measurement_uid} for a zero-point measurement.`);
+        continue;
+      }
       if (!expectedCurve) throw new Error(`Missing processed curve ${measurement.measurement_uid}.`);
       let pointIndex = 0;
       for (let rawRow = 5; ; rawRow += 1) {
@@ -211,11 +216,12 @@ async function main() {
   const normalized = XLSX.read(await fs.readFile(path.join(processedRoot, "IV_dataset_normalise_Outdoor.xlsx")), { type: "buffer", cellDates: true, raw: true });
 
   const sourceRows = rows(normalized, "Source_Rows");
-  const rawRows = rows(rawInventory, "Lami-results", { header: 1 });
+  const rawRowsBySheet = new Map(rawInventory.SheetNames.map((sheetName) => [sheetName, rows(rawInventory, sheetName, { header: 1 })]));
   const sourceHeaders = Object.keys(sourceRows[0] ?? {}).filter((key) => key.startsWith("col_"));
   let omittedSourceCells = 0;
   for (const sourceRow of sourceRows) {
-    const raw = rawRows[Number(sourceRow.source_inventory_row) - 1] ?? [];
+    const sourceSheet = String(sourceRow.source_inventory_sheet ?? "Lami-results");
+    const raw = (rawRowsBySheet.get(sourceSheet) ?? [])[Number(sourceRow.source_inventory_row) - 1] ?? [];
     sourceHeaders.forEach((header, index) => {
       const processedValue = comparable(sourceRow[header]);
       const rawValue = comparable(raw[index]);

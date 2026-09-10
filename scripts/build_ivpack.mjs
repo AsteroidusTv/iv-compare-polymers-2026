@@ -3,11 +3,12 @@ import { createReadStream } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import readline from "node:readline";
+import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 
 import XLSX from "xlsx";
 
-const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const processed = path.join(root, "data", "processed");
 const workbookPath = path.join(processed, "IV_dataset_normalise_Outdoor.xlsx");
 const pointsPath = path.join(processed, "IV_curve_points.tsv");
@@ -103,13 +104,13 @@ async function buildPayload() {
   const workbookBytes = await fs.readFile(workbookPath);
   const workbook = XLSX.read(workbookBytes, { type: "buffer", cellDates: true, raw: true });
   const samples = sheetRows(workbook, "Samples").map((row) => keep(row, [
-    "sample_uid", "source_inventory_row", "batch_no_raw", "electrode", "owner_or_general_comment", "encapsulation_date", "encapsulation_date_raw", "material_raw", "material_family", "sample_id_raw", "sample_label", "recipe_uid", "recipe_raw", "nb_sheets_raw", "frame_raw", "ribbon_raw", "sample_comments", "assigned_test",
+    "sample_uid", "source_inventory_sheet", "source_inventory_row", "batch_no_raw", "electrode", "owner_or_general_comment", "initial_efficiency_pct_raw", "initial_efficiency_pct", "encapsulation_date", "encapsulation_date_raw", "material_raw", "material_family", "sample_id_raw", "sample_label", "recipe_uid", "recipe_raw", "nb_sheets_raw", "frame_raw", "ribbon_raw", "sample_comments", "assigned_test",
   ])).map((row) => ({ ...row, source_inventory_row: number(row.source_inventory_row), encapsulation_date: date(row.encapsulation_date) }));
   const recipes = sheetRows(workbook, "Recipes").map((row) => keep(row, [
     "recipe_uid", "recipe_raw", "laminator", "temperature_profile_C", "duration_profile_min", "duration_profile_s", "pressure_pairs_mbar", "pressure_values_mbar",
   ]));
   const observations = sheetRows(workbook, "Inventory_Obs").map((row) => ({
-    ...keep(row, ["observation_uid", "sample_uid", "test_type", "exposure_unit", "action_or_status", "comments", "data_quality_flag"]),
+    ...keep(row, ["observation_uid", "sample_uid", "source_inventory_sheet", "test_type", "exposure_unit", "action_or_status", "comments", "data_quality_flag"]),
     exposure_duration_numeric: number(row.exposure_duration_numeric),
     efficiency_pct: number(row.efficiency_pct),
     jsc_mA_cm2: number(row.jsc_mA_cm2),
