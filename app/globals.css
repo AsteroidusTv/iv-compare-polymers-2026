@@ -52,7 +52,7 @@ button, a, label { -webkit-tap-highlight-color: transparent; }
 .materials-panel-title { margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
 .materials-panel-title > span { font-size: 11px; font-weight: 600; letter-spacing: 0; text-transform: none; }
 .material-selectors { display: flex; gap: 9px; align-items: stretch; overflow-x: auto; padding-bottom: 2px; }
-.material-selector { min-width: 360px; padding: 11px; position: relative; flex: 1 0 360px; border: 1px solid var(--line); border-top-width: 4px; border-radius: 11px; background: white; }
+.material-selector { min-width: 320px; padding: 11px; position: relative; flex: 1 0 320px; border: 1px solid var(--line); border-top-width: 4px; border-radius: 11px; background: white; }
 .material-selector label { display: grid; gap: 6px; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
 .material-selector select { width: 100%; padding: 9px 25px 9px 9px; border: 0; border-radius: 7px; outline: none; background: #f7f6f2; color: var(--ink); font-size: 13px; font-weight: 700; text-transform: none; }
 .material-selector select:focus { box-shadow: 0 0 0 3px rgba(52,105,212,.12); }
@@ -112,7 +112,8 @@ button, a, label { -webkit-tap-highlight-color: transparent; }
 .legend-toggle { padding: 4px 2px; display: inline-flex; gap: 0; align-items: center; border: 0; border-bottom: 1px solid transparent; background: transparent; color: var(--ink); cursor: pointer; font-size: 11px; font-weight: 700; transition: opacity .15s ease, border-color .15s ease; }
 .legend-toggle:hover, .legend-toggle:focus-visible { border-bottom-color: currentColor; outline: none; }
 .legend-toggle.hidden { opacity: .35; text-decoration: line-through; }
-.legend-toggle.hidden .legend-dot { filter: grayscale(1); }
+.legend-toggle.hidden .legend-dot, .legend-toggle.hidden .legend-stroke { filter: grayscale(1); }
+.legend-stroke { width: 25px; height: 9px; margin-right: 7px; overflow: visible; flex: 0 0 25px; }
 .legend-dot, .table-dot { display: inline-block; width: 9px; height: 9px; margin-right: 7px; border-radius: 50%; }
 .coral { background: var(--coral); }.blue { background: var(--blue); }
 .chart-zoom-controls { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; color: var(--muted); font-size: 11px; }

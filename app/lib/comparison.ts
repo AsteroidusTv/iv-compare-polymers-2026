@@ -22,29 +22,13 @@ export function metricOptionsFor(stress: string): MetricKey[] {
 }
 
 export function samplesForConfig(dataset: IVDataset, config: Pick<SeriesConfig, "material" | "electrode" | "recipe">): Sample[] {
-  return dataset.samples.filter((sample) => {
-    if (sample.material_family !== config.material) return false;
-    if (config.electrode !== "all" && sample.electrode !== config.electrode) return false;
-    if (config.recipe !== "all" && sample.recipe_uid !== config.recipe) return false;
-    return true;
-  });
+  return dataset.samples.filter((sample) => sample.material_family === config.material);
 }
 
 export function seriesSamplePasses(dataset: IVDataset, sampleId: string | null | undefined, config: SeriesConfig): boolean {
   if (!sampleId) return false;
   const sample = dataset.samples.find((item) => item.sample_uid === sampleId);
-  if (!sample || sample.material_family !== config.material) return false;
-  if (config.electrode !== "all" && sample.electrode !== config.electrode) return false;
-  if (config.recipe !== "all" && sample.recipe_uid !== config.recipe) return false;
-  return true;
-}
-
-export function electrodesForConfig(dataset: IVDataset, config: Pick<SeriesConfig, "material">): string[] {
-  return unique(dataset.samples.filter((sample) => sample.material_family === config.material).map((sample) => sample.electrode));
-}
-
-export function recipesForConfig(dataset: IVDataset, config: Pick<SeriesConfig, "material" | "electrode">): string[] {
-  return unique(dataset.samples.filter((sample) => sample.material_family === config.material && (config.electrode === "all" || sample.electrode === config.electrode)).map((sample) => sample.recipe_uid));
+  return Boolean(sample && sample.material_family === config.material);
 }
 
 export function stressesForConfig(dataset: IVDataset, config: Pick<SeriesConfig, "material" | "electrode" | "recipe">): string[] {
@@ -57,10 +41,8 @@ export function stressesForConfig(dataset: IVDataset, config: Pick<SeriesConfig,
 export function normalizeSeriesConfig(dataset: IVDataset, config: SeriesConfig): SeriesConfig {
   const materials = unique(dataset.samples.map((sample) => sample.material_family));
   const material = materials.includes(config.material) ? config.material : materials[0] ?? "";
-  const electrodes = electrodesForConfig(dataset, { material });
-  const electrode = config.electrode === "all" || electrodes.includes(config.electrode) ? config.electrode : "all";
-  const recipes = recipesForConfig(dataset, { material, electrode });
-  const recipe = config.recipe === "all" || recipes.includes(config.recipe) ? config.recipe : "all";
+  const electrode = "all";
+  const recipe = "all";
   const stresses = stressesForConfig(dataset, { material, electrode, recipe });
   const stress = stresses.includes(config.stress) ? config.stress : stresses[0] ?? "Unaged";
   const metrics = metricOptionsFor(stress);
@@ -72,27 +54,12 @@ export function createInitialSeries(dataset: IVDataset): SeriesConfig[] {
   const materials = unique(dataset.samples.map((sample) => sample.material_family));
   const preferredA = materials.includes("POE-1 / Mitsui") ? "POE-1 / Mitsui" : materials[0] ?? "";
   const preferredB = materials.includes("POE-2 / TF4") ? "POE-2 / TF4" : materials.find((item) => item !== preferredA) ?? preferredA;
-  const selectedMaterials = [preferredA, preferredB];
-  const sampleIdsWithDhEfficiency = new Set(dataset.observations
-    .filter((observation) => observation.test_type === "DH" && typeof observation.efficiency_pct === "number" && Number.isFinite(observation.efficiency_pct))
-    .map((observation) => observation.sample_uid));
-  const samplesByMaterial = selectedMaterials.map((material) => dataset.samples.filter((sample) => (
-    sample.material_family === material && sampleIdsWithDhEfficiency.has(sample.sample_uid)
-  )));
-  const commonElectrodes = unique(samplesByMaterial[0]?.map((sample) => sample.electrode) ?? [])
-    .filter((electrode) => samplesByMaterial.every((samples) => samples.some((sample) => sample.electrode === electrode)));
-  const electrode = commonElectrodes
-    .sort((left, right) => samplesByMaterial.reduce((sum, samples) => sum + samples.filter((sample) => sample.electrode === right).length, 0)
-      - samplesByMaterial.reduce((sum, samples) => sum + samples.filter((sample) => sample.electrode === left).length, 0))[0] ?? "all";
-  const commonRecipes = unique(samplesByMaterial[0]?.filter((sample) => electrode === "all" || sample.electrode === electrode).map((sample) => sample.recipe_uid) ?? [])
-    .filter((recipe) => samplesByMaterial.every((samples) => samples.some((sample) => (electrode === "all" || sample.electrode === electrode) && sample.recipe_uid === recipe)));
-  const recipe = commonRecipes[0] ?? "all";
   return [preferredA, preferredB].map((material, index) => normalizeSeriesConfig(dataset, {
     id: String.fromCharCode(97 + index),
     material,
     stress: "DH",
     metric: "efficiency_pct",
-    electrode,
-    recipe,
+    electrode: "all",
+    recipe: "all",
   }));
 }

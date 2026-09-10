@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createInitialSeries } from "../app/lib/comparison";
+import { createInitialSeries, seriesSamplePasses } from "../app/lib/comparison";
 import type { IVDataset } from "../app/lib/iv-data";
 
-test("initial comparison aligns the shared electrode instead of mixing conditions", () => {
+test("initial comparison pools electrode and standard lamination metadata by material", () => {
   const dataset = {
     samples: [
       { sample_uid: "A-CU", material_family: "POE-1 / Mitsui", electrode: "Cu" },
@@ -17,5 +17,7 @@ test("initial comparison aligns the shared electrode instead of mixing condition
     ],
   } as IVDataset;
   const series = createInitialSeries(dataset);
-  assert.deepEqual(series.map((item) => item.electrode), ["Cu", "Cu"]);
+  assert.deepEqual(series.map((item) => item.electrode), ["all", "all"]);
+  assert.deepEqual(series.map((item) => item.recipe), ["all", "all"]);
+  assert.equal(seriesSamplePasses(dataset, dataset.samples[1].sample_uid, series[0]), true);
 });

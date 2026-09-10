@@ -4,10 +4,11 @@ Internal scientific application for comparing photovoltaic encapsulants, ageing 
 
 ## Scientific scope
 
-The application supports exploratory comparison after damp heat (DH), thermal cycling (TC), outdoor exposure, or in the initial state. A comparison is attributable to the encapsulant only when electrode, lamination recipe, ageing protocol, and relevant batch/process conditions are controlled. The interface labels mixed or incomplete conditions and presents its summary as descriptive rather than inferential.
+The application supports exploratory comparison after damp heat (DH), thermal cycling (TC), outdoor exposure, or in the initial state. Following laboratory confirmation, lamination recipes are treated as the standard recipe assigned to each polymer rather than an independent comparison variable. Cu is the default electrode and the single Ag case is pooled with it. Recipe and electrode metadata remain preserved in exports for traceability; ageing protocol and metric remain explicit comparison controls.
 
 - Mean aggregation is shown with a 95% confidence interval.
 - Median aggregation is shown with an interquartile range.
+- The chart can switch between one aggregate trajectory per material and every contributing sample trajectory. Individual lines retain their Excel reference and use distinct line patterns without altering the aggregate calculations.
 - The former “best value” aggregation is intentionally unavailable because it stitched different specimens into an artificial trajectory.
 - Every QA-valid point remains visible. Statistical outliers are not hidden merely to improve chart scaling.
 - Outdoor PR, Pmpp, and irradiance are daily medians over measurements with irradiance ≥ 200 W/m². Electrical-only files without irradiance retain median positive Pmpp with an explicit QA flag.
