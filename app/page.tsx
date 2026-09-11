@@ -13,6 +13,7 @@ import {
 } from "./lib/iv-data";
 import { analyzeIVCurve } from "./lib/iv-curve-analysis";
 import { describeGraphElectrode } from "./lib/chart-export";
+import { resolveSelectedSampleIds, toggleSelectedSampleId } from "./lib/sample-selection";
 import {
   chooseRepresentativeMeasurement,
   measurementQualityReasons,
@@ -76,12 +77,12 @@ const HELP = {
   ageing: "Applied ageing protocol: DH means damp heat, TC means thermal cycling, and Outdoor means outdoor exposure. Durations are comparable only within the same protocol.",
   retention: "Retention = value at time t / reference value for the same sample × 100. For DH/TC, the reference is the initial state. For Outdoor, at least three valid days are required and the reference is the median of up to the first seven valid days. Sensitivity to 3-, 7-, and 14-day windows is reported when possible.",
   labConvention: "Laboratory convention: lamination recipes are the standard recipes assigned to each polymer and are not treated as a comparison variable. Cu is the default electrode; the single Ag case is retained and pooled with Cu. Both metadata fields remain available in the exported data for traceability.",
-  traceDisplay: "Aggregate shows one mean or median curve per material. All samples draws one separate trajectory for every contributing patch, using the same material colour and different line patterns. No observation is duplicated or removed.",
+  traceDisplay: "Aggregate shows one mean or median curve per material using only the selected samples. All samples draws one separate trajectory for every selected patch, using the same material colour and different line patterns. No observation is duplicated.",
   matching: "Matching links each IV file to an inventory sample using its metadata. “To resolve” contains only genuinely ambiguous or unidentified files. Reference cells and files already placed in laboratory Trash folders are retained separately for audit and do not participate in polymer comparisons.",
   observations: "Total number of individual measurements contributing to the points currently shown. This is not the number of durations or averages.",
   interval: "For each duration, the main line shows the selected aggregate. Mean values carry a 95% confidence interval; median values carry an interquartile range. Min and max remain available in the export.",
   replicates: "When n > 1, select n to open the individual observations. Choosing a sample changes only the plotted point; the aggregate, calculations, and exports remain unchanged.",
-  globalReplicate: "Selectors A and B are independent: for example, you can plot sample 1 of polymer A against sample 2 of polymer B. Each choice maps to a specific sample reference from the Excel inventory. Durations without a measurement for that sample are not plotted. A row-level choice creates a local override.",
+  globalReplicate: "Sample filters are independent for every series. In Aggregate mode, the selected samples are combined with the chosen mean or median. In All samples mode, each selected sample is drawn separately. At least one sample remains selected, and a row-level choice creates a local override.",
   patchReference: "Sample name and reference from the Excel inventory. In aggregate mode, the cell lists the samples contributing to the point; in individual mode, it identifies the exact plotted sample.",
   targetTime: "Only measurements acquired at this exact ageing duration are eligible. This prevents curves from different ageing times being overlaid as if they were equivalent.",
   curveChoice: "Representative selects the QA-valid curve whose efficiency is closest to the median of the eligible measurements. Choose a named measurement to make the selection fully explicit; the site never selects the maximum efficiency automatically.",
@@ -142,7 +143,7 @@ export default function Home() {
   const [hiddenSeries, setHiddenSeries] = useState<Set<SeriesId>>(() => new Set());
   const [expandedTrendRows, setExpandedTrendRows] = useState<Set<string>>(() => new Set());
   const [selectedTrendMembers, setSelectedTrendMembers] = useState<Record<string, string | null>>({});
-  const [globalTrendSamples, setGlobalTrendSamples] = useState<Record<SeriesId, string | null>>({});
+  const [trendSampleFilters, setTrendSampleFilters] = useState<Record<SeriesId, string[]>>({});
   const [curveMeasurementIds, setCurveMeasurementIds] = useState<Record<SeriesId, string | null>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const nextSeriesIdRef = useRef(2);
@@ -156,7 +157,7 @@ export default function Home() {
     setHiddenSeries(new Set());
     setExpandedTrendRows(new Set());
     setSelectedTrendMembers({});
-    setGlobalTrendSamples({});
+    setTrendSampleFilters({});
     setCurveMeasurementIds({});
   }, []);
 
@@ -395,10 +396,41 @@ export default function Home() {
     }));
     return [series.id, [...byUid.values()].sort((left, right) => left.sampleUid.localeCompare(right.sampleUid, "fr"))];
   })) as Record<SeriesId, TrendPoint["members"]>;
-  const activeTrendSamples = Object.fromEntries(trendSeries.map((series) => [
-    series.id,
-    trendSampleOptions[series.id]?.some((member) => member.sampleUid === globalTrendSamples[series.id]) ? globalTrendSamples[series.id] : null,
-  ])) as Record<SeriesId, string | null>;
+  const activeTrendSampleIds = Object.fromEntries(trendSeries.map((series) => {
+    const availableIds = (trendSampleOptions[series.id] ?? []).map((member) => member.sampleUid);
+    return [series.id, resolveSelectedSampleIds(availableIds, trendSampleFilters[series.id])];
+  })) as Record<SeriesId, string[]>;
+  const filteredTrendSeries = trendSeries.map((series) => {
+    const options = trendSampleOptions[series.id] ?? [];
+    const selectedIds = activeTrendSampleIds[series.id] ?? [];
+    const selected = new Set(selectedIds);
+    const points = series.points.flatMap((point) => {
+      const members = point.members.filter((member) => selected.has(member.sampleUid));
+      if (!members.length) return [];
+      const summary = summarise(members.map((member) => member.value), aggregation);
+      const singleSample = selectedIds.length === 1 ? options.find((member) => member.sampleUid === selectedIds[0]) : undefined;
+      return [{
+        ...point,
+        y: summary.value,
+        min: summary.min,
+        max: summary.max,
+        intervalLow: summary.intervalLow,
+        intervalHigh: summary.intervalHigh,
+        intervalLabel: summary.n > 1 ? summary.intervalLabel : "single value" as const,
+        n: summary.n,
+        members,
+        selectedLabel: singleSample ? `${singleSample.sampleLabel} · ${singleSample.sampleReference}` : undefined,
+      }];
+    });
+    const subsetNote = selectedIds.length === options.length ? null : `${selectedIds.length}/${options.length} samples selected`;
+    const signatures = new Set(points.map((point) => point.members.map((member) => member.sampleUid).sort().join("|")));
+    return {
+      ...series,
+      points,
+      contextLabel: [series.contextLabel, subsetNote].filter(Boolean).join(" · "),
+      sampleSetChanges: signatures.size > 1,
+    };
+  });
   const resolveTrendSelection = (seriesId: SeriesId, point: TrendPoint) => {
     const rowKey = trendRowKey(seriesId, point.x);
     if (Object.prototype.hasOwnProperty.call(selectedTrendMembers, rowKey)) {
@@ -406,17 +438,13 @@ export default function Home() {
       const member = observationId ? point.members.find((item) => item.observationId === observationId) : undefined;
       return member ? { mode: "member" as const, member } : { mode: "aggregate" as const };
     }
-    const sampleUid = activeTrendSamples[seriesId];
-    if (!sampleUid) return { mode: "aggregate" as const };
-    const member = point.members.find((item) => item.sampleUid === sampleUid);
-    return member ? { mode: "member" as const, member } : { mode: "missing" as const };
+    return { mode: "aggregate" as const };
   };
-  const selectedTrendSeries = trendSeries.map((series) => ({
+  const selectedTrendSeries = filteredTrendSeries.map((series) => ({
     ...series,
-    points: series.points.flatMap((point) => {
+    points: series.points.map((point) => {
       const selection = resolveTrendSelection(series.id, point);
-      if (selection.mode === "missing") return [];
-      return selection.mode === "member" ? [{
+      return selection.mode === "member" ? {
         ...point,
         y: selection.member.value,
         min: selection.member.value,
@@ -426,11 +454,11 @@ export default function Home() {
         intervalLabel: "single value" as const,
         n: 1,
         selectedLabel: `${selection.member.sampleLabel} · ${selection.member.sampleReference}`,
-      }] : [point];
+      } : point;
     }),
   }));
   const sampleTrendSeries: ContextTrendSeries[] = trendSeries.flatMap((series, parentIndex) => (
-    (trendSampleOptions[series.id] ?? []).map((sample, sampleIndex) => {
+    (trendSampleOptions[series.id] ?? []).map((sample, sampleIndex) => ({ sample, sampleIndex })).filter(({ sample }) => activeTrendSampleIds[series.id]?.includes(sample.sampleUid)).map(({ sample, sampleIndex }) => {
       const points = series.points.flatMap((point) => {
         const members = point.members.filter((member) => member.sampleUid === sample.sampleUid);
         if (!members.length) return [];
@@ -485,9 +513,16 @@ export default function Home() {
     return next;
   });
   const selectTrendMember = (rowKey: string, observationId?: string) => setSelectedTrendMembers((current) => ({ ...current, [rowKey]: observationId ?? null }));
-  const selectTrendSample = (seriesId: SeriesId, value: string) => {
-    setGlobalTrendSamples((current) => ({ ...current, [seriesId]: value === "aggregate" ? null : value }));
-    setSelectedTrendMembers((current) => Object.fromEntries(Object.entries(current).filter(([rowKey]) => !rowKey.startsWith(`${seriesId}:`))));
+  const selectAllTrendSamples = (seriesId: SeriesId) => {
+    setTrendSampleFilters((current) => Object.fromEntries(Object.entries(current).filter(([key]) => key !== seriesId)));
+  };
+  const toggleTrendSample = (seriesId: SeriesId, sampleId: string) => {
+    const availableIds = (trendSampleOptions[seriesId] ?? []).map((member) => member.sampleUid);
+    setTrendSampleFilters((current) => {
+      const nextSelection = toggleSelectedSampleId(availableIds, current[seriesId], sampleId);
+      if (nextSelection) return { ...current, [seriesId]: nextSelection };
+      return Object.fromEntries(Object.entries(current).filter(([key]) => key !== seriesId));
+    });
   };
   const sharedXUnit = trendSeries.length && trendSeries.every((series) => series.xUnit === trendSeries[0].xUnit) ? trendSeries[0].xUnit : null;
   const sharedMetric = seriesConfigs.length && seriesConfigs.every((config) => config.metric === seriesConfigs[0].metric) ? seriesConfigs[0].metric : null;
@@ -593,7 +628,7 @@ export default function Home() {
   const outdoorIssueSample = outdoorIssueExample ? sampleMap.get(outdoorIssueExample.sampleUid) : undefined;
   const comparisonCount = selectedTrendSeries.reduce((total, series) => total + series.points.reduce((sum, point) => sum + point.n, 0), 0);
   const removeSeriesChoices = (seriesId: SeriesId) => {
-    setGlobalTrendSamples((current) => Object.fromEntries(Object.entries(current).filter(([key]) => key !== seriesId)));
+    setTrendSampleFilters((current) => Object.fromEntries(Object.entries(current).filter(([key]) => key !== seriesId)));
     setSelectedTrendMembers((current) => Object.fromEntries(Object.entries(current).filter(([rowKey]) => !rowKey.startsWith(`${seriesId}:`))));
     setExpandedTrendRows((current) => new Set([...current].filter((rowKey) => !rowKey.startsWith(`${seriesId}:`))));
     setHiddenSeries((current) => new Set([...current].filter((key) => key !== seriesId)));
@@ -614,8 +649,8 @@ export default function Home() {
     removeSeriesChoices(seriesId);
   };
   const aggregationHelp = {
-    mean: "The mean uses every QA-valid sample. The chart and table report its 95% confidence interval; interpret intervals cautiously when n is small.",
-    median: "The median reports the central QA-valid sample and its interquartile range. It is robust to extremes but does not replace inspection of individual values.",
+    mean: "The mean uses every selected QA-valid sample. The chart and table report its 95% confidence interval; interpret intervals cautiously when n is small.",
+    median: "The median summarises the selected QA-valid samples with an interquartile range. It is robust to extremes but does not replace inspection of individual values.",
   }[aggregation];
 
   return (
@@ -749,31 +784,50 @@ export default function Home() {
               <div className="section-head">
                 <div><p className="eyebrow">Aggregated values</p><h4>Displayed points</h4></div>
                 <div className="table-head-tools">
-                  <span>{trendDisplay === "samples" ? "All contributing samples are drawn as separate trajectories." : `${aggregation === "mean" ? "95% CI" : "IQR"} · select n to view samples.`} <InfoTip text={`${HELP.traceDisplay} ${HELP.interval} ${HELP.replicates}`} align="right" /></span>
-                  {trendDisplay === "aggregate" ? trendSeries.map((series, seriesIndex) => <label className="inline-select patch-select" key={series.id}><FieldTitle help={HELP.globalReplicate} align="right">Sample {String.fromCharCode(65 + seriesIndex)}</FieldTitle><select value={activeTrendSamples[series.id] ?? "aggregate"} onChange={(event) => selectTrendSample(series.id, event.target.value)} style={{ borderLeftColor: series.color }}><option value="aggregate">Aggregate · all</option>{(trendSampleOptions[series.id] ?? []).map((member, index) => <option key={member.sampleUid} value={member.sampleUid}>Sample {index + 1} · {member.sampleLabel} · {member.sampleReference}</option>)}</select></label>) : null}
+                  <span>{trendDisplay === "samples" ? "Selected samples are drawn as separate trajectories." : `${aggregation === "mean" ? "95% CI" : "IQR"} · selected samples define each aggregate.`} <InfoTip text={`${HELP.traceDisplay} ${HELP.interval} ${HELP.replicates}`} align="right" /></span>
+                  {trendSeries.map((series, seriesIndex) => {
+                    const options = trendSampleOptions[series.id] ?? [];
+                    const selectedIds = activeTrendSampleIds[series.id] ?? [];
+                    const allSelected = selectedIds.length === options.length;
+                    return <fieldset className="sample-filter" key={series.id} style={{ borderTopColor: series.color }}>
+                      <legend>Samples {String.fromCharCode(65 + seriesIndex)} <InfoTip text={HELP.globalReplicate} align="right" /></legend>
+                      <div className="sample-filter-options">
+                        <button type="button" className={allSelected ? "active" : ""} onClick={() => selectAllTrendSamples(series.id)} disabled={allSelected}>All</button>
+                        {options.map((member, index) => {
+                          const checked = selectedIds.includes(member.sampleUid);
+                          const lastSelected = checked && selectedIds.length === 1;
+                          return <label className={checked ? "active" : ""} key={member.sampleUid} title={`${member.sampleLabel} · Excel ref. ${member.sampleReference}`}>
+                            <input type="checkbox" checked={checked} disabled={lastSelected} onChange={() => toggleTrendSample(series.id, member.sampleUid)} />
+                            <span>{index + 1}</span>
+                            <small>{member.sampleLabel}</small>
+                          </label>;
+                        })}
+                      </div>
+                      <small className="sample-filter-summary">{selectedIds.length}/{options.length} selected · {trendDisplay === "aggregate" ? `${aggregation === "mean" ? "mean" : "median"} of selection` : "individual curves"}</small>
+                    </fieldset>;
+                  })}
                 </div>
               </div>
               <div className="table-scroll"><table><thead><tr><th>Series / conditions</th><th>Sample / reference <InfoTip text={HELP.patchReference} align="left" /></th><th>Time</th><th>Plotted value</th><th>Interval low</th><th>Interval high</th><th>n</th></tr></thead><tbody>
-                {trendSeries.flatMap((series) => series.points.map((point) => {
+                {filteredTrendSeries.flatMap((series) => series.points.map((point) => {
                   const rowKey = trendRowKey(series.id, point.x);
                   const expanded = expandedTrendRows.has(rowKey);
                   const selection = resolveTrendSelection(series.id, point);
                   const selectedMember = selection.mode === "member" ? selection.member : undefined;
                   const selectedId = selectedMember?.observationId;
-                  const globalTarget = activeTrendSamples[series.id] ? trendSampleOptions[series.id].find((member) => member.sampleUid === activeTrendSamples[series.id]) : undefined;
                   return <Fragment key={rowKey}>
-                    <tr className={selection.mode === "missing" ? "patch-unavailable" : selectedId ? "individual-selected" : ""}>
+                    <tr className={selectedId ? "individual-selected" : ""}>
                       <td><span className="patch-reference"><b><span className="table-dot" style={{ background: series.color }} />{series.label}</b><small>{series.contextLabel}</small></span></td>
-                      <td>{selection.mode === "member" ? <span className="patch-reference"><b>{selectedMember!.sampleLabel}</b><small>Excel ref.: {selectedMember!.sampleReference}{selectedMember!.batchNo ? ` · batch ${selectedMember!.batchNo}` : ""}</small></span> : selection.mode === "missing" ? <span className="patch-reference"><b>No measurement at this duration</b><small>{globalTarget?.sampleLabel} · {globalTarget?.sampleReference}</small></span> : <span className="patch-reference"><b>Aggregate · {point.n} sample{point.n > 1 ? "s" : ""}</b><small>{point.members.map((member) => `${member.sampleLabel} (${member.sampleReference})`).join(" · ")}</small></span>}</td>
+                      <td>{selection.mode === "member" ? <span className="patch-reference"><b>{selectedMember!.sampleLabel}</b><small>Excel ref.: {selectedMember!.sampleReference}{selectedMember!.batchNo ? ` · batch ${selectedMember!.batchNo}` : ""}</small></span> : <span className="patch-reference"><b>Aggregate · {point.n} sample{point.n > 1 ? "s" : ""}</b><small>{point.members.map((member) => `${member.sampleLabel} (${member.sampleReference})`).join(" · ")}</small></span>}</td>
                       <td>{fr.format(point.x)} {series.xUnit}</td>
-                      <td>{selection.mode === "missing" ? "—" : <><b>{fr.format(selectedMember?.value ?? point.y)}</b> {series.yUnit}</>}</td>
+                      <td><b>{fr.format(selectedMember?.value ?? point.y)}</b> {series.yUnit}</td>
                       <td>{selection.mode === "aggregate" ? fr.format(point.intervalLow) : "—"}</td>
                       <td>{selection.mode === "aggregate" ? fr.format(point.intervalHigh) : "—"}</td>
                       <td>{point.n > 1 ? <button type="button" className="n-toggle" aria-expanded={expanded} onClick={() => toggleTrendRow(rowKey)} title="Show individual observations">{point.n}<span aria-hidden="true">{expanded ? "−" : "+"}</span></button> : point.n}</td>
                     </tr>
                     {expanded ? <tr className="replicate-detail-row"><td colSpan={7}>
                       <div className="replicate-panel">
-                        <div className="replicate-heading"><strong>Value used on the chart</strong><span>{activeTrendSamples[series.id] ? `Global selection ${series.id.toUpperCase()}: ${globalTarget?.sampleLabel}. A choice here creates a local override.` : "The table uses the reference aggregate."}</span></div>
+                        <div className="replicate-heading"><strong>Value used on the chart</strong><span>{activeTrendSampleIds[series.id]?.length}/{trendSampleOptions[series.id]?.length ?? 0} samples included. A choice here creates a local override.</span></div>
                         <div className="replicate-choices">
                           <button type="button" className={`replicate-choice ${selection.mode === "aggregate" ? "active" : ""}`} aria-pressed={selection.mode === "aggregate"} onClick={() => selectTrendMember(rowKey)} style={{ borderLeftColor: series.color }}><span><b>Aggregate</b><small>{{ mean: "Mean + 95% CI", median: "Median + IQR" }[aggregation]} · n={point.n}</small></span><strong>{fr.format(point.y)} {series.yUnit}</strong></button>
                           {point.members.map((member, index) => <button type="button" className={`replicate-choice ${selectedId === member.observationId ? "active" : ""}`} aria-pressed={selectedId === member.observationId} key={member.observationId} onClick={() => selectTrendMember(rowKey, member.observationId)} style={{ borderLeftColor: series.color }}><span><b>Sample {index + 1} · {member.sampleLabel}</b><small>Excel ref.: {member.sampleReference}{member.batchNo ? ` · batch ${member.batchNo}` : ""} · {member.observationId}</small></span><strong>{fr.format(member.value)} {series.yUnit}</strong></button>)}

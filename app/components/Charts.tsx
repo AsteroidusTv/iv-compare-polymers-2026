@@ -281,7 +281,7 @@ export function TrendChart({
   reportYAxisLabel?: string;
 }) {
   const [viewport, setViewport] = useState<TrendViewport>({ zoom: 1, centreX: 0.5, centreY: 0.5 });
-  const [graphEndInput, setGraphEndInput] = useState("");
+  const [graphEndInput, setGraphEndInput] = useState<string | null>(null);
   const dragRef = useRef<{ clientX: number; clientY: number; centreX: number; centreY: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -330,8 +330,9 @@ export function TrendChart({
   const sourceTimes = sourcePoints.map((point) => point.x);
   const minimumTime = Math.min(...sourceTimes);
   const maximumTime = Math.max(...sourceTimes);
-  const requestedGraphEnd = Number(graphEndInput);
-  const graphEnd = graphEndInput.trim() && Number.isFinite(requestedGraphEnd) && requestedGraphEnd >= minimumTime && requestedGraphEnd < maximumTime
+  const displayedGraphEnd = graphEndInput === null ? String(maximumTime) : graphEndInput;
+  const requestedGraphEnd = Number(displayedGraphEnd);
+  const graphEnd = displayedGraphEnd.trim() && Number.isFinite(requestedGraphEnd) && requestedGraphEnd >= minimumTime && requestedGraphEnd < maximumTime
     ? requestedGraphEnd
     : null;
   const plottedSeries = series
@@ -436,8 +437,8 @@ export function TrendChart({
         <output aria-live="polite">{Math.round(viewport.zoom * 100)}%</output>
         <button type="button" onClick={() => changeZoom(viewport.zoom * 1.5)} disabled={viewport.zoom === MAX_TREND_ZOOM} aria-label="Zoom in">+</button>
         <button type="button" className="chart-reset-button" onClick={() => setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 })} disabled={viewport.zoom === 1}>Reset</button>
-        <label className="chart-end-control">Graph end <input type="number" min={minimumTime} max={maximumTime} step="any" inputMode="decimal" value={graphEndInput} placeholder={numberFormat.format(maximumTime)} aria-label={`Graph end (${xUnit})`} onChange={(event) => { setGraphEndInput(event.target.value); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} /><span>{xUnit}</span></label>
-        <button type="button" className="chart-reset-button" onClick={() => { setGraphEndInput(""); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} disabled={!graphEndInput}>All</button>
+        <label className="chart-end-control">Graph end <input type="number" min={minimumTime} max={maximumTime} step="1" inputMode="numeric" value={displayedGraphEnd} aria-label={`Graph end (${xUnit})`} onChange={(event) => { setGraphEndInput(event.target.value); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} /><span>{xUnit}</span></label>
+        <button type="button" className="chart-reset-button" onClick={() => { setGraphEndInput(null); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} disabled={graphEndInput === null}>Max</button>
         <span className="chart-export-divider" aria-hidden="true" />
         <button type="button" className="chart-export-button" onClick={() => {
           if (!svgRef.current) return;
