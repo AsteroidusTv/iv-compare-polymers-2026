@@ -1,7 +1,20 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { describeSeriesSelection, describeTrendExport } from "../app/lib/chart-export";
+import { describeGraphElectrode, describeSeriesSelection, describeTrendExport, pointsThrough } from "../app/lib/chart-export";
+
+test("graph exports mention only silver electrodes", () => {
+  assert.equal(describeGraphElectrode(["Cu", "Cu", null]), undefined);
+  assert.equal(describeGraphElectrode(["Cu", " Ag "]), "Ag electrode");
+});
+
+test("graph-end limits keep only observations at or before the boundary", () => {
+  const points = [{ x: 1_000 }, { x: 1_500 }, { x: 2_000 }];
+
+  assert.deepEqual(pointsThrough(points, 1_500), [{ x: 1_000 }, { x: 1_500 }]);
+  assert.deepEqual(pointsThrough([{ x: 1_000 }, { x: 2_000 }], 1_500), [{ x: 1_000 }]);
+  assert.deepEqual(pointsThrough(points, null), points);
+});
 
 test("individual specimen exports do not claim an aggregate or n=1", () => {
   const points = [

@@ -12,6 +12,7 @@ import {
   MetricKey,
 } from "./lib/iv-data";
 import { analyzeIVCurve } from "./lib/iv-curve-analysis";
+import { describeGraphElectrode } from "./lib/chart-export";
 import {
   chooseRepresentativeMeasurement,
   measurementQualityReasons,
@@ -299,7 +300,8 @@ export default function Home() {
         };
       }).sort((a, b) => a.x - b.x);
       const signatures = new Set(points.map((point) => point.members.map((member) => member.sampleUid).sort().join("|")));
-      const contextLabel = `${config.stress} · ${METRICS[config.metric].label} · standard lamination recipes · electrodes pooled`;
+      const electrodeNote = describeGraphElectrode(points.flatMap((point) => point.members.map((member) => sampleMap.get(member.sampleUid)?.electrode)));
+      const contextLabel = [config.stress, METRICS[config.metric].label, electrodeNote].filter(Boolean).join(" · ");
       return { id: config.id, label: `${String.fromCharCode(65 + index)} · ${config.material}`, color, points, config, xUnit: timeUnit(config.stress), yUnit: mode === "retention" ? "% of reference" : METRICS[config.metric].unit, contextLabel, baselineWarnings: [...baselineWarnings], sampleSetChanges: signatures.size > 1 };
     };
     return seriesConfigs.map(build);
@@ -370,19 +372,22 @@ export default function Home() {
     }), [curveCandidateGroups, curveMeasurementIds, dataset]);
 
   const currentPolarity = currentConvention === "instrument" ? -1 : 1;
-  const curveSeries: CurveSeries[] = curveSelections.map((selection) => ({
-    id: selection.seriesId,
-    label: `${String.fromCharCode(65 + seriesConfigs.findIndex((config) => config.id === selection.seriesId))} · ${selection.material}`,
-    color: selection.color,
-    segments: (sweepView === "primary"
-      ? [selection.analysis.segments[selection.analysis.primaryIndex]]
-      : selection.analysis.segments
-    ).filter(Boolean).map((segment) => ({
-      id: `${selection.measurement.measurement_uid}-${segment.id}`,
-      isPrimary: segment.id === selection.analysis.segments[selection.analysis.primaryIndex]?.id,
-      points: segment.points.map((point) => ({ x: point.x, y: point.y * currentPolarity, sourceIndex: point.sourceIndex })),
-    })),
-  }));
+  const curveSeries: CurveSeries[] = curveSelections.map((selection) => {
+    const electrodeNote = describeGraphElectrode([sampleMap.get(selection.measurement.sample_uid ?? "")?.electrode]);
+    return {
+      id: selection.seriesId,
+      label: [`${String.fromCharCode(65 + seriesConfigs.findIndex((config) => config.id === selection.seriesId))} · ${selection.material}`, electrodeNote].filter(Boolean).join(" · "),
+      color: selection.color,
+      segments: (sweepView === "primary"
+        ? [selection.analysis.segments[selection.analysis.primaryIndex]]
+        : selection.analysis.segments
+      ).filter(Boolean).map((segment) => ({
+        id: `${selection.measurement.measurement_uid}-${segment.id}`,
+        isPrimary: segment.id === selection.analysis.segments[selection.analysis.primaryIndex]?.id,
+        points: segment.points.map((point) => ({ x: point.x, y: point.y * currentPolarity, sourceIndex: point.sourceIndex })),
+      })),
+    };
+  });
   const trendSampleOptions = Object.fromEntries(trendSeries.map((series) => {
     const byUid = new Map<string, TrendPoint["members"][number]>();
     series.points.forEach((point) => point.members.forEach((member) => {
@@ -448,8 +453,8 @@ export default function Home() {
         id: `${series.id}::${sample.sampleUid}`,
         label: `${String.fromCharCode(65 + parentIndex)}${sampleIndex + 1} · ${sample.sampleLabel}`,
         points,
-        contextLabel: `${series.config.stress} · ${METRICS[series.config.metric].label} · ${sample.sampleUid} · Excel ref. ${sample.sampleReference}`,
-        exportDetail: `${sample.sampleUid} · Excel ref. ${sample.sampleReference}`,
+        contextLabel: [series.config.stress, METRICS[series.config.metric].label, sample.sampleUid, `Excel ref. ${sample.sampleReference}`, describeGraphElectrode([sampleMap.get(sample.sampleUid)?.electrode])].filter(Boolean).join(" · "),
+        exportDetail: [sample.sampleUid, `Excel ref. ${sample.sampleReference}`, describeGraphElectrode([sampleMap.get(sample.sampleUid)?.electrode])].filter(Boolean).join(" · "),
         parentSeriesId: series.id,
         linePattern: SAMPLE_LINE_PATTERNS[sampleIndex % SAMPLE_LINE_PATTERNS.length],
       };
@@ -587,28 +592,26 @@ export default function Home() {
   const outdoorIssueExample = relevantOutdoorIssues[0];
   const outdoorIssueSample = outdoorIssueExample ? sampleMap.get(outdoorIssueExample.sampleUid) : undefined;
   const comparisonCount = selectedTrendSeries.reduce((total, series) => total + series.points.reduce((sum, point) => sum + point.n, 0), 0);
-  const resetSeriesChoices = () => {
-    setGlobalTrendSamples({});
-    setSelectedTrendMembers({});
-    setExpandedTrendRows(new Set());
-    setHiddenSeries(new Set());
-    setCurveMeasurementIds({});
+  const removeSeriesChoices = (seriesId: SeriesId) => {
+    setGlobalTrendSamples((current) => Object.fromEntries(Object.entries(current).filter(([key]) => key !== seriesId)));
+    setSelectedTrendMembers((current) => Object.fromEntries(Object.entries(current).filter(([rowKey]) => !rowKey.startsWith(`${seriesId}:`))));
+    setExpandedTrendRows((current) => new Set([...current].filter((rowKey) => !rowKey.startsWith(`${seriesId}:`))));
+    setHiddenSeries((current) => new Set([...current].filter((key) => key !== seriesId)));
+    setCurveMeasurementIds((current) => Object.fromEntries(Object.entries(current).filter(([key]) => key !== seriesId)));
   };
   const updateSeriesConfig = (seriesId: string, patch: Partial<SeriesConfig>) => {
     if (!dataset) return;
     setSeriesConfigs((current) => current.map((config) => config.id === seriesId ? normalizeSeriesConfig(dataset, { ...config, ...patch }) : config));
-    resetSeriesChoices();
   };
   const addComparisonMaterial = () => {
     if (!dataset || !seriesConfigs.length || seriesConfigs.length >= SERIES_COLORS.length) return;
     const base = seriesConfigs[0];
     const id = `s${nextSeriesIdRef.current++}`;
     setSeriesConfigs((current) => [...current, normalizeSeriesConfig(dataset, { ...base, id })]);
-    resetSeriesChoices();
   };
   const removeComparisonMaterial = (seriesId: string) => {
     setSeriesConfigs((current) => current.filter((config) => config.id !== seriesId));
-    resetSeriesChoices();
+    removeSeriesChoices(seriesId);
   };
   const aggregationHelp = {
     mean: "The mean uses every QA-valid sample. The chart and table report its 95% confidence interval; interpret intervals cautiously when n is small.",
@@ -721,9 +724,10 @@ export default function Home() {
                   const reportReference = first.config.stress === "Outdoor" ? "reference baseline" : "initial value";
                   const reportYAxisLabel = mode === "retention" ? `${reportMetric} retention (% of ${reportReference})` : `${reportMetric} (${first.yUnit})`;
                   const reportSubtitle = aggregation === "mean" ? "Mean with 95% CI when estimable" : "Median with IQR when estimable";
-                  return <section className="trend-panel" key={panel.map((series) => series.id).join("-")}>
+                  const panelKey = overlayCompatible ? `shared-${first.xUnit}` : `series-${first.parentSeriesId ?? first.id}-${first.xUnit}`;
+                  return <section className="trend-panel" key={panelKey}>
                     <div className="trend-panel-head"><div><span className="trend-panel-title"><strong>{panelTitle}</strong>{helpMetric ? <InfoTip text={METRIC_HELP[helpMetric]} align="left" /> : null}</span><span className="trend-panel-context">{trendDisplay === "samples" ? `${panel.length} individual sample trajectories · ${first.xUnit}` : panel.length > 1 ? `${panel.length} compatible series · ${first.xUnit}` : first.contextLabel}</span></div></div>
-                    <TrendChart key={`${panel.map((series) => `${series.id}-${series.config.stress}-${series.config.metric}`).join("|")}-${mode}-${aggregation}-${includeQa}`} series={visiblePanel.map((series) => ({ ...series, exportDetail: series.contextLabel }))} xUnit={first.xUnit} yUnit={first.yUnit} reportTitle={reportTitle} reportSubtitle={reportSubtitle} reportYAxisLabel={reportYAxisLabel} />
+                    <TrendChart series={visiblePanel.map((series) => ({ ...series, exportDetail: series.contextLabel }))} xUnit={first.xUnit} yUnit={first.yUnit} reportTitle={reportTitle} reportSubtitle={reportSubtitle} reportYAxisLabel={reportYAxisLabel} />
                   </section>;
                 })}
               </div>

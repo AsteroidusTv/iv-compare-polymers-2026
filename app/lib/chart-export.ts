@@ -5,6 +5,14 @@ export type TrendExportPoint = {
 
 export type TrendExportMode = "individual" | "aggregate" | "mixed";
 
+export function describeGraphElectrode(electrodes: Array<string | null | undefined>): string | undefined {
+  return electrodes.some((electrode) => electrode?.trim().toLowerCase() === "ag") ? "Ag electrode" : undefined;
+}
+
+export function pointsThrough<T extends { x: number }>(points: T[], maximumX: number | null): T[] {
+  return maximumX === null ? points : points.filter((point) => point.x <= maximumX);
+}
+
 function sampleSizeDescription(points: TrendExportPoint[]): string | null {
   const counts = points.map((point) => point.n).filter((count) => count > 0);
   if (!counts.length) return null;

@@ -121,6 +121,10 @@ button, a, label { -webkit-tap-highlight-color: transparent; }
 .chart-zoom-controls button { min-width: 28px; height: 27px; padding: 0 8px; border: 1px solid var(--line); border-radius: 7px; background: #faf9f6; color: var(--ink); cursor: pointer; font-size: 12px; font-weight: 800; }
 .chart-zoom-controls .chart-reset-button { min-width: 50px; font-size: 9px; text-transform: uppercase; }
 .chart-zoom-controls .chart-export-button { min-width: 74px; border-color: #b8c8e8; background: #f5f8ff; color: var(--blue); font-size: 9px; text-transform: uppercase; }
+.chart-end-control { height: 27px; padding-left: 8px; display: inline-flex; gap: 5px; align-items: center; border: 1px solid var(--line); border-radius: 7px; background: #faf9f6; color: var(--muted); font-size: 9px; font-weight: 800; text-transform: uppercase; }
+.chart-end-control input { width: 70px; height: 25px; padding: 0 5px; border: 0; border-left: 1px solid var(--line); background: white; color: var(--ink); font: inherit; text-align: right; }
+.chart-end-control input:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+.chart-end-control span { padding-right: 7px; text-transform: none; }
 .chart-export-divider { width: 1px; height: 20px; margin: 0 2px !important; background: var(--line); }
 .chart-data-policy { margin-right: auto !important; color: #35634a; font-weight: 800; }
 .chart-zoom-controls button:disabled { opacity: .4; cursor: default; }
@@ -281,6 +285,7 @@ footer { padding: 22px 4px 0; display: flex; justify-content: space-between; col
   .chart-zoom-controls > span { margin-right: 0; }
   .chart-zoom-controls > span:not(.chart-data-policy):not(.chart-export-divider), .chart-data-policy { grid-column: 1 / -1; }
   .chart-export-divider { width: auto; height: 1px; grid-column: 1 / -1; margin: 2px 0 !important; }
+  .chart-end-control { grid-column: 1 / -1; justify-self: start; }
   .chart-zoom-controls .chart-export-button { grid-column: span 2; }
   .chart-data-policy { width: 100%; }
   .axis-label { font-size: 19px; }

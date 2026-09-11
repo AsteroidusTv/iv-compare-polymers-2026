@@ -2,7 +2,7 @@
 
 import { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
 
-import { describeSeriesSelection, describeTrendExport } from "../lib/chart-export";
+import { describeSeriesSelection, describeTrendExport, pointsThrough } from "../lib/chart-export";
 
 export interface TrendPoint {
   x: number;
@@ -281,6 +281,7 @@ export function TrendChart({
   reportYAxisLabel?: string;
 }) {
   const [viewport, setViewport] = useState<TrendViewport>({ zoom: 1, centreX: 0.5, centreY: 0.5 });
+  const [graphEndInput, setGraphEndInput] = useState("");
   const dragRef = useRef<{ clientX: number; clientY: number; centreX: number; centreY: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -322,17 +323,28 @@ export function TrendChart({
   if (!series.length) {
     return <div className="empty-chart"><strong>All curves are hidden</strong><span>Select a legend item to show a series again.</span></div>;
   }
-  const all = series.flatMap((item) => item.points);
-  if (!all.length) {
+  const sourcePoints = series.flatMap((item) => item.points);
+  if (!sourcePoints.length) {
     return <div className="empty-chart"><strong>No comparable points</strong><span>Broaden the filters or choose another condition.</span></div>;
   }
+  const sourceTimes = sourcePoints.map((point) => point.x);
+  const minimumTime = Math.min(...sourceTimes);
+  const maximumTime = Math.max(...sourceTimes);
+  const requestedGraphEnd = Number(graphEndInput);
+  const graphEnd = graphEndInput.trim() && Number.isFinite(requestedGraphEnd) && requestedGraphEnd >= minimumTime && requestedGraphEnd < maximumTime
+    ? requestedGraphEnd
+    : null;
+  const plottedSeries = series
+    .map((item) => ({ ...item, points: pointsThrough(item.points, graphEnd) }))
+    .filter((item) => item.points.length);
+  const all = plottedSeries.flatMap((item) => item.points);
   const isRetention = yUnit === "% of reference";
   const allTimes = all.map((point) => point.x);
   const allValues = all.flatMap((point) => [point.y, point.intervalLow, point.intervalHigh]);
-  const maximumTime = Math.max(...allTimes, 0);
-  const fullXStep = niceStep(maximumTime);
+  const maximumPlottedTime = Math.max(...allTimes, 0);
+  const fullXStep = niceStep(graphEnd ?? maximumPlottedTime);
   const fullXMin = 0;
-  const fullXMax = Math.max(fullXStep, Math.ceil(maximumTime / fullXStep) * fullXStep);
+  const fullXMax = graphEnd ?? Math.max(fullXStep, Math.ceil(maximumPlottedTime / fullXStep) * fullXStep);
   const [paddedYMin, paddedYMax] = extent(allValues);
   const retentionStep = 20;
   const fullYMin = isRetention ? 0 : paddedYMin;
@@ -350,17 +362,18 @@ export function TrendChart({
   const yMax = yMin + ySpan;
   const sx = (value: number) => margin.left + ((value - xMin) / (xMax - xMin || 1)) * (width - margin.left - margin.right);
   const sy = (value: number) => height - margin.bottom - ((value - yMin) / (yMax - yMin || 1)) * (height - margin.top - margin.bottom);
-  const xTicks = viewport.zoom === 1 ? tickSequence(fullXMin, fullXMax, fullXStep) : ticks(xMin, xMax);
+  const xTicks = viewport.zoom === 1 ? (graphEnd === null ? tickSequence(fullXMin, fullXMax, fullXStep) : ticks(fullXMin, fullXMax)) : ticks(xMin, xMax);
   const yTicks = viewport.zoom === 1 && isRetention ? tickSequence(fullYMin, fullYMax, retentionStep) : ticks(yMin, yMax);
   const exportSummary = describeTrendExport(all, reportSubtitle);
-  const exportSeries = series.map((item) => ({
+  const exportSeries = plottedSeries.map((item) => ({
     ...item,
     exportSelection: describeSeriesSelection(item.points, exportSummary.mode),
   }));
   const exportTitle = reportTitle ?? `Performance over time — ${yUnit}`;
-  const exportSubtitle = exportSummary.subtitle;
+  const graphEndNote = graphEnd === null ? null : `shown through ${numberFormat.format(graphEnd)} ${xUnit} · observed points only`;
+  const exportSubtitle = [exportSummary.subtitle, graphEndNote].filter(Boolean).join(" · ");
   const yAxisLabel = reportYAxisLabel ?? yUnit;
-  const exportStem = exportFileStem("performance-over-time", exportSeries);
+  const exportStem = exportFileStem(graphEnd === null ? "performance-over-time" : `performance-over-time-through-${graphEnd}-${xUnit}`, exportSeries);
 
   const changeZoom = (nextZoom: number, anchorX = 0.5, anchorY = 0.5) => {
     setViewport((current) => {
@@ -417,12 +430,14 @@ export function TrendChart({
   return (
     <div className="zoomable-chart">
       <div className="chart-zoom-controls" aria-label="Chart zoom controls">
-        <span className="chart-data-policy">All QA-valid values shown</span>
+        <span className="chart-data-policy">{graphEnd === null ? "All QA-valid values shown" : `Shown through ${numberFormat.format(graphEnd)} ${xUnit} · observed points only`}</span>
         <span>Scroll or +/− to zoom · drag or arrows to pan</span>
         <button type="button" onClick={() => changeZoom(viewport.zoom / 1.5)} disabled={viewport.zoom === 1} aria-label="Zoom out">−</button>
         <output aria-live="polite">{Math.round(viewport.zoom * 100)}%</output>
         <button type="button" onClick={() => changeZoom(viewport.zoom * 1.5)} disabled={viewport.zoom === MAX_TREND_ZOOM} aria-label="Zoom in">+</button>
         <button type="button" className="chart-reset-button" onClick={() => setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 })} disabled={viewport.zoom === 1}>Reset</button>
+        <label className="chart-end-control">Graph end <input type="number" min={minimumTime} max={maximumTime} step="any" inputMode="decimal" value={graphEndInput} placeholder={numberFormat.format(maximumTime)} aria-label={`Graph end (${xUnit})`} onChange={(event) => { setGraphEndInput(event.target.value); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} /><span>{xUnit}</span></label>
+        <button type="button" className="chart-reset-button" onClick={() => { setGraphEndInput(""); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} disabled={!graphEndInput}>All</button>
         <span className="chart-export-divider" aria-hidden="true" />
         <button type="button" className="chart-export-button" onClick={() => {
           if (!svgRef.current) return;
@@ -433,7 +448,7 @@ export function TrendChart({
         }}>Export SVG</button>
       </div>
       <figure className="data-figure">
-      <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} role="img" tabIndex={0} aria-label="Zoomable comparative evolution chart. All QA-valid values are displayed." onKeyDown={onKeyDown} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={endPointerDrag} onPointerCancel={endPointerDrag} onDoubleClick={() => setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 })}>
+      <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} role="img" tabIndex={0} aria-label={`Zoomable comparative evolution chart. ${graphEnd === null ? "All QA-valid values are displayed." : `QA-valid observations through ${numberFormat.format(graphEnd)} ${xUnit} are displayed without interpolation.`}`} onKeyDown={onKeyDown} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={endPointerDrag} onPointerCancel={endPointerDrag} onDoubleClick={() => setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 })}>
         <defs><clipPath id="trend-plot-clip"><rect x={margin.left} y={margin.top} width={plotWidth} height={plotHeight} /></clipPath></defs>
         {yTicks.map((tick) => <g key={`y-${tick}`}><line className="grid-line" x1={margin.left} x2={width - margin.right} y1={sy(tick)} y2={sy(tick)} /><text className="axis-label" x={margin.left - 12} y={sy(tick) + 4} textAnchor="end">{numberFormat.format(tick)}</text></g>)}
         {xTicks.map((tick) => <g key={`x-${tick}`}><line className="tick-line" x1={sx(tick)} x2={sx(tick)} y1={height - margin.bottom} y2={height - margin.bottom + 6} /><text className="axis-label" x={sx(tick)} y={height - 20} textAnchor="middle">{numberFormat.format(tick)}</text></g>)}
@@ -441,7 +456,7 @@ export function TrendChart({
         <text className="axis-title" x={width - margin.right} y={height - 5} textAnchor="end">Time ({xUnit})</text>
         <text className="axis-title" x={margin.left} y={14}>{yAxisLabel}</text>
         {isRetention && yMin <= 100 && yMax >= 100 ? <g className="reference-baseline"><line x1={margin.left} x2={width - margin.right} y1={sy(100)} y2={sy(100)} /><text x={width - margin.right - 4} y={sy(100) - 6} textAnchor="end">Reference · 100%</text></g> : null}
-        <g clipPath="url(#trend-plot-clip)">{series.map((item, seriesIndex) => {
+        <g clipPath="url(#trend-plot-clip)">{plottedSeries.map((item, seriesIndex) => {
           const ordered = [...item.points].sort((a, b) => a.x - b.x);
           const path = ordered.map((point, index) => `${index ? "L" : "M"}${sx(point.x)},${sy(point.y)}`).join(" ");
           return <g key={item.label} data-export-series-index={seriesIndex}>
@@ -451,7 +466,7 @@ export function TrendChart({
           </g>;
         })}</g>
       </svg>
-      <figcaption className="visually-hidden">The line connects aggregate values by ageing duration. Vertical ranges show the 95% confidence interval for means or the interquartile range for medians. No statistical outlier is hidden.</figcaption>
+      <figcaption className="visually-hidden">The line connects aggregate values by ageing duration. Vertical ranges show the 95% confidence interval for means or the interquartile range for medians. No statistical outlier is hidden. A graph-end limit excludes later observations without creating an interpolated point.</figcaption>
       </figure>
     </div>
   );
