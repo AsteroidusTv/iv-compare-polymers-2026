@@ -142,8 +142,13 @@ function asText(value: unknown): string | null {
   return String(value);
 }
 
-function asIsoDate(value: unknown): string | null {
-  if (value instanceof Date && Number.isFinite(value.getTime())) return value.toISOString().slice(0, 10);
+export function asIsoDate(value: unknown): string | null {
+  if (value instanceof Date && Number.isFinite(value.getTime())) {
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, "0");
+    const day = String(value.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
   if (typeof value === "number" && value > 20_000 && value < 80_000) {
     return new Date(Date.UTC(1899, 11, 30) + value * 86_400_000).toISOString().slice(0, 10);
   }

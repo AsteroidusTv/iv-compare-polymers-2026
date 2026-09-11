@@ -3,7 +3,7 @@ import fs from "node:fs";
 import test from "node:test";
 import { gunzipSync } from "node:zlib";
 
-import { validateDataset, type IVDataset } from "../app/lib/iv-data";
+import { asIsoDate, validateDataset, type IVDataset } from "../app/lib/iv-data";
 
 function validDataset(): IVDataset {
   return {
@@ -29,6 +29,19 @@ test("dataset validation enforces referential integrity and curve counts", () =>
   assert.throws(() => validateDataset(mismatch), /inconsistent voltage\/current arrays/);
 });
 
+test("Excel calendar dates keep their displayed day in positive UTC offsets", () => {
+  const previousTimezone = process.env.TZ;
+  process.env.TZ = "Europe/Zurich";
+  try {
+    const excelDate = new Date(2026, 8, 10);
+    assert.equal(excelDate.toISOString().slice(0, 10), "2026-09-09");
+    assert.equal(asIsoDate(excelDate), "2026-09-10");
+  } finally {
+    if (previousTimezone === undefined) delete process.env.TZ;
+    else process.env.TZ = previousTimezone;
+  }
+});
+
 test("the shipped package satisfies the complete dataset invariants", () => {
   const payload = JSON.parse(gunzipSync(fs.readFileSync(new URL("../public/data/iv-compare-dowsil.ivpack", import.meta.url))).toString("utf8"));
   const dataset = validateDataset(payload);
@@ -38,4 +51,7 @@ test("the shipped package satisfies the complete dataset invariants", () => {
   assert.equal(dataset.report.reviewFiles, 3);
   assert.equal(dataset.report.auditFiles, 42);
   assert.equal(dataset.provenance?.pipelineVersion, "2.0.0");
+  assert.equal(dataset.samples.find((sample) => sample.sample_uid === "SMP-003")?.encapsulation_date, "2026-03-19");
+  assert.equal(dataset.files.find((file) => file.file_uid === "FIL-0001")?.measurement_date, "2026-03-31");
+  assert.equal(dataset.measurements.find((measurement) => measurement.measurement_uid === "MEA-00001")?.measurement_date, "2026-03-31");
 });
