@@ -61,4 +61,6 @@ Imports are processed locally in the browser. `.ivpack` files are limited to 64 
 
 The project uses the standard Vinext Node server and does not require Cloudflare, OpenAI Sites, D1, R2, or Wrangler. Build with `pnpm build`, run with `pnpm start`, and place the Hestia reverse proxy in front of the Node process.
 
+The production topology, staging procedure, verification steps, and rollback commands are documented in [`DEPLOYMENT.md`](DEPLOYMENT.md).
+
 Because the repository contains internal research data, production must protect the entire origin—including `/data/*.ivpack`—with Hestia/Nginx authentication or an equivalent access-control layer. Do not rely on hiding the download link as a security measure.
