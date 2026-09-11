@@ -73,7 +73,7 @@ rsync -az --delete \
   --exclude='.next/' \
   --exclude='.vinext/' \
   --exclude='.wrangler/' \
-  --exclude='data/' \
+  --exclude='/data/' \
   --exclude='outputs/' \
   --exclude='tests/' \
   ./ "codex-server:$DEPLOY_STAGE/"
@@ -85,6 +85,7 @@ Install and build inside staging while production remains online:
 ssh -o BatchMode=yes codex-server "
   set -eu
   cd '$DEPLOY_STAGE'
+  test -f public/data/iv-compare-dowsil.ivpack
   pnpm install --frozen-lockfile
   pnpm build
   printf '%s\n' '$DEPLOY_SHA' > DEPLOYED_GIT_SHA
@@ -128,7 +129,8 @@ ssh -o BatchMode=yes codex-server "
     && sudo systemctl start iv-compare.service \
     && sleep 2 \
     && systemctl is-active --quiet iv-compare.service \
-    && curl -fsS --max-time 10 http://127.0.0.1:4310/ >/dev/null
+    && curl -fsS --max-time 10 http://127.0.0.1:4310/ >/dev/null \
+    && curl -fsS --max-time 10 http://127.0.0.1:4310/data/iv-compare-dowsil.ivpack >/dev/null
   then
     echo deploy-ok
   else
@@ -190,8 +192,10 @@ ssh -o BatchMode=yes codex-server "
   mv \"\$current\" \"\$failed\"
   mv \"\$source\" \"\$current\"
   sudo systemctl start iv-compare.service
+  sleep 2
   systemctl is-active --quiet iv-compare.service
   curl -fsS --max-time 10 http://127.0.0.1:4310/ >/dev/null
+  curl -fsS --max-time 10 http://127.0.0.1:4310/data/iv-compare-dowsil.ivpack >/dev/null
 "
 ```
 
