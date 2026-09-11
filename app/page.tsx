@@ -76,7 +76,7 @@ const HELP = {
   retention: "Retention = value at time t / reference value for the same sample × 100. For DH/TC, the reference is the initial state. For Outdoor, at least three valid days are required and the reference is the median of up to the first seven valid days. Sensitivity to 3-, 7-, and 14-day windows is reported when possible.",
   labConvention: "Laboratory convention: lamination recipes are the standard recipes assigned to each polymer and are not treated as a comparison variable. Cu is the default electrode; the single Ag case is retained and pooled with Cu. Both metadata fields remain available in the exported data for traceability.",
   traceDisplay: "Aggregate shows one mean or median curve per material. All samples draws one separate trajectory for every contributing patch, using the same material colour and different line patterns. No observation is duplicated or removed.",
-  matching: "Matching links each IV file to an inventory sample using its metadata. Excluded files remain in the source dataset but do not participate in comparisons by default.",
+  matching: "Matching links each IV file to an inventory sample using its metadata. “To resolve” contains only genuinely ambiguous or unidentified files. Reference cells and files already placed in laboratory Trash folders are retained separately for audit and do not participate in polymer comparisons.",
   observations: "Total number of individual measurements contributing to the points currently shown. This is not the number of durations or averages.",
   interval: "For each duration, the main line shows the selected aggregate. Mean values carry a 95% confidence interval; median values carry an interquartile range. Min and max remain available in the export.",
   replicates: "When n > 1, select n to open the individual observations. Choosing a sample changes only the plotted point; the aggregate, calculations, and exports remain unchanged.",
@@ -687,7 +687,7 @@ export default function Home() {
           <label className="inline-select"><FieldTitle help={aggregationHelp}>Aggregation</FieldTitle><select value={aggregation} onChange={(event) => setAggregation(event.target.value as Aggregation)}><option value="mean">Mean + 95% CI</option><option value="median">Median + IQR</option></select></label>
           <span className="condition-group"><span className="condition-chip ok">Lab-standard recipes · Cu default</span><InfoTip text={HELP.labConvention} /></span>
           <span className="check-item outdoor-quality-toggle"><label className="check-control"><input type="checkbox" checked={includeQa} onChange={(event) => setIncludeQa(event.target.checked)} /> Include QA-flagged data{relevantOutdoorIssues.length ? ` (${relevantOutdoorIssues.length} outdoor)` : ""}</label><InfoTip text={`${HELP.qa} ${HELP.outdoorQa}`} align="right" /></span>
-          <span className="quality-note">{report ? `${report.matchedFiles}/${report.files} files matched · ${report.reviewFiles} excluded` : ""}<InfoTip text={HELP.matching} align="right" /></span>
+          <span className="quality-note">{report ? `${report.matchedFiles}/${report.files} files matched · ${report.reviewFiles} to resolve${report.auditFiles ? ` · ${report.auditFiles} reference/audit` : ""}` : ""}<InfoTip text={HELP.matching} align="right" /></span>
         </div>
 
         <nav className="view-tabs" aria-label="Chart type">

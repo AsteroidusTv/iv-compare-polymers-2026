@@ -113,6 +113,7 @@ export interface IVDataset {
     points: number;
     matchedFiles: number;
     reviewFiles: number;
+    auditFiles?: number;
   };
   samples: Sample[];
   recipes: Recipe[];
@@ -426,6 +427,7 @@ export async function readNormalizedPair(workbookFile: File, pointsFile: File): 
       points,
       matchedFiles: files.filter((file) => file.match_status.startsWith("matched_")).length,
       reviewFiles: files.filter((file) => file.match_status === "ambiguous" || file.match_status === "unmatched").length,
+      auditFiles: files.filter((file) => file.match_status === "reference_unassigned" || file.match_status === "audit_only").length,
     },
     samples,
     recipes,

@@ -11,7 +11,7 @@
   "iv": {
     "voltage": "Legacy simple V-I exports contain millivolt values even when the header says V [V]; curve_voltage_scale_to_V records the applied 0.001 conversion.",
     "current": "Simple V-I current is divided by cell area; multi-cell V-J exports already contain current density. Generated-current density reverses the instrument sign.",
-    "matching": "All file-to-sample decisions, alternative scores, reasons and margins are versioned in the IV_Files and Match_Review sheets. Ambiguous and unmatched files remain excluded by default. Non-encapsulated reference cells are catalogued but deliberately unmatched because they are not polymer patches.",
+    "matching": "All file-to-sample decisions, alternative scores, reasons and margins are versioned in the IV_Files and Match_Review sheets. Ambiguous and unmatched files remain excluded by default. Non-encapsulated and silicon reference cells use reference_unassigned; unresolved files already stored in laboratory Trash folders use audit_only. These audit sources are preserved but are not counted as polymer-matching failures.",
     "qa": "Source flags and conservative physical plausibility checks are additive; no raw value is deleted."
   },
   "outdoor": {

@@ -34,5 +34,8 @@ test("the shipped package satisfies the complete dataset invariants", () => {
   const dataset = validateDataset(payload);
   assert.equal(dataset.schemaVersion, "1.2");
   assert.equal(dataset.report.points, 1_043_400);
+  assert.equal(dataset.report.matchedFiles, 364);
+  assert.equal(dataset.report.reviewFiles, 3);
+  assert.equal(dataset.report.auditFiles, 42);
   assert.equal(dataset.provenance?.pipelineVersion, "2.0.0");
 });

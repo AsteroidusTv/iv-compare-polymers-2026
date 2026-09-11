@@ -28,6 +28,8 @@ The application supports exploratory comparison after damp heat (DH), thermal cy
 
 The browser package embeds SHA-256 provenance for the complete raw-data tree and each processed input. File-to-sample matching reasons and margins, source rows, raw daily counts, aggregation protocols, and QA flags remain available in the package or workbook.
 
+Matching totals distinguish unresolved files from audit-only sources. Non-encapsulated and silicon reference cells, plus files already stored in laboratory `Trash` folders, remain preserved but are not counted as polymer-matching failures.
+
 Rebuild and verify the package:
 
 ```bash

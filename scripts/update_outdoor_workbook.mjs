@@ -17,7 +17,8 @@ const ivPointCount = Number(workbook.worksheets.getItem("README").getRange("B8")
 const ivFileMatrix = workbook.worksheets.getItem("IV_Files").getUsedRange(true).values;
 const matchStatusColumn = ivFileMatrix[0].findIndex((value) => value === "match_status");
 const matchedFileCount = ivFileMatrix.slice(1).filter((row) => String(row[matchStatusColumn]).startsWith("matched_")).length;
-const reviewFileCount = ivFileCount - matchedFileCount;
+const reviewFileCount = ivFileMatrix.slice(1).filter((row) => ["ambiguous", "unmatched"].includes(String(row[matchStatusColumn]))).length;
+const auditFileCount = ivFileMatrix.slice(1).filter((row) => ["reference_unassigned", "audit_only"].includes(String(row[matchStatusColumn]))).length;
 await fs.mkdir(outputDir, { recursive: true });
 
 async function render(name, range) {
@@ -138,8 +139,9 @@ readme.getRange("A3:B10").values = [
   ["IV sweeps", ivSweepCount],
   ["IV points", ivPointCount],
   ["Matched files (high/medium confidence)", matchedFileCount],
-  ["Files to review (ambiguous/unmatched)", reviewFileCount],
+  ["Files to resolve (ambiguous/unmatched)", reviewFileCount],
 ];
+readme.getRange("D7:E7").values = [["Reference / audit-only files", auditFileCount]];
 readme.getRange("D3:E6").values = [
   ["Outdoor", "Value"],
   ["CSV files", 15],

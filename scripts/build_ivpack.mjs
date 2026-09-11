@@ -180,6 +180,7 @@ async function buildPayload() {
     points: Object.values(curves).reduce((total, curve) => total + curve.v.length, 0),
     matchedFiles: files.filter((row) => row.match_status?.startsWith("matched_")).length,
     reviewFiles: files.filter((row) => row.match_status === "ambiguous" || row.match_status === "unmatched").length,
+    auditFiles: files.filter((row) => row.match_status === "reference_unassigned" || row.match_status === "audit_only").length,
   };
   return {
     schemaVersion: "1.2",
