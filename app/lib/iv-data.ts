@@ -3,6 +3,7 @@ export type Aggregation = "mean" | "median";
 
 export interface Sample {
   sample_uid: string;
+  initial_efficiency_pct?: number | null;
   batch_no_raw?: string | null;
   electrode?: string | null;
   encapsulation_date?: string | null;
@@ -246,6 +247,7 @@ export async function fetchDefaultDataset(): Promise<IVDataset> {
 function normalizeSamples(rows: UnknownRow[]): Sample[] {
   return rows.map((row) => ({
     sample_uid: String(row.sample_uid ?? ""),
+    initial_efficiency_pct: asNumber(row.initial_efficiency_pct),
     batch_no_raw: asText(row.batch_no_raw),
     electrode: asText(row.electrode),
     encapsulation_date: asIsoDate(row.encapsulation_date),

@@ -2,6 +2,7 @@
 
 import { DragEvent, Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CurveChart, CurveSeries, TrendChart, TrendPoint, TrendSeries } from "./components/Charts";
+import { EncapsulationComparison } from "./components/EncapsulationComparison";
 import { FieldTitle, InfoTip } from "./components/InfoTip";
 import {
   Aggregation,
@@ -35,7 +36,7 @@ import {
 const SERIES_COLORS = ["#ee735e", "#3469d4", "#2f9b72", "#9a62d4", "#d4932f", "#24a0ad", "#c84f83", "#68717e"];
 const numberFormat = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 });
 const fr = numberFormat;
-type View = "trend" | "curves";
+type View = "trend" | "curves" | "encapsulation";
 type ValueMode = "absolute" | "retention";
 type TrendDisplay = "aggregate" | "samples";
 type CurrentConvention = "instrument" | "pv";
@@ -687,11 +688,11 @@ export default function Home() {
         <div className="workspace-head">
           <div>
             <p className="eyebrow">Comparison workspace</p>
-            <h3>{sharedCurveStress ? (sharedCurveStress === "Unaged" ? "Initial-state comparison" : `Evolution after ${sharedCurveStress}`) : "Condition comparison"}</h3>
+            <h3>{view === "encapsulation" ? "Before / after encapsulation" : sharedCurveStress ? (sharedCurveStress === "Unaged" ? "Initial-state comparison" : `Evolution after ${sharedCurveStress}`) : "Condition comparison"}</h3>
           </div>
           <div className="head-actions">
             <a className="soft-button" href="/data/iv-compare-dowsil.ivpack" download>Sample package</a>
-            <button type="button" className="primary-button" onClick={exportTrend} disabled={!comparisonCount}>Export CSV</button>
+            {view !== "encapsulation" && <button type="button" className="primary-button" onClick={exportTrend} disabled={!comparisonCount}>Export CSV</button>}
           </div>
         </div>
 
@@ -705,8 +706,8 @@ export default function Home() {
                 <div className="series-config-title"><span className="material-slot"><i style={{ background: SERIES_COLORS[index % SERIES_COLORS.length] }} />Series {String.fromCharCode(65 + index)}</span>{index >= 2 ? <button type="button" className="remove-material" onClick={() => removeComparisonMaterial(config.id)} aria-label={`Remove series ${String.fromCharCode(65 + index)}`} title="Remove this series">×</button> : null}</div>
                 <div className="series-config-grid">
                   <label>Encapsulant<select aria-label={`Series ${String.fromCharCode(65 + index)} encapsulant`} value={config.material} onChange={(event) => updateSeriesConfig(config.id, { material: event.target.value })}>{materials.map((item) => <option key={item}>{item}</option>)}</select></label>
-                  <label>Ageing protocol<select aria-label={`Series ${String.fromCharCode(65 + index)} ageing protocol`} value={config.stress} onChange={(event) => updateSeriesConfig(config.id, { stress: event.target.value })}>{stresses.map((item) => <option key={item}>{item}</option>)}</select></label>
-                  <label className="series-metric">Metric<select aria-label={`Series ${String.fromCharCode(65 + index)} metric`} value={config.metric} onChange={(event) => updateSeriesConfig(config.id, { metric: event.target.value as MetricKey })}>{metrics.map((key) => <option key={key} value={key}>{METRICS[key].label}</option>)}</select></label>
+                  {view !== "encapsulation" && <label>Ageing protocol<select aria-label={`Series ${String.fromCharCode(65 + index)} ageing protocol`} value={config.stress} onChange={(event) => updateSeriesConfig(config.id, { stress: event.target.value })}>{stresses.map((item) => <option key={item}>{item}</option>)}</select></label>}
+                  {view !== "encapsulation" && <label className="series-metric">Metric<select aria-label={`Series ${String.fromCharCode(65 + index)} metric`} value={config.metric} onChange={(event) => updateSeriesConfig(config.id, { metric: event.target.value as MetricKey })}>{metrics.map((key) => <option key={key} value={key}>{METRICS[key].label}</option>)}</select></label>}
                 </div>
               </article>;
             })}
@@ -717,7 +718,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="control-row">
+        {view !== "encapsulation" && <div className="control-row">
           <div className="segmented" aria-label="Value mode">
             <button className={mode === "retention" ? "active" : ""} onClick={() => setMode("retention")}>Retention</button>
             <button className={mode === "absolute" ? "active" : ""} onClick={() => setMode("absolute")}>Absolute value</button>
@@ -734,12 +735,14 @@ export default function Home() {
           <span className="quality-note">{report ? `${report.matchedFiles}/${report.files} files matched · ${report.reviewFiles} to resolve${report.auditFiles ? ` · ${report.auditFiles} reference/audit` : ""}` : ""}<InfoTip text={HELP.matching} align="right" /></span>
         </div>
 
+        }
         <nav className="view-tabs" aria-label="Chart type">
           <button className={view === "trend" ? "active" : ""} onClick={() => setView("trend")}><span>01</span> Performance over time</button>
           <button className={view === "curves" ? "active" : ""} onClick={() => setView("curves")}><span>02</span> IV curves</button>
+          <button className={view === "encapsulation" ? "active" : ""} onClick={() => setView("encapsulation")}><span>03</span> Before / after encapsulation</button>
         </nav>
 
-        {view === "trend" ? (
+        {view === "encapsulation" ? <EncapsulationComparison dataset={dataset} selections={seriesConfigs.map((config, index) => ({ material: config.material, color: SERIES_COLORS[index % SERIES_COLORS.length] }))} /> : view === "trend" ? (
           <div className="chart-layout">
             <section className="chart-card">
               <div className="chart-title">
