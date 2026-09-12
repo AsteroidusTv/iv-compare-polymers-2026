@@ -3,10 +3,12 @@
 import { useRef } from "react";
 import type { IVDataset } from "../lib/iv-data";
 import { boxStatistics, encapsulationGroups } from "../lib/encapsulation";
+import { pointOffsets } from "../lib/encapsulation-layout";
 
 export function EncapsulationComparison({ dataset, selections }: { dataset: IVDataset | null; selections: { material: string; color: string }[] }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const { groups, excluded } = encapsulationGroups(dataset?.samples ?? [], dataset?.observations ?? [], selections.map((item) => item.material));
+  groups.sort((a, b) => selections.findIndex((item) => item.material === a.family) - selections.findIndex((item) => item.material === b.family) || a.material.localeCompare(b.material) || a.batch.localeCompare(b.batch, "en", { numeric: true }) || a.electrode.localeCompare(b.electrode));
   const missing = [...new Set(selections.map((item) => item.material))].filter((material) => !groups.some((group) => group.family === material));
   const values = groups.flatMap((group) => group.pairs.flatMap((pair) => [pair.before, pair.after]));
   const min = values.length ? Math.max(0, Math.floor(Math.min(...values)) - 1) : 0;
@@ -33,6 +35,7 @@ export function EncapsulationComparison({ dataset, selections }: { dataset: IVDa
           <rect width={width} height={480} fill="white" />
           <text x={width / 2} y={28} textAnchor="middle" fontSize={18} fontWeight="bold">PCE before / after encapsulation</text>
           <text x={width / 2} y={51} textAnchor="middle" fontSize={12}>Same cells at both stages · formulations and batches kept separate</text>
+          <text x={width / 2} y={74} textAnchor="middle" fontSize={13} fontWeight="bold">○ Before · ● After · Line: median · Box: middle 50% (not a confidence interval)</text>
           <text x={20} y={220} transform="rotate(-90 20 220)" textAnchor="middle" fontSize={14}>PCE η (%)</text>
           {Array.from({ length: 6 }, (_, i) => min + (max - min) * i / 5).map((value) => <g key={value}><line x1={65} x2={width - 20} y1={y(value)} y2={y(value)} stroke="#ddd" /><text x={55} y={y(value) + 4} textAnchor="end" fontSize={12}>{value.toFixed(1)}</text></g>)}
           {groups.map((group, index) => {
@@ -40,7 +43,8 @@ export function EncapsulationComparison({ dataset, selections }: { dataset: IVDa
             const color = selections.find((item) => item.material === group.family)?.color ?? "#336699";
             return <g key={group.key}>
               {(["before", "after"] as const).map((stage, stageIndex) => {
-                const x = center + (stageIndex ? 30 : -30);
+                const x = center + (stageIndex ? 36 : -36);
+                const offsets = pointOffsets(group.pairs.map((pair) => y(pair[stage])));
                 const box = boxStatistics(group.pairs.map((pair) => pair[stage]));
                 return <g key={stage}>
                   {group.pairs.length >= 3 && <g stroke={color} fill={color} fillOpacity={stageIndex ? 0.4 : 0.12}>
@@ -49,7 +53,7 @@ export function EncapsulationComparison({ dataset, selections }: { dataset: IVDa
                     <rect x={x - 20} y={y(box.q3)} width={40} height={Math.max(1, y(box.q1) - y(box.q3))} />
                     <line x1={x - 20} x2={x + 20} y1={y(box.median)} y2={y(box.median)} strokeWidth={2} />
                   </g>}
-                  {group.pairs.map((pair, i) => <circle key={pair.sampleUid} cx={x + ((i % 5) - 2) * 4} cy={y(pair[stage])} r={3.5} fill={stageIndex ? color : "white"} stroke={color}><title>{pair.reference}: {stage} {pair[stage]}%</title></circle>)}
+                  {group.pairs.map((pair, i) => <circle key={pair.sampleUid} cx={x + offsets[i]} cy={y(pair[stage])} r={3.5} fill={stageIndex ? color : "white"} stroke={color}><title>{pair.reference}: {stage} {pair[stage]}%</title></circle>)}
                   <text x={x} y={363} textAnchor="middle" fontSize={12}>{stageIndex ? "After" : "Before"}</text>
                 </g>;
               })}
