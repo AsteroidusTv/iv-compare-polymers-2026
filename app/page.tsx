@@ -77,12 +77,12 @@ const HELP = {
   ageing: "Applied ageing protocol: DH means damp heat, TC means thermal cycling, and Outdoor means outdoor exposure. Durations are comparable only within the same protocol.",
   retention: "Retention = value at time t / reference value for the same sample × 100. For DH/TC, the reference is the initial state. For Outdoor, at least three valid days are required and the reference is the median of up to the first seven valid days. Sensitivity to 3-, 7-, and 14-day windows is reported when possible.",
   labConvention: "Laboratory convention: lamination recipes are the standard recipes assigned to each polymer and are not treated as a comparison variable. Cu is the default electrode; the single Ag case is retained and pooled with Cu. Both metadata fields remain available in the exported data for traceability.",
-  traceDisplay: "Aggregate shows one mean or median curve per material using only the selected samples. All samples draws one separate trajectory for every selected patch, using the same material colour and different line patterns. No observation is duplicated.",
+  traceDisplay: "Individual samples draws one separate trajectory for every checked patch, using the same material colour and different line patterns. Mean or Median replaces those trajectories with one aggregate curve per material.",
   matching: "Matching links each IV file to an inventory sample using its metadata. “To resolve” contains only genuinely ambiguous or unidentified files. Reference cells and files already placed in laboratory Trash folders are retained separately for audit and do not participate in polymer comparisons.",
   observations: "Total number of individual measurements contributing to the points currently shown. This is not the number of durations or averages.",
   interval: "For each duration, the main line shows the selected aggregate. Mean values carry a 95% confidence interval; median values carry an interquartile range. Min and max remain available in the export.",
   replicates: "When n > 1, select n to open the individual observations. Choosing a sample changes only the plotted point; the aggregate, calculations, and exports remain unchanged.",
-  globalReplicate: "Sample filters are independent for every series. In Aggregate mode, the selected samples are combined with the chosen mean or median. In All samples mode, each selected sample is drawn separately. At least one sample remains selected, and a row-level choice creates a local override.",
+  globalReplicate: "Sample filters are independent for every series. Checking or unchecking a sample immediately updates the individual curves. Choose Mean or Median above to replace them with one aggregate curve per material. At least one sample remains selected.",
   patchReference: "Sample name and reference from the Excel inventory. In aggregate mode, the cell lists the samples contributing to the point; in individual mode, it identifies the exact plotted sample.",
   targetTime: "Only measurements acquired at this exact ageing duration are eligible. This prevents curves from different ageing times being overlaid as if they were equivalent.",
   curveChoice: "Representative selects the QA-valid curve whose efficiency is closest to the median of the eligible measurements. Choose a named measurement to make the selection fully explicit; the site never selects the maximum efficiency automatically.",
@@ -132,7 +132,7 @@ export default function Home() {
   const [seriesConfigs, setSeriesConfigs] = useState<SeriesConfig[]>([]);
   const [mode, setMode] = useState<ValueMode>("retention");
   const [aggregation, setAggregation] = useState<Aggregation>("mean");
-  const [trendDisplay, setTrendDisplay] = useState<TrendDisplay>("aggregate");
+  const [trendDisplay, setTrendDisplay] = useState<TrendDisplay>("samples");
   const [includeQa, setIncludeQa] = useState(false);
   const [curveTime, setCurveTime] = useState<number | null>(null);
   const [currentConvention, setCurrentConvention] = useState<CurrentConvention>("instrument");
@@ -514,10 +514,14 @@ export default function Home() {
   });
   const selectTrendMember = (rowKey: string, observationId?: string) => setSelectedTrendMembers((current) => ({ ...current, [rowKey]: observationId ?? null }));
   const selectAllTrendSamples = (seriesId: SeriesId) => {
+    setTrendDisplay("samples");
+    setHiddenSeries(new Set());
     setTrendSampleFilters((current) => Object.fromEntries(Object.entries(current).filter(([key]) => key !== seriesId)));
   };
   const toggleTrendSample = (seriesId: SeriesId, sampleId: string) => {
     const availableIds = (trendSampleOptions[seriesId] ?? []).map((member) => member.sampleUid);
+    setTrendDisplay("samples");
+    setHiddenSeries(new Set());
     setTrendSampleFilters((current) => {
       const nextSelection = toggleSelectedSampleId(availableIds, current[seriesId], sampleId);
       if (nextSelection) return { ...current, [seriesId]: nextSelection };
@@ -718,8 +722,8 @@ export default function Home() {
           </div>
           <InfoTip text={HELP.retention} align="left" />
           <div className="segmented" aria-label="Trend display">
-            <button className={trendDisplay === "aggregate" ? "active" : ""} onClick={() => { setTrendDisplay("aggregate"); setHiddenSeries(new Set()); }}>Aggregate</button>
-            <button className={trendDisplay === "samples" ? "active" : ""} onClick={() => { setTrendDisplay("samples"); setHiddenSeries(new Set()); }}>All samples</button>
+            <button className={trendDisplay === "samples" ? "active" : ""} onClick={() => { setTrendDisplay("samples"); setHiddenSeries(new Set()); }}>Individual samples</button>
+            <button className={trendDisplay === "aggregate" ? "active" : ""} onClick={() => { setTrendDisplay("aggregate"); setHiddenSeries(new Set()); }}>{aggregation === "mean" ? "Mean" : "Median"}</button>
           </div>
           <InfoTip text={HELP.traceDisplay} align="left" />
           <label className="inline-select"><FieldTitle help={aggregationHelp}>Aggregation</FieldTitle><select value={aggregation} onChange={(event) => setAggregation(event.target.value as Aggregation)}><option value="mean">Mean + 95% CI</option><option value="median">Median + IQR</option></select></label>

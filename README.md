@@ -8,7 +8,7 @@ The application supports exploratory comparison after damp heat (DH), thermal cy
 
 - Mean aggregation is shown with a 95% confidence interval.
 - Median aggregation is shown with an interquartile range.
-- Each material has an independent sample filter. Aggregate mode recalculates the selected mean or median from that subset, while All samples draws the selected specimens as individual trajectories with stable numbering and Excel references.
+- Each material has an independent sample filter. Checked specimens are drawn as individual trajectories by default, with the material colour, distinct line patterns, stable numbering, and Excel references. Mean or median mode replaces them with one aggregate trajectory calculated from the selected subset.
 - The former “best value” aggregation is intentionally unavailable because it stitched different specimens into an artificial trajectory.
 - Every QA-valid point remains visible. Statistical outliers are not hidden merely to improve chart scaling.
 - Outdoor PR, Pmpp, and irradiance are daily medians over measurements with irradiance ≥ 200 W/m². Electrical-only files without irradiance retain median positive Pmpp with an explicit QA flag.
