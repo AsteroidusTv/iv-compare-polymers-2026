@@ -43,6 +43,8 @@ pnpm data:verify:deep
 
 ## Local development
 
+Trend charts auto-fit the Y axis to the displayed series through the chosen graph end, with padding and rounded ticks; retention includes the 100% reference but no longer forces zero. Manual Y bounds persist until Auto Y is selected; invalid bounds fall back to auto with a validation message. Uncertainty intervals can be hidden without changing means, medians or tables. Manual/zoom clipping and hidden intervals are disclosed in the UI and exported figure subtitle. These display controls do not change CSV data or statistical calculations.
+
 Lab trend QA is applied before aggregation and reference normalization. Besides source flags, the app reviews values outside the existing IV plausibility ranges and isolated dropouts: a value ≤10% of both adjacent values of the same cell/protocol/unit, with those neighbours agreeing within 35%. This is a review heuristic, not proof of measurement error. Sustained and terminal zero values are retained. The QA disclosure lists the reasons; “Include QA-flagged data” restores these observations explicitly. Raw source data are unchanged. Wide small-sample 95% confidence intervals are not QA flags and remain untruncated.
 
 ### Before / after encapsulation

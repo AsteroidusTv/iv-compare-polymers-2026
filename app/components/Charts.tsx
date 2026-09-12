@@ -291,6 +291,8 @@ export function TrendChart({
 }) {
   const [viewport, setViewport] = useState<TrendViewport>({ zoom: 1, centreX: 0.5, centreY: 0.5 });
   const [graphEndInput, setGraphEndInput] = useState<string | null>(null);
+  const [manualY, setManualY] = useState<{ min: string; max: string } | null>(null);
+  const [showIntervals, setShowIntervals] = useState(true);
   const dragRef = useRef<{ clientX: number; clientY: number; centreX: number; centreY: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -350,15 +352,16 @@ export function TrendChart({
   const all = plottedSeries.flatMap((item) => item.points);
   const isRetention = yUnit === "% of reference";
   const allTimes = all.map((point) => point.x);
-  const allValues = all.flatMap((point) => [point.y, point.intervalLow, point.intervalHigh]);
+  const allValues = all.flatMap((point) => showIntervals ? [point.y, point.intervalLow, point.intervalHigh] : [point.y]);
   const maximumPlottedTime = Math.max(...allTimes, 0);
   const fullXStep = niceStep(graphEnd ?? maximumPlottedTime);
   const fullXMin = 0;
   const fullXMax = graphEnd ?? Math.max(fullXStep, Math.ceil(maximumPlottedTime / fullXStep) * fullXStep);
-  const [paddedYMin, paddedYMax] = extent(allValues);
-  const retentionStep = 20;
-  const fullYMin = isRetention ? 0 : paddedYMin;
-  const fullYMax = isRetention ? Math.max(120, Math.ceil(Math.max(...allValues, 100) / retentionStep) * retentionStep) : paddedYMax;
+  const [paddedYMin, paddedYMax] = extent(isRetention ? [...allValues, 100] : allValues);
+  const autoYStep = niceStep(paddedYMax - paddedYMin);
+  const manualYValid = manualY !== null && manualY.min.trim() !== "" && manualY.max.trim() !== "" && Number.isFinite(Number(manualY.min)) && Number.isFinite(Number(manualY.max)) && Number(manualY.min) < Number(manualY.max);
+  const fullYMin = manualYValid ? Number(manualY!.min) : Math.floor(paddedYMin / autoYStep) * autoYStep;
+  const fullYMax = manualYValid ? Number(manualY!.max) : Math.ceil(paddedYMax / autoYStep) * autoYStep;
   const width = TREND_CHART_WIDTH;
   const height = TREND_CHART_HEIGHT;
   const margin = TREND_CHART_MARGIN;
@@ -373,7 +376,8 @@ export function TrendChart({
   const sx = (value: number) => margin.left + ((value - xMin) / (xMax - xMin || 1)) * (width - margin.left - margin.right);
   const sy = (value: number) => height - margin.bottom - ((value - yMin) / (yMax - yMin || 1)) * (height - margin.top - margin.bottom);
   const xTicks = viewport.zoom === 1 ? (graphEnd === null ? tickSequence(fullXMin, fullXMax, fullXStep) : ticks(fullXMin, fullXMax)) : ticks(xMin, xMax);
-  const yTicks = viewport.zoom === 1 && isRetention ? tickSequence(fullYMin, fullYMax, retentionStep) : ticks(yMin, yMax);
+  const yTicks = viewport.zoom === 1 && !manualYValid ? tickSequence(fullYMin, fullYMax, autoYStep) : ticks(yMin, yMax);
+  const clippedY = allValues.some((value) => value < yMin || value > yMax);
   const exportSummary = describeTrendExport(all, reportSubtitle);
   const exportSeries = plottedSeries.map((item) => ({
     ...item,
@@ -381,7 +385,8 @@ export function TrendChart({
   }));
   const exportTitle = reportTitle ?? `Performance over time — ${yUnit}`;
   const graphEndNote = graphEnd === null ? null : `shown through ${numberFormat.format(graphEnd)} ${xUnit} · observed points only`;
-  const exportSubtitle = [exportSummary.subtitle, graphEndNote].filter(Boolean).join(" · ");
+  const scaleNote = `${manualYValid ? "Manual" : "Auto"} Y: ${numberFormat.format(yMin)}–${numberFormat.format(yMax)} ${yUnit}${clippedY ? " · values or intervals clipped" : ""}${showIntervals ? "" : " · uncertainty intervals hidden"}`;
+  const exportSubtitle = [exportSummary.subtitle, graphEndNote, scaleNote].filter(Boolean).join(" · ");
   const yAxisLabel = reportYAxisLabel ?? yUnit;
   const exportStem = exportFileStem(graphEnd === null ? "performance-over-time" : `performance-over-time-through-${graphEnd}-${xUnit}`, exportSeries);
 
@@ -458,6 +463,17 @@ export function TrendChart({
         }}>Export SVG</button>
       </div>
       <figure className="data-figure">
+      <div className="chart-zoom-controls" aria-label="Y-axis scale">
+        <button type="button" onClick={() => { setManualY(null); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} aria-pressed={manualY === null}>Auto Y</button>
+        <button type="button" onClick={() => { setManualY({ min: String(fullYMin), max: String(fullYMax) }); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} aria-pressed={manualY !== null}>Manual Y</button>
+        {manualY && <>
+          <label>Y min <input aria-label="Y minimum" type="number" step="any" style={{ width: 90 }} value={manualY.min} onChange={(event) => { setManualY({ ...manualY, min: event.target.value }); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} /></label>
+          <label>Y max <input aria-label="Y maximum" type="number" step="any" style={{ width: 90 }} value={manualY.max} onChange={(event) => { setManualY({ ...manualY, max: event.target.value }); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} /></label>
+          {!manualYValid && <span role="alert">Enter finite bounds with min &lt; max. Auto scale used meanwhile.</span>}
+        </>}
+        <label><input type="checkbox" checked={showIntervals} onChange={(event) => { setShowIntervals(event.target.checked); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} /> Show uncertainty intervals (95% CI / IQR)</label>
+        <span role="status">{scaleNote}</span>
+      </div>
       <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} role="img" tabIndex={0} aria-label={`Zoomable comparative evolution chart. ${graphEnd === null ? "All QA-valid values are displayed." : `QA-valid observations through ${numberFormat.format(graphEnd)} ${xUnit} are displayed without interpolation.`}`} onKeyDown={onKeyDown} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={endPointerDrag} onPointerCancel={endPointerDrag} onDoubleClick={() => setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 })}>
         <defs><clipPath id="trend-plot-clip"><rect x={margin.left} y={margin.top} width={plotWidth} height={plotHeight} /></clipPath></defs>
         {yTicks.map((tick) => <g key={`y-${tick}`}><line className="grid-line" x1={margin.left} x2={width - margin.right} y1={sy(tick)} y2={sy(tick)} /><text className="axis-label" x={margin.left - 12} y={sy(tick) + 4} textAnchor="end">{numberFormat.format(tick)}</text></g>)}
@@ -470,7 +486,7 @@ export function TrendChart({
           const ordered = [...item.points].sort((a, b) => a.x - b.x);
           const path = ordered.map((point, index) => `${index ? "L" : "M"}${sx(point.x)},${sy(point.y)}`).join(" ");
           return <g key={item.label} data-export-series-index={seriesIndex}>
-            {ordered.map((point) => <line key={`range-${point.x}`} x1={sx(point.x)} x2={sx(point.x)} y1={sy(point.intervalLow)} y2={sy(point.intervalHigh)} stroke={item.color} strokeWidth="1.5" opacity=".3"><title>{`${point.intervalLabel}: ${numberFormat.format(point.intervalLow)}–${numberFormat.format(point.intervalHigh)} ${yUnit}`}</title></line>)}
+            {showIntervals && ordered.map((point) => <line key={`range-${point.x}`} x1={sx(point.x)} x2={sx(point.x)} y1={sy(point.intervalLow)} y2={sy(point.intervalHigh)} stroke={item.color} strokeWidth="1.5" opacity=".3"><title>{`${point.intervalLabel}: ${numberFormat.format(point.intervalLow)}–${numberFormat.format(point.intervalHigh)} ${yUnit}`}</title></line>)}
             <path d={path} fill="none" stroke={item.color} strokeWidth="3" strokeDasharray={item.linePattern} strokeLinejoin="round" strokeLinecap="round" />
             {ordered.map((point) => <circle className={`trend-point${point.selectedLabel ? " selected" : ""}`} key={`point-${point.x}`} cx={sx(point.x)} cy={sy(point.y)} r={point.selectedLabel ? "2.75" : "3.5"} fill={point.selectedLabel ? item.color : "white"} stroke={item.color} strokeWidth={point.selectedLabel ? "1.4" : "1.9"} tabIndex={0} role="img" aria-label={`${item.label}, ${numberFormat.format(point.x)} ${xUnit}, ${numberFormat.format(point.y)} ${yUnit}, ${point.selectedLabel ?? `n ${point.n}`}`}><title>{`${item.label} — ${numberFormat.format(point.x)} ${xUnit}: ${numberFormat.format(point.y)} ${yUnit}${point.selectedLabel ? ` · ${point.selectedLabel}` : ` (${point.intervalLabel} ${numberFormat.format(point.intervalLow)}–${numberFormat.format(point.intervalHigh)}, n=${point.n})`}`}</title></circle>)}
           </g>;
