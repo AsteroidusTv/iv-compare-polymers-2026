@@ -3,6 +3,7 @@
 import { DragEvent, Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CurveChart, CurveSeries, TrendChart, TrendPoint, TrendSeries } from "./components/Charts";
 import { EncapsulationComparison } from "./components/EncapsulationComparison";
+import { labQualityIssues, labObservationEligible } from "./lib/lab-quality";
 import { FieldTitle, InfoTip } from "./components/InfoTip";
 import {
   Aggregation,
@@ -225,6 +226,22 @@ export default function Home() {
     return result;
   }, [dataset]);
 
+  const labQualityByMetric = useMemo(() => new Map(
+    (["efficiency_pct", "jsc_mA_cm2", "voc_V", "ff_pct"] as MetricKey[]).map((metric) => [metric, labQualityIssues(dataset?.observations ?? [], metric)]),
+  ), [dataset]);
+  const relevantLabIssues = useMemo(() => {
+    const issues = new Map<string, string>();
+    if (!dataset) return issues;
+    for (const config of seriesConfigs) {
+      for (const observation of dataset.observations) {
+        if ((observation.test_type !== config.stress && observation.test_type !== "Unaged") || !samplePasses(observation.sample_uid, config)) continue;
+        const reason = labQualityByMetric.get(config.metric)?.get(observation.observation_uid);
+        if (reason) issues.set(observation.observation_uid, `${observation.sample_uid} · ${observation.test_type} · ${observation.exposure_duration_numeric ?? "reference"} ${observation.exposure_unit ?? ""}: ${reason}`);
+      }
+    }
+    return issues;
+  }, [dataset, seriesConfigs, samplePasses, labQualityByMetric]);
+
   const relevantOutdoorIssues = useMemo(() => {
     const issues = new Map<string, OutdoorQualityIssue>();
     seriesConfigs.filter((config) => config.stress === "Outdoor").forEach((config) => {
@@ -249,7 +266,7 @@ export default function Home() {
         baselineCache.set(key, baseline);
         return baseline;
       }
-      const baseline = observations.find((observation) => observation.sample_uid === sampleUid && observation.test_type === "Unaged" && numeric(observation[config.metric]))?.[config.metric];
+      const baseline = observations.find((observation) => observation.sample_uid === sampleUid && observation.test_type === "Unaged" && numeric(observation[config.metric]) && labObservationEligible(observation, labQualityByMetric.get(config.metric) ?? new Map(), includeQa))?.[config.metric];
       const value = numeric(baseline) ? baseline : null;
       const result = { value, count: value === null ? 0 : 1, sensitivityPct: null };
       baselineCache.set(key, result);
@@ -263,7 +280,7 @@ export default function Home() {
         if (observation.test_type !== config.stress || !samplePasses(observation.sample_uid, config)) return;
         const raw = observation[config.metric];
         if (!numeric(raw)) return;
-        if (!includeQa && (observation.data_quality_flag || outdoorQualityByMetric.get(config.metric)?.has(observation.observation_uid))) return;
+        if (!labObservationEligible(observation, labQualityByMetric.get(config.metric) ?? new Map(), includeQa) || (!includeQa && outdoorQualityByMetric.get(config.metric)?.has(observation.observation_uid))) return;
         const x = config.stress === "Unaged" ? 0 : observation.exposure_duration_numeric;
         if (!numeric(x)) return;
         let value = raw;
@@ -307,7 +324,7 @@ export default function Home() {
       return { id: config.id, label: `${String.fromCharCode(65 + index)} · ${config.material}`, color, points, config, xUnit: timeUnit(config.stress), yUnit: mode === "retention" ? "% of reference" : METRICS[config.metric].unit, contextLabel, exportLabel: config.material, exportLegendKey: config.id, baselineWarnings: [...baselineWarnings], sampleSetChanges: signatures.size > 1 };
     };
     return seriesConfigs.map(build);
-  }, [dataset, seriesConfigs, mode, aggregation, samplePasses, sampleMap, includeQa, outdoorQualityByMetric]);
+  }, [dataset, seriesConfigs, mode, aggregation, samplePasses, sampleMap, includeQa, outdoorQualityByMetric, labQualityByMetric]);
 
   const sharedCurveStress = seriesConfigs.length && seriesConfigs.every((config) => config.stress === seriesConfigs[0].stress) ? seriesConfigs[0].stress : null;
   const curveXUnit = sharedCurveStress ? timeUnit(sharedCurveStress) : "";
@@ -736,6 +753,8 @@ export default function Home() {
         </div>
 
         }
+        {view === "trend" && relevantLabIssues.size > 0 && <details style={{ margin: "12px 24px" }}><summary>Lab QA · {relevantLabIssues.size} flagged observations {includeQa ? "included" : "excluded from curves, aggregates and references"}</summary><ul>{[...relevantLabIssues].map(([id, reason]) => <li key={id}>{reason}</li>)}</ul></details>}
+        {view === "trend" && trendDisplay === "aggregate" && aggregation === "mean" && <p style={{ margin: "12px 24px" }}>95% confidence intervals can be very wide with only two cells. They are not measured values or QA flags. Use individual samples or Median + IQR to inspect the spread.</p>}
         <nav className="view-tabs" aria-label="Chart type">
           <button className={view === "trend" ? "active" : ""} onClick={() => setView("trend")}><span>01</span> Performance over time</button>
           <button className={view === "curves" ? "active" : ""} onClick={() => setView("curves")}><span>02</span> IV curves</button>

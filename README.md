@@ -43,6 +43,8 @@ pnpm data:verify:deep
 
 ## Local development
 
+Lab trend QA is applied before aggregation and reference normalization. Besides source flags, the app reviews values outside the existing IV plausibility ranges and isolated dropouts: a value ≤10% of both adjacent values of the same cell/protocol/unit, with those neighbours agreeing within 35%. This is a review heuristic, not proof of measurement error. Sustained and terminal zero values are retained. The QA disclosure lists the reasons; “Include QA-flagged data” restores these observations explicitly. Raw source data are unchanged. Wide small-sample 95% confidence intervals are not QA flags and remain untruncated.
+
 ### Before / after encapsulation
 
 The third chart tab compares PCE (`initial_efficiency_pct`, from Initial Eff) with the same cell's unique, unflagged `Unaged` observation. It uses the selected material families, independently of ageing settings and trend sample filters. Missing, non-finite, negative or ambiguous pairs are excluded; measured zero after encapsulation remains included. Formulations, batches and electrode metadata are kept separate. The exact measurement interval around encapsulation is not documented.
