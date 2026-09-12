@@ -2,7 +2,7 @@
 
 import { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
 
-import { describeSeriesSelection, describeTrendExport, pointsThrough } from "../lib/chart-export";
+import { describeSeriesSelection, describeTrendExport, pointsThrough, uniqueLegendEntries } from "../lib/chart-export";
 
 export interface TrendPoint {
   x: number;
@@ -30,6 +30,8 @@ export interface TrendSeries {
   color: string;
   points: TrendPoint[];
   exportDetail?: string;
+  exportLabel?: string;
+  exportLegendKey?: string;
   linePattern?: string;
 }
 
@@ -79,11 +81,13 @@ const EXPORT_STYLES = `
 
 type ExportSeries = Pick<TrendSeries | CurveSeries, "label" | "color"> & {
   exportDetail?: string;
+  exportLabel?: string;
+  exportLegendKey?: string;
   exportSelection?: string;
 };
 
 function exportFileStem(prefix: string, series: ExportSeries[]): string {
-  const labels = series.map((item) => item.label).join("-vs-");
+  const labels = uniqueLegendEntries(series).map((item) => item.exportLabel ?? item.label).join("-vs-");
   const slug = `${prefix}-${labels}`
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -110,8 +114,9 @@ function serialiseChart(
   width: number,
   height: number,
 ): { content: string; width: number; height: number } {
-  const legendRows = Math.max(1, Math.ceil(series.length / EXPORT_COLUMNS));
-  const legendRowHeight = series.some((item) => item.exportSelection) ? 40 : series.some((item) => item.exportDetail) ? 30 : 20;
+  const legendSeries = uniqueLegendEntries(series);
+  const legendRows = Math.max(1, Math.ceil(legendSeries.length / EXPORT_COLUMNS));
+  const legendRowHeight = legendSeries.some((item) => item.exportSelection) ? 40 : legendSeries.some((item) => item.exportDetail) ? 30 : 20;
   const headerHeight = 54 + legendRows * legendRowHeight;
   const exportHeight = height + headerHeight;
   const root = document.createElementNS(SVG_NAMESPACE, "svg");
@@ -134,7 +139,7 @@ function serialiseChart(
   appendSvgText(root, subtitle, 24, 42, "export-subtitle");
   const legend = document.createElementNS(SVG_NAMESPACE, "g");
   legend.setAttribute("class", "export-legend");
-  series.forEach((item, index) => {
+  legendSeries.forEach((item, index) => {
     const column = index % EXPORT_COLUMNS;
     const row = Math.floor(index / EXPORT_COLUMNS);
     const x = 24 + column * EXPORT_COLUMN_WIDTH;
@@ -146,10 +151,10 @@ function serialiseChart(
     marker.setAttribute("y2", String(y - 3));
     marker.setAttribute("stroke", item.color);
     marker.setAttribute("stroke-width", "3");
-    const pattern = EXPORT_LINE_PATTERNS[index % EXPORT_LINE_PATTERNS.length];
+    const pattern = item.exportLegendKey ? "" : EXPORT_LINE_PATTERNS[index % EXPORT_LINE_PATTERNS.length];
     if (pattern) marker.setAttribute("stroke-dasharray", pattern);
     legend.appendChild(marker);
-    appendSvgText(legend, item.label, x + 22, y, "export-legend");
+    appendSvgText(legend, item.exportLabel ?? item.label, x + 22, y, "export-legend");
     if (item.exportDetail) appendSvgText(legend, item.exportDetail.slice(0, 48), x + 22, y + 11, "export-subtitle");
     if (item.exportSelection) appendSvgText(legend, item.exportSelection.slice(0, 48), x + 22, y + 22, "export-subtitle");
   });
@@ -163,6 +168,10 @@ function serialiseChart(
   clone.removeAttribute("tabindex");
   clone.querySelectorAll<SVGGElement>("[data-export-series-index]").forEach((group) => {
     const index = Number(group.dataset.exportSeriesIndex ?? 0);
+    if (series[index]?.exportLegendKey) {
+      group.querySelectorAll<SVGPathElement>("path").forEach((path) => path.removeAttribute("stroke-dasharray"));
+      return;
+    }
     const pattern = EXPORT_LINE_PATTERNS[index % EXPORT_LINE_PATTERNS.length];
     if (!pattern) return;
     group.querySelectorAll<SVGPathElement>("path").forEach((path) => path.setAttribute("stroke-dasharray", pattern));

@@ -5,6 +5,16 @@ export type TrendExportPoint = {
 
 export type TrendExportMode = "individual" | "aggregate" | "mixed";
 
+export function uniqueLegendEntries<T extends { label: string; exportLegendKey?: string }>(series: T[]): T[] {
+  const seen = new Set<string>();
+  return series.filter((item) => {
+    const key = item.exportLegendKey ?? item.label;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 export function describeGraphElectrode(electrodes: Array<string | null | undefined>): string | undefined {
   return electrodes.some((electrode) => electrode?.trim().toLowerCase() === "ag") ? "Ag electrode" : undefined;
 }
@@ -31,7 +41,7 @@ export function describeTrendExport(points: TrendExportPoint[], aggregateDescrip
   const aggregatePoints = points.filter((point) => !point.selectedLabel);
 
   if (individualPoints.length && !aggregatePoints.length) {
-    return { mode: "individual", subtitle: "Individual specimen trajectories · no aggregation" };
+    return { mode: "individual", subtitle: "Individual specimen trajectories · one line per specimen · no aggregation" };
   }
 
   const sampleSize = sampleSizeDescription(aggregatePoints);
