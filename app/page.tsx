@@ -4,6 +4,7 @@ import { DragEvent, Fragment, useCallback, useEffect, useMemo, useRef, useState 
 import { CurveChart, CurveSeries, TrendChart, TrendPoint, TrendSeries } from "./components/Charts";
 import { EncapsulationComparison } from "./components/EncapsulationComparison";
 import { labQualityIssues, labObservationEligible } from "./lib/lab-quality";
+import { ageingSampleCandidates, resolveAgeingTimes, toggleAgeingTime } from "./lib/iv-ageing";
 import { FieldTitle, InfoTip } from "./components/InfoTip";
 import {
   Aggregation,
@@ -43,6 +44,7 @@ type TrendDisplay = "aggregate" | "samples";
 type CurrentConvention = "instrument" | "pv";
 type SweepView = "primary" | "all";
 type CurveScale = "primary" | "all";
+type CurveComparison = "ageing" | "materials";
 type SeriesId = string;
 type OutdoorQualityIssue = {
   observationId: string;
@@ -137,6 +139,9 @@ export default function Home() {
   const [trendDisplay, setTrendDisplay] = useState<TrendDisplay>("samples");
   const [includeQa, setIncludeQa] = useState(false);
   const [curveTime, setCurveTime] = useState<number | null>(null);
+  const [curveComparison, setCurveComparison] = useState<CurveComparison>("ageing");
+  const [curveAgeingSample, setCurveAgeingSample] = useState<string | null>(null);
+  const [curveAgeingTimes, setCurveAgeingTimes] = useState<number[]>([]);
   const [currentConvention, setCurrentConvention] = useState<CurrentConvention>("instrument");
   const [sweepView, setSweepView] = useState<SweepView>("primary");
   const [curveScale, setCurveScale] = useState<CurveScale>("primary");
@@ -161,6 +166,8 @@ export default function Home() {
     setSelectedTrendMembers({});
     setTrendSampleFilters({});
     setCurveMeasurementIds({});
+    setCurveAgeingSample(null);
+    setCurveAgeingTimes([]);
   }, []);
 
   useEffect(() => {
@@ -328,6 +335,7 @@ export default function Home() {
 
   const sharedCurveStress = seriesConfigs.length && seriesConfigs.every((config) => config.stress === seriesConfigs[0].stress) ? seriesConfigs[0].stress : null;
   const curveXUnit = sharedCurveStress ? timeUnit(sharedCurveStress) : "";
+  const displayedCurveXUnit = curveComparison === "ageing" ? timeUnit(seriesConfigs[0]?.stress ?? "") : curveXUnit;
   const eligibleFiles = useCallback((config: SeriesConfig) => {
     if (!dataset) return [];
     return dataset.files.filter((file) => {
@@ -350,6 +358,13 @@ export default function Home() {
   const selectableCurveTimes = curveTimes.common.length ? curveTimes.common : curveTimes.all;
   const resolvedCurveTime = selectableCurveTimes.includes(curveTime as number) ? curveTime : selectableCurveTimes[selectableCurveTimes.length - 1] ?? null;
 
+  const ageingCandidates = useMemo(() => dataset && seriesConfigs[0]
+    ? ageingSampleCandidates(dataset, seriesConfigs[0], includeQa)
+    : [], [dataset, seriesConfigs, includeQa]);
+  const resolvedAgeingSample = ageingCandidates.find((candidate) => candidate.sampleUid === curveAgeingSample) ?? ageingCandidates[0] ?? null;
+  const availableAgeingTimes = resolvedAgeingSample?.times.map((item) => item.time) ?? [];
+  const selectedAgeingTimes = resolveAgeingTimes(availableAgeingTimes, curveAgeingTimes);
+
   const curveCandidateGroups = useMemo(() => {
     if (!dataset || resolvedCurveTime === null) return [];
     if (!sharedCurveStress) return [];
@@ -364,7 +379,7 @@ export default function Home() {
     });
   }, [dataset, resolvedCurveTime, eligibleFiles, includeQa, seriesConfigs, sharedCurveStress]);
 
-  const curveSelections = useMemo(() => curveCandidateGroups.flatMap((group) => {
+  const materialCurveSelections = useMemo(() => curveCandidateGroups.flatMap((group) => {
       if (!dataset) return [];
       const requested = curveMeasurementIds[group.seriesId];
       const measurement = requested
@@ -382,6 +397,7 @@ export default function Home() {
         material: group.material,
         config: group.config,
         color: group.color,
+        linePattern: undefined,
         measurement,
         file,
         actualTime: group.config.stress === "Unaged" ? 0 : file.inferred_exposure_duration as number,
@@ -390,13 +406,48 @@ export default function Home() {
       }];
     }), [curveCandidateGroups, curveMeasurementIds, dataset]);
 
+  const ageingCurveSelections = useMemo(() => {
+    if (!dataset || !resolvedAgeingSample || !seriesConfigs[0]) return [];
+    return selectedAgeingTimes.flatMap((time, index) => {
+      const candidate = resolvedAgeingSample.times.find((item) => item.time === time);
+      if (!candidate) return [];
+      const key = `ageing:${resolvedAgeingSample.sampleUid}:${time}`;
+      const requested = curveMeasurementIds[key];
+      const measurement = requested
+        ? candidate.measurements.find((item) => item.measurement_uid === requested) ?? chooseRepresentativeMeasurement(candidate.measurements)
+        : chooseRepresentativeMeasurement(candidate.measurements);
+      if (!measurement) return [];
+      const file = candidate.files.find((item) => item.file_uid === measurement.file_uid);
+      const curve = dataset.curves[measurement.measurement_uid];
+      if (!file || !curve) return [];
+      const points = curve.v.map((x, pointIndex) => ({ x, y: curve.j[pointIndex] })).filter((point): point is { x: number; y: number } => numeric(point.x) && numeric(point.y));
+      return [{
+        seriesId: key,
+        material: seriesConfigs[0].material,
+        config: seriesConfigs[0],
+        color: SERIES_COLORS[0],
+        linePattern: SAMPLE_LINE_PATTERNS[index % SAMPLE_LINE_PATTERNS.length],
+        measurement,
+        file,
+        actualTime: time,
+        points,
+        analysis: analyzeIVCurve(points, measurement.voc_V),
+      }];
+    });
+  }, [dataset, resolvedAgeingSample, selectedAgeingTimes, curveMeasurementIds, seriesConfigs]);
+
+  const curveSelections = curveComparison === "ageing" ? ageingCurveSelections : materialCurveSelections;
+
   const currentPolarity = currentConvention === "instrument" ? -1 : 1;
   const curveSeries: CurveSeries[] = curveSelections.map((selection) => {
     const electrodeNote = describeGraphElectrode([sampleMap.get(selection.measurement.sample_uid ?? "")?.electrode]);
     return {
       id: selection.seriesId,
-      label: [`${String.fromCharCode(65 + seriesConfigs.findIndex((config) => config.id === selection.seriesId))} · ${selection.material}`, electrodeNote].filter(Boolean).join(" · "),
+      label: curveComparison === "ageing"
+        ? [`${fr.format(selection.actualTime)} ${timeUnit(selection.config.stress)}`, resolvedAgeingSample?.label, electrodeNote].filter(Boolean).join(" · ")
+        : [`${String.fromCharCode(65 + seriesConfigs.findIndex((config) => config.id === selection.seriesId))} · ${selection.material}`, electrodeNote].filter(Boolean).join(" · "),
       color: selection.color,
+      linePattern: selection.linePattern,
       segments: (sweepView === "primary"
         ? [selection.analysis.segments[selection.analysis.primaryIndex]]
         : selection.analysis.segments
@@ -705,7 +756,7 @@ export default function Home() {
         <div className="workspace-head">
           <div>
             <p className="eyebrow">Comparison workspace</p>
-            <h3>{view === "encapsulation" ? "Before / after encapsulation" : sharedCurveStress ? (sharedCurveStress === "Unaged" ? "Initial-state comparison" : `Evolution after ${sharedCurveStress}`) : "Condition comparison"}</h3>
+            <h3>{view === "curves" && curveComparison === "ageing" ? "IV evolution of one cell" : view === "encapsulation" ? "Before / after encapsulation" : sharedCurveStress ? (sharedCurveStress === "Unaged" ? "Initial-state comparison" : `Evolution after ${sharedCurveStress}`) : "Condition comparison"}</h3>
           </div>
           <div className="head-actions">
             <a className="soft-button" href="/data/iv-compare-dowsil.ivpack" download>Sample package</a>
@@ -714,24 +765,24 @@ export default function Home() {
         </div>
 
         <div className="materials-panel">
-          <div className="materials-panel-title"><FieldTitle help={`${HELP.polymer} ${HELP.addMaterial}`}>Comparison series</FieldTitle><span>{comparisonMaterials.length} series</span></div>
+          <div className="materials-panel-title"><FieldTitle help={`${HELP.polymer} ${HELP.addMaterial}`}>{view === "curves" && curveComparison === "ageing" ? "Material and ageing protocol" : "Comparison series"}</FieldTitle><span>{view === "curves" && curveComparison === "ageing" ? "1 material" : `${comparisonMaterials.length} series`}</span></div>
           <div className="material-selectors">
-            {seriesConfigs.map((config, index) => {
+            {seriesConfigs.filter((_, index) => !(view === "curves" && curveComparison === "ageing") || index === 0).map((config, index) => {
               const stresses = dataset ? stressesForConfig(dataset, config) : [];
               const metrics = metricOptionsFor(config.stress);
               return <article className="material-selector series-config-card" key={config.id} style={{ borderTopColor: SERIES_COLORS[index % SERIES_COLORS.length] }}>
                 <div className="series-config-title"><span className="material-slot"><i style={{ background: SERIES_COLORS[index % SERIES_COLORS.length] }} />Series {String.fromCharCode(65 + index)}</span>{index >= 2 ? <button type="button" className="remove-material" onClick={() => removeComparisonMaterial(config.id)} aria-label={`Remove series ${String.fromCharCode(65 + index)}`} title="Remove this series">×</button> : null}</div>
                 <div className="series-config-grid">
-                  <label>Encapsulant<select aria-label={`Series ${String.fromCharCode(65 + index)} encapsulant`} value={config.material} onChange={(event) => updateSeriesConfig(config.id, { material: event.target.value })}>{materials.map((item) => <option key={item}>{item}</option>)}</select></label>
-                  {view !== "encapsulation" && <label>Ageing protocol<select aria-label={`Series ${String.fromCharCode(65 + index)} ageing protocol`} value={config.stress} onChange={(event) => updateSeriesConfig(config.id, { stress: event.target.value })}>{stresses.map((item) => <option key={item}>{item}</option>)}</select></label>}
+                  <label>Encapsulant<select aria-label={`Series ${String.fromCharCode(65 + index)} encapsulant`} value={config.material} onChange={(event) => { updateSeriesConfig(config.id, { material: event.target.value }); setCurveAgeingSample(null); setCurveAgeingTimes([]); setCurveMeasurementIds({}); }}>{materials.map((item) => <option key={item}>{item}</option>)}</select></label>
+                  {view !== "encapsulation" && <label>Ageing protocol<select aria-label={`Series ${String.fromCharCode(65 + index)} ageing protocol`} value={config.stress} onChange={(event) => { updateSeriesConfig(config.id, { stress: event.target.value }); setCurveAgeingSample(null); setCurveAgeingTimes([]); setCurveMeasurementIds({}); }}>{stresses.map((item) => <option key={item}>{item}</option>)}</select></label>}
                   {view !== "encapsulation" && <label className="series-metric">Metric<select aria-label={`Series ${String.fromCharCode(65 + index)} metric`} value={config.metric} onChange={(event) => updateSeriesConfig(config.id, { metric: event.target.value as MetricKey })}>{metrics.map((key) => <option key={key} value={key}>{METRICS[key].label}</option>)}</select></label>}
                 </div>
               </article>;
             })}
-            <div className="add-material-wrap">
+            {!(view === "curves" && curveComparison === "ageing") && <div className="add-material-wrap">
               <button type="button" className="add-material" onClick={addComparisonMaterial} disabled={!dataset || seriesConfigs.length >= SERIES_COLORS.length}><span aria-hidden="true">+</span> Add series</button>
               <InfoTip text={seriesConfigs.length >= SERIES_COLORS.length ? `A maximum of ${SERIES_COLORS.length} series can be displayed.` : HELP.addMaterial} align="right" />
-            </div>
+            </div>}
           </div>
         </div>
 
@@ -869,9 +920,13 @@ export default function Home() {
           </div>
         ) : (
           <div className="curve-workspace">
-            {!sharedCurveStress ? <div className="missing-selection"><strong>IV curve overlay requires one shared ageing protocol.</strong><span>The performance view still compares these conditions in separate panels. Choose the same protocol in every series to overlay raw IV curves.</span></div> : <>
+            <div className="segmented" aria-label="IV comparison mode">
+              <button className={curveComparison === "ageing" ? "active" : ""} onClick={() => { setCurveComparison("ageing"); setHiddenSeries(new Set()); setCurveMeasurementIds({}); }}>One cell over ageing</button>
+              <button className={curveComparison === "materials" ? "active" : ""} onClick={() => { setCurveComparison("materials"); setHiddenSeries(new Set()); setCurveMeasurementIds({}); }}>Materials at one time</button>
+            </div>
+            {curveComparison === "materials" && !sharedCurveStress ? <div className="missing-selection"><strong>IV curve overlay requires one shared ageing protocol.</strong><span>The performance view still compares these conditions in separate panels. Choose the same protocol in every series to overlay raw IV curves.</span></div> : <>
             <div className="curve-toolbar">
-              <label><FieldTitle help={HELP.targetTime}>Target time</FieldTitle><select value={resolvedCurveTime ?? ""} onChange={(event) => { setCurveTime(Number(event.target.value)); setCurveMeasurementIds({}); }} disabled={!selectableCurveTimes.length}>{selectableCurveTimes.length ? selectableCurveTimes.map((time) => <option key={time} value={time}>{fr.format(time)} {curveXUnit}{curveTimes.common.includes(time) ? " · exact for all series" : ""}</option>) : <option>No exact shared time available</option>}</select></label>
+              {curveComparison === "materials" ? <label><FieldTitle help={HELP.targetTime}>Target time</FieldTitle><select value={resolvedCurveTime ?? ""} onChange={(event) => { setCurveTime(Number(event.target.value)); setCurveMeasurementIds({}); }} disabled={!selectableCurveTimes.length}>{selectableCurveTimes.length ? selectableCurveTimes.map((time) => <option key={time} value={time}>{fr.format(time)} {curveXUnit}{curveTimes.common.includes(time) ? " · exact for all series" : ""}</option>) : <option>No exact shared time available</option>}</select></label> : <label><FieldTitle help="Only cells with QA-valid raw IV curves at two or more exact stages are offered. Every curve belongs to this same physical cell.">Physical cell</FieldTitle><select aria-label="Physical cell for IV ageing" value={resolvedAgeingSample?.sampleUid ?? ""} disabled={!ageingCandidates.length} onChange={(event) => { setCurveAgeingSample(event.target.value); setCurveAgeingTimes([]); setCurveMeasurementIds({}); setHiddenSeries(new Set()); }}>{ageingCandidates.length ? ageingCandidates.map((candidate) => <option key={candidate.sampleUid} value={candidate.sampleUid}>{candidate.label} · {candidate.sampleUid} · {candidate.times.length} stages</option>) : <option>No cell with multiple exact IV stages</option>}</select></label>}
               <label><FieldTitle help={HELP.convention}>Current convention</FieldTitle><select value={currentConvention} onChange={(event) => setCurrentConvention(event.target.value as CurrentConvention)}><option value="instrument">Instrument · negative J</option><option value="pv">PV · positive generated J</option></select></label>
               <label><FieldTitle help={HELP.sweep}>Sweep</FieldTitle><select value={sweepView} onChange={(event) => setSweepView(event.target.value as SweepView)}><option value="primary">Primary · recommended</option><option value="all">All segments</option></select></label>
               <label><FieldTitle help={HELP.scale} align="right">Scale</FieldTitle><select value={curveScale} onChange={(event) => setCurveScale(event.target.value as CurveScale)}><option value="primary">Primary segments</option><option value="all">All data</option></select></label>
@@ -882,8 +937,9 @@ export default function Home() {
               </div>
             </div>
             <div className="curve-selection-grid" aria-label="IV measurement selection">
-              {curveCandidateGroups.map((group, index) => <label key={group.seriesId} style={{ borderTopColor: group.color }}>
-                <FieldTitle help={HELP.curveChoice} align={index === curveCandidateGroups.length - 1 ? "right" : "left"}>Series {String.fromCharCode(65 + index)} measurement</FieldTitle>
+              {curveComparison === "ageing" && resolvedAgeingSample ? <div className="sample-filter-card" style={{ borderTopColor: SERIES_COLORS[0] }}><strong>Ageing stages · same cell</strong><div className="sample-filter-options">{resolvedAgeingSample.times.map((candidate) => { const checked = selectedAgeingTimes.includes(candidate.time); return <label className={checked ? "active" : ""} key={candidate.time}><input type="checkbox" checked={checked} disabled={checked && selectedAgeingTimes.length <= 2} onChange={() => { setCurveAgeingTimes(toggleAgeingTime(selectedAgeingTimes, candidate.time)); setCurveMeasurementIds({}); setHiddenSeries(new Set()); }} /> {fr.format(candidate.time)} {timeUnit(seriesConfigs[0]?.stress ?? "")}</label>; })}</div><small>Choose at least two measured stages. 0 means Unaged after encapsulation, when an IV file is linked to this same cell.</small></div> : null}
+              {(curveComparison === "ageing" ? ageingCurveSelections.map((selection) => ({ seriesId: selection.seriesId, color: selection.color, candidates: resolvedAgeingSample?.times.find((item) => item.time === selection.actualTime)?.measurements ?? [], title: `${fr.format(selection.actualTime)} ${timeUnit(selection.config.stress)} measurement` })) : curveCandidateGroups.map((group, index) => ({ ...group, title: `Series ${String.fromCharCode(65 + index)} measurement` }))).map((group, index) => <label key={group.seriesId} style={{ borderTopColor: group.color }}>
+                <FieldTitle help={HELP.curveChoice} align={index === curveCandidateGroups.length - 1 ? "right" : "left"}>{group.title}</FieldTitle>
                 <select value={curveMeasurementIds[group.seriesId] ?? "representative"} disabled={!group.candidates.length} onChange={(event) => setCurveMeasurementIds((current) => ({ ...current, [group.seriesId]: event.target.value === "representative" ? null : event.target.value }))}>
                   <option value="representative">Representative · closest to median efficiency</option>
                   {group.candidates.map((measurement) => {
@@ -899,7 +955,7 @@ export default function Home() {
               <div className="chart-title">
                 {curveSelections.map((selection) => {
                   const hidden = hiddenSeries.has(selection.seriesId);
-                  return <button type="button" className={`legend-toggle ${hidden ? "hidden" : ""}`} key={selection.seriesId} aria-pressed={!hidden} onClick={() => toggleSeries(selection.seriesId)} title={`${hidden ? "Show" : "Hide"} ${selection.material} — calculations remain unchanged`}><span className="legend-dot" style={{ background: selection.color }} />{selection.material} · {fr.format(selection.actualTime)} {curveXUnit}</button>;
+                  return <button type="button" className={`legend-toggle ${hidden ? "hidden" : ""}`} key={selection.seriesId} aria-pressed={!hidden} onClick={() => toggleSeries(selection.seriesId)} title={`${hidden ? "Show" : "Hide"} ${selection.material} — calculations remain unchanged`}><svg className="legend-stroke" viewBox="0 0 24 8" aria-hidden="true"><line x1="1" x2="23" y1="4" y2="4" stroke={selection.color} strokeWidth="3" strokeDasharray={selection.linePattern} /></svg>{curveComparison === "ageing" ? `${fr.format(selection.actualTime)} ${displayedCurveXUnit}` : `${selection.material} · ${fr.format(selection.actualTime)} ${displayedCurveXUnit}`}</button>;
                 })}
                 <span>{currentConvention === "instrument" ? "Instrument convention · negative photocurrent" : "PV convention · positive generated current"}</span>
               </div>
@@ -909,7 +965,7 @@ export default function Home() {
             <div className="measurement-grid">
               {curveSelections.map((selection) => <article className="measurement-card" key={selection.seriesId} style={{ borderTopColor: selection.color }}>
                 <p className="eyebrow">{selection.material}</p>
-                <h4>{fr.format(selection.actualTime)} {curveXUnit} · {selection.measurement.measurement_uid}</h4>
+                <h4>{fr.format(selection.actualTime)} {displayedCurveXUnit} · {selection.measurement.measurement_uid}</h4>
                 <p className="measurement-selection-mode">{curveMeasurementIds[selection.seriesId] ? "Explicit measurement" : "Representative measurement nearest the median efficiency"}</p>
                 <dl>
                   <div><dt>Efficiency <InfoTip text={HELP.efficiency} align="left" /></dt><dd>{numeric(selection.measurement.efficiency_pct) ? `${fr.format(selection.measurement.efficiency_pct)} %` : "—"}</dd></div>

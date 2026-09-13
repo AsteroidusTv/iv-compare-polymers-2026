@@ -39,6 +39,7 @@ export interface CurveSeries {
   id: string;
   label: string;
   color: string;
+  linePattern?: string;
   segments: Array<{
     id: string;
     isPrimary: boolean;
@@ -674,7 +675,7 @@ export function CurveChart({
           {series.flatMap((item, seriesIndex) => item.segments.map((segment) => {
             const path = segment.points.map((point, index) => `${index ? "L" : "M"}${sx(point.x)},${sy(point.y)}`).join(" ");
             return <g key={segment.id} opacity={segment.isPrimary ? 1 : .48} data-export-series-index={seriesIndex}>
-              <path d={path} fill="none" stroke={item.color} strokeWidth={segment.isPrimary ? 3.5 : 2.25} strokeDasharray={segment.isPrimary ? undefined : "7 5"} strokeLinejoin="round" strokeLinecap="round"><title>{`${item.label} — ${segment.isPrimary ? "primary sweep" : "retained segment"}`}</title></path>
+              <path d={path} fill="none" stroke={item.color} strokeWidth={segment.isPrimary ? 3.5 : 2.25} strokeDasharray={segment.isPrimary ? item.linePattern : "3 4"} strokeLinejoin="round" strokeLinecap="round"><title>{`${item.label} — ${segment.isPrimary ? "primary sweep" : "retained segment"}`}</title></path>
               {showPoints ? segment.points.map((point) => <circle key={`${segment.id}-${point.sourceIndex}`} cx={sx(point.x)} cy={sy(point.y)} r={segment.isPrimary ? 2.2 : 1.8} fill="white" stroke={item.color} strokeWidth="1.3"><title>{`${item.label} — point ${point.sourceIndex + 1}: ${numberFormat.format(point.x)} V, ${numberFormat.format(point.y)} mA/cm²`}</title></circle>) : null}
             </g>;
           }))}

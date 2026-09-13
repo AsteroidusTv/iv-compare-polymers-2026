@@ -2,6 +2,8 @@
 
 This runbook deploys the `main` branch to the existing Hestia/Nginx origin. It does not use Cloudflare or OpenAI Sites.
 
+For the standard, already-committed release path, run `./scripts/release-main.sh`. It executes the validation, pushes `main`, builds a unique staging release, performs the automatic-rollback switch below, and verifies the private and public origins with concise logs. It refuses a dirty worktree or a branch other than `main`. The detailed commands below remain the source of truth and the manual recovery reference.
+
 ## Production topology
 
 | Purpose | Location |
