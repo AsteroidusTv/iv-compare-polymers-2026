@@ -1,6 +1,6 @@
 {
-  "pipelineVersion": "2.0.0",
-  "generatedOn": "2026-09-10",
+  "pipelineVersion": "2.1.0",
+  "generatedOn": "2026-09-13",
   "inventory": {
     "source": "data/raw/IV/Summary.xlsx",
     "rule": "Parse both Lami-results and Lami-results2. Forward-fill batch, electrode, owner, encapsulation date and material only inside each sheet's sample block. A non-empty Material or Sample ID starts a sample; following rows contain additional observations until the next sample.",
@@ -12,6 +12,7 @@
     "voltage": "Legacy simple V-I exports contain millivolt values even when the header says V [V]; curve_voltage_scale_to_V records the applied 0.001 conversion.",
     "current": "Simple V-I current is divided by cell area; multi-cell V-J exports already contain current density. Generated-current density reverses the instrument sign.",
     "matching": "All file-to-sample decisions, alternative scores, reasons and margins are versioned in the IV_Files and Match_Review sheets. Ambiguous and unmatched files remain excluded by default. Non-encapsulated and silicon reference cells use reference_unassigned; unresolved files already stored in laboratory Trash folders use audit_only. These audit sources are preserved but are not counted as polymer-matching failures.",
+    "preEncapsulationReferenceLinking": "The browser package keeps non-encapsulated files as reference_unassigned but adds a separate reference_sample_uid only when the recorded box and cell/R-reference resolve to one Lami-results2 sample. Orange-box links use the documented cell sequence plus R-reference; Flag-box links require a unique R-reference across batches A2 and A3. Unresolved references remain unlinked.",
     "qa": "Source flags and conservative physical plausibility checks are additive; no raw value is deleted."
   },
   "outdoor": {

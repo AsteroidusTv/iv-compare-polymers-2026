@@ -1,11 +1,14 @@
-import type { Observation, Sample } from "./iv-data";
-import { numeric, quantile } from "./science";
+import type { IVFile, IVDataset, Measurement, Observation, Sample } from "./iv-data";
+import { measurementQualityReasons, numeric, quantile } from "./science";
 
 export interface EncapsulationPair {
   sampleUid: string;
   reference: string;
   before: number;
   after: number;
+  beforeMeasurementDate: string | null;
+  encapsulationDate: string | null;
+  afterMeasurementDates: string[];
 }
 
 export interface EncapsulationGroup {
@@ -14,11 +17,13 @@ export interface EncapsulationGroup {
   material: string;
   batch: string;
   electrode: string;
+  recipeUid: string | null;
+  recipe: string | null;
   pairs: EncapsulationPair[];
 }
 
 // Require a unique, unflagged Unaged measurement; never choose an arbitrary replicate.
-export function encapsulationGroups(samples: Sample[], observations: Observation[], materials: string[]) {
+export function encapsulationGroups(samples: Sample[], observations: Observation[], materials: string[], files: IVFile[] = []) {
   const unaged = new Map<string, Observation[]>();
   for (const observation of observations) {
     if (observation.test_type !== "Unaged") continue;
@@ -40,12 +45,70 @@ export function encapsulationGroups(samples: Sample[], observations: Observation
     const material = sample.material_raw || sample.material_family;
     const batch = sample.batch_no_raw || "Unknown";
     const electrode = sample.electrode || "Unknown";
-    const key = JSON.stringify([sample.material_family, material, batch, electrode]);
-    const group = groups.get(key) ?? { key, family: sample.material_family, material, batch, electrode, pairs: [] };
-    group.pairs.push({ sampleUid: sample.sample_uid, reference: sample.sample_id_raw || sample.sample_uid, before, after });
+    const recipeUid = sample.recipe_uid || null;
+    const recipe = sample.recipe_raw || null;
+    const key = JSON.stringify([sample.material_family, material, batch, electrode, recipeUid, recipe]);
+    const group = groups.get(key) ?? { key, family: sample.material_family, material, batch, electrode, recipeUid, recipe, pairs: [] };
+    const referenceDates = [...new Set(files.filter((file) => file.reference_sample_uid === sample.sample_uid).map((file) => file.measurement_date).filter((value): value is string => Boolean(value)))].sort();
+    const afterDates = [...new Set(files.filter((file) => file.sample_uid === sample.sample_uid && file.inferred_test_type === "Unaged" && (!file.matched_observation_uid || file.matched_observation_uid === rows[0].observation_uid)).map((file) => file.measurement_date).filter((value): value is string => Boolean(value)))].sort();
+    group.pairs.push({
+      sampleUid: sample.sample_uid,
+      reference: sample.sample_id_raw || sample.sample_uid,
+      before,
+      after,
+      beforeMeasurementDate: referenceDates.length === 1 ? referenceDates[0] : null,
+      encapsulationDate: sample.encapsulation_date || null,
+      afterMeasurementDates: afterDates,
+    });
     groups.set(key, group);
   }
   return { groups: [...groups.values()], excluded };
+}
+
+export interface EncapsulationCurvePair {
+  sample: Sample;
+  beforeFile: IVFile;
+  afterFiles: IVFile[];
+  beforeMeasurement: Measurement;
+  afterMeasurement: Measurement;
+  beforeTargetPce: number;
+  afterTargetPce: number;
+}
+
+function closestValidMeasurement(measurements: Measurement[], targetPce: number, dataset: IVDataset): Measurement | null {
+  return measurements
+    .filter((measurement) => dataset.curves[measurement.measurement_uid] && measurementQualityReasons(measurement).length === 0 && numeric(measurement.efficiency_pct))
+    .sort((left, right) => Math.abs((left.efficiency_pct as number) - targetPce) - Math.abs((right.efficiency_pct as number) - targetPce) || left.measurement_uid.localeCompare(right.measurement_uid))[0] ?? null;
+}
+
+// Raw JV files contain several sweeps. Use the QA-valid sweep whose PCE is nearest
+// the independently recorded inventory PCE at each stage; expose the exact sweep
+// identifiers in the UI so this diagnostic choice stays auditable.
+export function encapsulationCurvePairs(dataset: IVDataset): EncapsulationCurvePair[] {
+  const observationsBySample = new Map<string, Observation[]>();
+  dataset.observations.forEach((observation) => {
+    if (observation.test_type !== "Unaged" || observation.data_quality_flag || !numeric(observation.efficiency_pct)) return;
+    const rows = observationsBySample.get(observation.sample_uid) ?? [];
+    rows.push(observation);
+    observationsBySample.set(observation.sample_uid, rows);
+  });
+  return dataset.samples.flatMap((sample) => {
+    if (!numeric(sample.initial_efficiency_pct)) return [];
+    const observations = observationsBySample.get(sample.sample_uid) ?? [];
+    if (observations.length !== 1) return [];
+    const beforeFiles = dataset.files.filter((file) => file.reference_sample_uid === sample.sample_uid);
+    if (beforeFiles.length !== 1) return [];
+    const observation = observations[0];
+    const exactAfterFiles = dataset.files.filter((file) => file.sample_uid === sample.sample_uid && file.inferred_test_type === "Unaged" && file.matched_observation_uid === observation.observation_uid);
+    const afterFiles = exactAfterFiles.length ? exactAfterFiles : dataset.files.filter((file) => file.sample_uid === sample.sample_uid && file.inferred_test_type === "Unaged");
+    if (!afterFiles.length) return [];
+    const beforeFile = beforeFiles[0];
+    const beforeMeasurement = closestValidMeasurement(dataset.measurements.filter((measurement) => measurement.file_uid === beforeFile.file_uid), sample.initial_efficiency_pct, dataset);
+    const afterFileIds = new Set(afterFiles.map((file) => file.file_uid));
+    const afterMeasurement = closestValidMeasurement(dataset.measurements.filter((measurement) => afterFileIds.has(measurement.file_uid)), observation.efficiency_pct as number, dataset);
+    if (!beforeMeasurement || !afterMeasurement) return [];
+    return [{ sample, beforeFile, afterFiles, beforeMeasurement, afterMeasurement, beforeTargetPce: sample.initial_efficiency_pct, afterTargetPce: observation.efficiency_pct as number }];
+  });
 }
 
 export function boxStatistics(values: number[]) {

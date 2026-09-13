@@ -62,6 +62,8 @@ export interface IVFile {
   material_family_inferred?: string | null;
   measurement_date?: string | null;
   sample_uid?: string | null;
+  reference_sample_uid?: string | null;
+  reference_match_basis?: string | null;
   match_status: string;
   match_score?: number | null;
   match_margin?: number | null;
@@ -196,6 +198,7 @@ export function validateDataset(value: unknown): IVDataset {
   });
   files.forEach((row) => {
     if (row.sample_uid && !sampleIds.has(row.sample_uid)) throw new Error(`File ${row.file_uid} references unknown sample ${row.sample_uid}.`);
+    if (row.reference_sample_uid && !sampleIds.has(row.reference_sample_uid)) throw new Error(`File ${row.file_uid} references unknown pre-encapsulation sample ${row.reference_sample_uid}.`);
   });
   let pointCount = 0;
   measurements.forEach((row) => {
@@ -328,6 +331,8 @@ function normalizeFiles(rows: UnknownRow[]): IVFile[] {
     material_family_inferred: asText(row.material_family_inferred),
     measurement_date: asIsoDate(row.measurement_date),
     sample_uid: asText(row.sample_uid),
+    reference_sample_uid: asText(row.reference_sample_uid),
+    reference_match_basis: asText(row.reference_match_basis),
     match_status: String(row.match_status ?? "unmatched"),
     match_score: asNumber(row.match_score),
     match_margin: asNumber(row.match_margin),

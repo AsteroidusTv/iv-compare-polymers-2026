@@ -50,7 +50,8 @@ test("the shipped package satisfies the complete dataset invariants", () => {
   assert.equal(dataset.report.matchedFiles, 364);
   assert.equal(dataset.report.reviewFiles, 3);
   assert.equal(dataset.report.auditFiles, 42);
-  assert.equal(dataset.provenance?.pipelineVersion, "2.0.0");
+  assert.equal(dataset.provenance?.pipelineVersion, "2.1.0");
+  assert.equal(dataset.files.filter((file) => file.reference_sample_uid).length, 27);
   assert.equal(dataset.samples.find((sample) => sample.sample_uid === "SMP-003")?.encapsulation_date, "2026-03-19");
   assert.equal(dataset.files.find((file) => file.file_uid === "FIL-0001")?.measurement_date, "2026-03-31");
   assert.equal(dataset.measurements.find((measurement) => measurement.measurement_uid === "MEA-00001")?.measurement_date, "2026-03-31");

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import fs from "node:fs";
 import zlib from "node:zlib";
-import { boxStatistics, encapsulationGroups } from "../app/lib/encapsulation";
+import { boxStatistics, encapsulationCurvePairs, encapsulationGroups } from "../app/lib/encapsulation";
 import type { IVDataset, Observation, Sample } from "../app/lib/iv-data";
 
 test("pairs use the same cell, preserve zero after and separate batches/formulations", () => {
@@ -22,6 +22,17 @@ test("pairs use the same cell, preserve zero after and separate batches/formulat
   assert.equal(encapsulationGroups(samples, observations, ["Other"]).groups.length, 0);
 });
 
+test("encapsulation groups keep recorded lamination recipes separate", () => {
+  const samples: Sample[] = [
+    { sample_uid: "big", material_family: "TPO", material_raw: "TPO-1", batch_no_raw: "A2", recipe_uid: "big", recipe_raw: "CVF", initial_efficiency_pct: 17 },
+    { sample_uid: "small", material_family: "TPO", material_raw: "TPO-1", batch_no_raw: "A2", recipe_uid: "small", recipe_raw: "CSEM2 SL", initial_efficiency_pct: 17 },
+  ];
+  const observations: Observation[] = samples.map((sample, index) => ({ observation_uid: `o${index}`, sample_uid: sample.sample_uid, test_type: "Unaged", efficiency_pct: 16 }));
+  const result = encapsulationGroups(samples, observations, ["TPO"]);
+  assert.equal(result.groups.length, 2);
+  assert.deepEqual(result.groups.map((group) => group.recipe).sort(), ["CSEM2 SL", "CVF"]);
+});
+
 test("box whiskers exclude outliers and quartiles use linear interpolation", () => {
   assert.deepEqual(boxStatistics([1, 2, 3, 4, 100]), { q1: 2, median: 3, q3: 4, low: 1, high: 4 });
   assert.deepEqual(boxStatistics([1, 2, 3, 4]), { q1: 1.75, median: 2.5, q3: 3.25, low: 1, high: 4 });
@@ -32,4 +43,11 @@ test("supplied package has 35 eligible encapsulation pairs", () => {
   const result = encapsulationGroups(dataset.samples, dataset.observations, dataset.samples.map((sample) => sample.material_family));
   assert.equal(result.groups.reduce((count, group) => count + group.pairs.length, 0), 35);
   assert.ok(result.groups.every((group) => group.pairs.length > 0));
+  const curvePairs = encapsulationCurvePairs(dataset);
+  assert.equal(curvePairs.length, 27);
+  assert.ok(curvePairs.every((pair) => pair.beforeFile.reference_match_basis && pair.beforeMeasurement.file_uid === pair.beforeFile.file_uid));
+  assert.deepEqual(
+    [...new Set(curvePairs.map((pair) => pair.sample.batch_no_raw))].sort(),
+    ["A1", "A2", "A3"],
+  );
 });
