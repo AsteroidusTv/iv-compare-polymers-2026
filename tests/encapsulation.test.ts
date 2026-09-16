@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import fs from "node:fs";
 import zlib from "node:zlib";
-import { boxStatistics, encapsulationCurvePairs, encapsulationGroups } from "../app/lib/encapsulation";
+import { boxStatistics, encapsulationCurvePairs, encapsulationGroups, meanPairedRelativeChange, pairedMeasurementDayRange } from "../app/lib/encapsulation";
 import type { IVDataset, Observation, Sample } from "../app/lib/iv-data";
 
 test("pairs use the same cell, preserve zero after and separate batches/formulations", () => {
@@ -36,6 +36,21 @@ test("encapsulation groups keep recorded lamination recipes separate", () => {
 test("box whiskers exclude outliers and quartiles use linear interpolation", () => {
   assert.deepEqual(boxStatistics([1, 2, 3, 4, 100]), { q1: 2, median: 3, q3: 4, low: 1, high: 4 });
   assert.deepEqual(boxStatistics([1, 2, 3, 4]), { q1: 1.75, median: 2.5, q3: 3.25, low: 1, high: 4 });
+});
+
+test("relative PCE change is averaged from paired cell changes", () => {
+  const pairs = [
+    { sampleUid: "a", reference: "a", before: 10, after: 20, beforeMeasurementDate: null, encapsulationDate: null, afterMeasurementDates: [] },
+    { sampleUid: "b", reference: "b", before: 20, after: 20, beforeMeasurementDate: null, encapsulationDate: null, afterMeasurementDates: [] },
+  ];
+  assert.equal(meanPairedRelativeChange(pairs), 50);
+  assert.equal(meanPairedRelativeChange([{ ...pairs[0], before: 0 }]), null);
+});
+
+test("measurement interval reports the observed before-to-after day range", () => {
+  const pair = { sampleUid: "a", reference: "a", before: 10, after: 9, beforeMeasurementDate: "2026-08-03", encapsulationDate: "2026-08-05", afterMeasurementDates: ["2026-08-10", "2026-08-11"] };
+  assert.deepEqual(pairedMeasurementDayRange([pair]), { min: 7, max: 8 });
+  assert.equal(pairedMeasurementDayRange([{ ...pair, beforeMeasurementDate: null }]), null);
 });
 
 test("supplied package has 35 eligible encapsulation pairs", () => {

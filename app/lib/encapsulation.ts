@@ -22,6 +22,25 @@ export interface EncapsulationGroup {
   pairs: EncapsulationPair[];
 }
 
+export function meanPairedRelativeChange(pairs: EncapsulationPair[]) {
+  const changes = pairs.filter((pair) => pair.before !== 0).map((pair) => (pair.after - pair.before) / pair.before * 100);
+  return changes.length ? changes.reduce((sum, value) => sum + value, 0) / changes.length : null;
+}
+
+export function pairedMeasurementDayRange(pairs: EncapsulationPair[]) {
+  const days = pairs.flatMap((pair) => {
+    if (!pair.beforeMeasurementDate) return [];
+    const before = Date.parse(`${pair.beforeMeasurementDate.slice(0, 10)}T00:00:00Z`);
+    if (!Number.isFinite(before)) return [];
+    return pair.afterMeasurementDates.flatMap((value) => {
+      const after = Date.parse(`${value.slice(0, 10)}T00:00:00Z`);
+      if (!Number.isFinite(after)) return [];
+      return [Math.round((after - before) / 86_400_000)];
+    });
+  });
+  return days.length ? { min: Math.min(...days), max: Math.max(...days) } : null;
+}
+
 // Require a unique, unflagged Unaged measurement; never choose an arbitrary replicate.
 export function encapsulationGroups(samples: Sample[], observations: Observation[], materials: string[], files: IVFile[] = []) {
   const unaged = new Map<string, Observation[]>();
