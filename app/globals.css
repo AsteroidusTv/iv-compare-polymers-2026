@@ -212,7 +212,7 @@ tbody tr:hover { background: #faf9f6; }
 
 .curve-workspace { display: grid; gap: 18px; }
 .encapsulation-workspace { display: grid; gap: 18px; }
-.encapsulation-summary > p, .encapsulation-method-note { color: var(--muted); font-size: 11px; line-height: 1.5; }
+.encapsulation-summary > p { color: var(--muted); font-size: 11px; line-height: 1.5; }
 .encapsulation-jv { padding-bottom: 18px; }
 .encapsulation-jv-controls { margin-top: 14px; padding: 14px; display: grid; grid-template-columns: minmax(280px, 1.4fr) repeat(2, minmax(210px, 1fr)); gap: 12px; align-items: stretch; border-radius: 14px; background: #f2f0eb; }
 .encapsulation-jv-controls label { min-width: 0; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
@@ -226,7 +226,6 @@ tbody tr:hover { background: #faf9f6; }
 .encapsulation-diagnostic-head { margin: 20px 4px -4px; display: flex; gap: 12px; align-items: baseline; justify-content: space-between; }
 .encapsulation-diagnostic-head strong { font-size: 12px; }
 .encapsulation-diagnostic-head span { color: var(--muted); font-size: 10px; }
-.encapsulation-method-note { margin: 14px 4px 0; }
 .curve-toolbar { min-height: 68px; padding: 14px; display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); align-items: end; gap: 12px; border-radius: 14px; background: #f2f0eb; }
 .curve-toolbar > label:not(.check-control) { min-width: 0; }
 .curve-toolbar select { margin-top: 4px; padding-top: 7px; padding-bottom: 7px; background: white; }

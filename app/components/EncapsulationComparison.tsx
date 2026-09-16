@@ -9,6 +9,7 @@ import { pointOffsets } from "../lib/encapsulation-layout";
 import type { IVDataset, Measurement } from "../lib/iv-data";
 import { analyzeIVCurve } from "../lib/iv-curve-analysis";
 import { numeric } from "../lib/science";
+import { InfoTip } from "./InfoTip";
 
 const dateFormat = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
 
@@ -96,8 +97,9 @@ function EncapsulationJVComparison({ dataset, pairs, selections }: { dataset: IV
     groups.set(key, group);
     return groups;
   }, new Map<string, { key: string; material: string; batch: string; recipe: string; pairs: EncapsulationCurvePair[] }>()).values()];
+  const diagnosticHelp = `Measured JV curves from the same physical cell are compared before and after encapsulation. At each stage, the QA-valid raw sweep closest to the independently recorded PCE is used. Exact sweep IDs: ${pair.beforeMeasurement.measurement_uid} → ${pair.afterMeasurement.measurement_uid}. This is a mechanism-screening view, not an isolated causal estimate of the process.`;
   return <section className="chart-card encapsulation-jv" aria-label="JV comparison before and after encapsulation">
-    <div className="chart-title"><strong>JV diagnostic · same cell before / after encapsulation</strong><span>PV operating region · measured curves · no smoothing</span></div>
+    <div className="chart-title"><div className="trend-panel-title"><strong>JV diagnostic · same cell before / after encapsulation</strong><InfoTip text={diagnosticHelp} align="left" /></div></div>
     <div className="encapsulation-jv-controls">
       <label>Physical cell<select value={pair.sample.sample_uid} onChange={(event) => setRequestedSampleUid(event.target.value)}>{pairs.map((item) => <option value={item.sample.sample_uid} key={item.sample.sample_uid}>{item.sample.material_raw || item.sample.material_family} · batch {item.sample.batch_no_raw || "—"} · {item.sample.sample_id_raw || item.sample.sample_uid} · {item.sample.recipe_raw || "process n/a"}</option>)}</select></label>
       <div><b>{pair.sample.material_raw || pair.sample.material_family}</b><span>Batch {pair.sample.batch_no_raw || "—"} · {recipe}{pair.sample.electrode && pair.sample.electrode !== "Cu" ? ` · ${pair.sample.electrode}` : ""}</span></div>
@@ -115,7 +117,6 @@ function EncapsulationJVComparison({ dataset, pairs, selections }: { dataset: IV
       const delta = (key: "efficiency_pct" | "jsc_mA_cm2" | "voc_V" | "ff_pct") => mean(group.pairs.map((item) => (item.afterMeasurement[key] as number) - (item.beforeMeasurement[key] as number)));
       return <tr key={group.key}><td>{group.material} / {group.batch}</td><td>{group.recipe}</td><td>{group.pairs.length}</td><td>{delta("efficiency_pct").toFixed(2)}</td><td>{delta("jsc_mA_cm2").toFixed(2)}</td><td>{delta("voc_V").toFixed(3)}</td><td>{delta("ff_pct").toFixed(2)}</td></tr>;
     })}</tbody></table></div>
-    <p className="encapsulation-method-note">Diagnostic sweep selection: at each stage, the QA-valid raw sweep closest to the independently recorded PCE is shown. Exact sweep IDs: {pair.beforeMeasurement.measurement_uid} → {pair.afterMeasurement.measurement_uid}. This supports mechanism screening; it does not isolate a causal process variable.</p>
   </section>;
 }
 
@@ -129,8 +130,8 @@ export function EncapsulationComparison({ dataset, selections }: { dataset: IVDa
   const min = values.length ? Math.max(0, Math.floor(Math.min(...values)) - 1) : 0;
   const max = values.length ? Math.ceil(Math.max(...values)) + 1 : 1;
   const width = Math.max(720, groups.length * 230 + 100);
-  const height = 520;
-  const y = (value: number) => 340 - (value - min) / (max - min) * 240;
+  const height = 410;
+  const y = (value: number) => 300 - (value - min) / (max - min) * 240;
   const rawCurvePairs = dataset ? encapsulationCurvePairs(dataset).filter((pair) => selectedMaterials.includes(pair.sample.material_family)).sort((a, b) => a.sample.material_family.localeCompare(b.sample.material_family) || (a.sample.batch_no_raw || "").localeCompare(b.sample.batch_no_raw || "", "en", { numeric: true }) || processOrder(a.sample.recipe_raw) - processOrder(b.sample.recipe_raw) || (a.sample.recipe_raw || "").localeCompare(b.sample.recipe_raw || "") || (a.sample.sample_id_raw || "").localeCompare(b.sample.sample_id_raw || "", "en", { numeric: true })) : [];
   const exportSvg = () => {
     if (!svgRef.current) return;
@@ -141,24 +142,22 @@ export function EncapsulationComparison({ dataset, selections }: { dataset: IVDa
     anchor.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
+  const summaryHelp = `The same physical cells are paired before encapsulation and after encapsulation, before ageing. Open points are before; filled points are after; thin lines connect the same cell. Boxes span Q1–Q3, with the median and 1.5 × IQR whiskers. Formulation, batch and distinct recorded processes remain separate. QA-flagged or ambiguous pairs are excluded. Dates come from linked raw JV files when available. ${excluded} selected-material cells have no unique valid PCE pair.`;
   return <div className="encapsulation-workspace">
     <section className="chart-card encapsulation-summary" aria-label="Before and after encapsulation">
-      <div className="chart-title"><strong>Encapsulation · PCE (η) before / after</strong><button type="button" className="soft-button" disabled={!groups.length} onClick={exportSvg}>Export SVG</button></div>
-      <p>Paired cells only. Formulation, batch and recorded lamination recipe are kept separate. QA-flagged or ambiguous baselines are excluded.</p>
-      <p>Source: Initial Eff → Unaged, before ageing. Measurement dates are shown only where the raw files link unambiguously to the same physical cell. {excluded} selected-material cells excluded because a unique valid PCE pair is unavailable.</p>
+      <div className="chart-title"><div className="trend-panel-title"><strong>Encapsulation · PCE (η) before / after</strong><InfoTip text={summaryHelp} align="left" /></div><button type="button" className="soft-button" disabled={!groups.length} onClick={exportSvg}>Export SVG</button></div>
       {missing.length > 0 && <p role="status">No paired data for: {missing.join(" · ")}. Choose another encapsulant above.</p>}
       {groups.length > 0 && <>
         <div style={{ overflowX: "auto" }}>
           <svg ref={svgRef} xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Paired PCE before and after encapsulation, grouped by formulation, batch and lamination recipe" style={{ background: "white", fontFamily: "Arial, sans-serif", color: "#222" }}>
             <rect width={width} height={height} fill="white" />
             <text x={width / 2} y={28} textAnchor="middle" fontSize={18} fontWeight="bold">PCE before / after encapsulation</text>
-            <text x={width / 2} y={51} textAnchor="middle" fontSize={12}>Same physical cells · formulation, batch and recorded process kept separate</text>
-            <text x={width / 2} y={74} textAnchor="middle" fontSize={13} fontWeight="bold">○ Before · ● After · Thin line: same cell · Box: middle 50% (not a confidence interval)</text>
-            <text x={20} y={220} transform="rotate(-90 20 220)" textAnchor="middle" fontSize={14}>PCE η (%)</text>
+            <text x={20} y={180} transform="rotate(-90 20 180)" textAnchor="middle" fontSize={14}>PCE η (%)</text>
             {Array.from({ length: 6 }, (_, i) => min + (max - min) * i / 5).map((value) => <g key={value}><line x1={65} x2={width - 20} y1={y(value)} y2={y(value)} stroke="#ddd" /><text x={55} y={y(value) + 4} textAnchor="end" fontSize={12}>{value.toFixed(1)}</text></g>)}
             {groups.map((group, index) => {
               const center = 100 + (index + 0.5) * (width - 120) / groups.length;
               const color = selections.find((item) => item.material === group.family)?.color ?? "#336699";
+              const showProcess = groups.some((candidate) => candidate.key !== group.key && candidate.material === group.material && candidate.batch === group.batch && candidate.electrode === group.electrode);
               const beforeOffsets = pointOffsets(group.pairs.map((pair) => y(pair.before)));
               const afterOffsets = pointOffsets(group.pairs.map((pair) => y(pair.after)));
               return <g key={group.key}>
@@ -175,19 +174,17 @@ export function EncapsulationComparison({ dataset, selections }: { dataset: IVDa
                       <line x1={x - 20} x2={x + 20} y1={y(box.median)} y2={y(box.median)} strokeWidth={2} />
                     </g>}
                     {group.pairs.map((pair, i) => <circle key={pair.sampleUid} cx={x + offsets[i]} cy={y(pair[stage])} r={3.5} fill={stageIndex ? color : "white"} stroke={color}><title>{pair.reference}: {stage} {pair[stage]}%</title></circle>)}
-                    <text x={x} y={363} textAnchor="middle" fontSize={12}>{stageIndex ? "After" : "Before"}</text>
+                    <text x={x} y={323} textAnchor="middle" fontSize={12}>{stageIndex ? "After" : "Before"}</text>
                   </g>;
                 })}
-                <text x={center} y={388} textAnchor="middle" fontSize={12} fontWeight="bold">{group.material}</text>
-                <text x={center} y={407} textAnchor="middle" fontSize={11}>{groupProcessLabel(group, dataset)}</text>
-                <text x={center} y={426} textAnchor="middle" fontSize={11}>Batch {group.batch} · n={group.pairs.length}{group.electrode === "Cu" ? "" : ` · ${group.electrode}`}</text>
+                <text x={center} y={348} textAnchor="middle" fontSize={12} fontWeight="bold">{group.material}</text>
+                {showProcess && <text x={center} y={369} textAnchor="middle" fontSize={11}>{groupProcessLabel(group, dataset)}</text>}
+                <text x={center} y={showProcess ? 390 : 371} textAnchor="middle" fontSize={11}>Batch {group.batch} · n={group.pairs.length}{group.electrode === "Cu" ? "" : ` · ${group.electrode}`}</text>
               </g>;
             })}
-            <text x={width / 2} y={472} textAnchor="middle" fontSize={11}>Box: Q1–Q3; line: median; whiskers: within 1.5 × IQR; every measured point and paired change shown. n=1 remains an individual observation only.</text>
-            <text x={width / 2} y={493} textAnchor="middle" fontSize={11}>Source: Initial Eff → Unaged. Dates are reported from linked raw JV files where available.</text>
           </svg>
         </div>
-        <div className="table-scroll"><table><thead><tr><th>Formulation / batch</th><th>Recorded process</th><th>Paired n</th><th>Mean before (%)</th><th>Mean after (%)</th><th>Mean paired Δη (pp)</th><th>Measurement timeline</th></tr></thead><tbody>{groups.map((group) => {
+        <div className="table-scroll"><table><thead><tr><th>Formulation / batch</th><th>Recorded process</th><th>Paired n</th><th>Mean before (%)</th><th>Mean after (%)</th><th>Mean paired Δη (pp)</th><th>Measurement timeline <InfoTip text="Before measurement → encapsulation → after measurement. Dates appear only when the raw files link unambiguously to the same physical cell." align="right" /></th></tr></thead><tbody>{groups.map((group) => {
           const beforeDates = group.pairs.map((pair) => pair.beforeMeasurementDate).filter((value): value is string => Boolean(value));
           const encapsulationDates = group.pairs.map((pair) => pair.encapsulationDate).filter((value): value is string => Boolean(value));
           const afterDates = group.pairs.flatMap((pair) => pair.afterMeasurementDates);
