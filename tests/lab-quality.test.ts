@@ -43,3 +43,13 @@ test("implausible unflagged references are ineligible", () => {
   const issues = labQualityIssues([reference], "efficiency_pct");
   assert.equal(labObservationEligible(reference, issues, false), false);
 });
+
+test("non-numeric PCE does not exclude valid Jsc/Voc/FF; unknown global QA still does", () => {
+  const observation = row("partial", 1, 0, { efficiency_pct: null, jsc_mA_cm2: 22, voc_V: 1, ff_pct: 75, data_quality_flag: "non_numeric_metric:eff" });
+  assert.equal(labObservationEligible(observation, labQualityIssues([observation], "efficiency_pct"), false), false);
+  for (const metric of ["jsc_mA_cm2", "voc_V", "ff_pct"] as const) {
+    assert.equal(labObservationEligible(observation, labQualityIssues([observation], metric), false), true);
+    const global = { ...observation, data_quality_flag: "non_numeric_metric:eff; acquisition_invalid" };
+    assert.equal(labObservationEligible(global, labQualityIssues([global], metric), false), false);
+  }
+});

@@ -71,6 +71,12 @@ export function summarise(values: number[], method: Aggregation): SummaryStatist
     return { value: finite[0], intervalLow: finite[0], intervalHigh: finite[0], intervalLabel: "single value", min, max, n: 1 };
   }
   if (method === "median") {
+    // Two observations stay inspectable, but do not acquire a box/IQR which
+    // visually suggests a well-characterised distribution.
+    if (finite.length === 2) {
+      const value = median(finite);
+      return { value, intervalLow: value, intervalHigh: value, intervalLabel: "single value", min, max, n: 2 };
+    }
     return {
       value: median(finite),
       intervalLow: quantile(finite, 0.25),
@@ -147,8 +153,9 @@ export function outdoorQualityReason(observation: Observation, metric: MetricKey
   const highLimit = centre + Math.max(6 * robustSigma, centre * 1.5);
   if (value > highLimit) return `${value} is an isolated high-side spike relative to neighbouring days (local median ${centre}).`;
 
-  const adjacent = peers.filter((peer) => Math.abs(peer.time - time) <= 2 && peer.time !== time).map((peer) => peer.value);
-  if (adjacent.length >= 2 && value < centre * 0.25 && Math.max(...adjacent) / Math.min(...adjacent) < 1.35) {
+  const adjacentPeers = peers.filter((peer) => Math.abs(peer.time - time) <= 2 && peer.time !== time && numeric(peer.value) && peer.value > 0);
+  const adjacent = adjacentPeers.map((peer) => peer.value);
+  if (adjacentPeers.some((peer) => peer.time < time) && adjacentPeers.some((peer) => peer.time > time) && value < centre * 0.25 && Math.max(...adjacent) / Math.min(...adjacent) < 1.35) {
     return `${value} is an isolated dropout followed by recovery (local median ${centre}).`;
   }
   return null;
@@ -160,16 +167,16 @@ export interface BaselineResult {
   sensitivityPct: number | null;
 }
 
-export function outdoorBaseline(values: number[]): BaselineResult {
+export function outdoorBaseline(values: number[], window: 3 | 7 | 14 = 7): BaselineResult {
   const finite = values.filter(Number.isFinite);
   if (finite.length < 3) return { value: null, count: finite.length, sensitivityPct: null };
-  const first7 = finite.slice(0, 7);
-  const value = median(first7);
+  const firstWindow = finite.slice(0, window);
+  const value = median(firstWindow);
   const windows = [3, 7, 14]
     .filter((size) => finite.length >= size)
     .map((size) => median(finite.slice(0, size)));
   const sensitivityPct = windows.length > 1 && value !== 0
     ? ((Math.max(...windows) - Math.min(...windows)) / Math.abs(value)) * 100
     : null;
-  return { value, count: first7.length, sensitivityPct };
+  return { value, count: firstWindow.length, sensitivityPct };
 }

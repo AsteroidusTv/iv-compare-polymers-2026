@@ -1,5 +1,7 @@
 import type { IVDataset, IVFile, Measurement } from "./iv-data";
 import type { SeriesConfig } from "./comparison";
+import { seriesSamplePasses } from "./comparison";
+import { getJVDiagnostics } from "./jv-science";
 import { measurementQualityReasons, numeric } from "./science";
 
 export interface AgeingTimeCandidate {
@@ -14,12 +16,14 @@ export interface AgeingSampleCandidate {
   times: AgeingTimeCandidate[];
 }
 
-export function ageingSampleCandidates(dataset: IVDataset, config: SeriesConfig, includeQa: boolean): AgeingSampleCandidate[] {
+export function ageingSampleCandidates(dataset: IVDataset, config: SeriesConfig, includeQa: boolean, inspectUnsafe = false): AgeingSampleCandidate[] {
+  const diagnostics = getJVDiagnostics(dataset);
   const sampleMap = new Map(dataset.samples.map((sample) => [sample.sample_uid, sample]));
   const measurementsByFile = new Map<string, Measurement[]>();
   for (const measurement of dataset.measurements) {
     if (!measurement.sample_uid || !dataset.curves[measurement.measurement_uid]) continue;
     if (!includeQa && measurementQualityReasons(measurement).length) continue;
+    if (!inspectUnsafe && !diagnostics.get(measurement.measurement_uid)?.quantitativeEligible) continue;
     const rows = measurementsByFile.get(measurement.file_uid) ?? [];
     rows.push(measurement);
     measurementsByFile.set(measurement.file_uid, rows);
@@ -29,6 +33,7 @@ export function ageingSampleCandidates(dataset: IVDataset, config: SeriesConfig,
     if (!file.match_status.startsWith("matched_") || !file.sample_uid) continue;
     const sample = sampleMap.get(file.sample_uid);
     if (!sample || sample.material_family !== config.material) continue;
+    if (!seriesSamplePasses(dataset, sample.sample_uid, config)) continue;
     const time = file.inferred_test_type === "Unaged" ? 0 : file.inferred_test_type === config.stress ? file.inferred_exposure_duration : null;
     if (!numeric(time)) continue;
     const measurements = (measurementsByFile.get(file.file_uid) ?? []).filter((measurement) => measurement.sample_uid === file.sample_uid);

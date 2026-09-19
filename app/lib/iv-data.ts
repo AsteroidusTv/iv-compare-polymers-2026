@@ -72,6 +72,11 @@ export interface IVFile {
 }
 
 export interface Measurement {
+  incident_power_mW_cm2?: number | null;
+  pmpp_mW_cm2?: number | null;
+  voltage_unit_interpretation?: string | null;
+  current_unit_interpretation?: string | null;
+  conversion_applied?: string | null;
   measurement_uid: string;
   file_uid: string;
   sample_uid?: string | null;
@@ -237,8 +242,17 @@ async function decodeBlob(blob: Blob): Promise<string> {
   return new Response(stream).text();
 }
 
+const packageHashes = new WeakMap<IVDataset, string>();
+export function datasetPackageHash(dataset: IVDataset): string | null {
+  return packageHashes.get(dataset) ?? null;
+}
 export async function readPack(blob: Blob): Promise<IVDataset> {
-  return validateDataset(JSON.parse(await decodeBlob(blob)));
+  const dataset = validateDataset(JSON.parse(await decodeBlob(blob)));
+  if (globalThis.crypto?.subtle) {
+    const digest = await crypto.subtle.digest("SHA-256", await blob.arrayBuffer());
+    packageHashes.set(dataset, Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join(""));
+  }
+  return dataset;
 }
 
 export async function fetchDefaultDataset(): Promise<IVDataset> {
@@ -343,6 +357,11 @@ function normalizeFiles(rows: UnknownRow[]): IVFile[] {
 
 function normalizeMeasurements(rows: UnknownRow[]): Measurement[] {
   return rows.map((row) => ({
+    incident_power_mW_cm2: asNumber(row.incident_power_mW_cm2),
+    pmpp_mW_cm2: asNumber(row.pmpp_mW_cm2),
+    voltage_unit_interpretation: asText(row.voltage_unit_interpretation),
+    current_unit_interpretation: asText(row.current_unit_interpretation),
+    conversion_applied: asText(row.conversion_applied),
     measurement_uid: String(row.measurement_uid ?? ""),
     file_uid: String(row.file_uid ?? ""),
     sample_uid: asText(row.sample_uid),

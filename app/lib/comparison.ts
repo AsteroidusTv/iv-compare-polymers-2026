@@ -7,6 +7,8 @@ export interface SeriesConfig {
   metric: MetricKey;
   electrode: string;
   recipe: string;
+  formulation?: string;
+  batch?: string;
 }
 
 export const IV_METRICS: MetricKey[] = ["efficiency_pct", "jsc_mA_cm2", "voc_V", "ff_pct"];
@@ -21,17 +23,28 @@ export function metricOptionsFor(stress: string): MetricKey[] {
   return stress === "Outdoor" ? OUTDOOR_METRICS : IV_METRICS;
 }
 
-export function samplesForConfig(dataset: IVDataset, config: Pick<SeriesConfig, "material" | "electrode" | "recipe">): Sample[] {
-  return dataset.samples.filter((sample) => sample.material_family === config.material);
+type SampleFilters = Pick<SeriesConfig, "material" | "electrode" | "recipe" | "formulation" | "batch">;
+
+function matchesSample(sample: Sample, config: SampleFilters): boolean {
+  const selected = (filter: string | undefined, actual: string | null | undefined) => !filter || filter === "all" || filter === actual;
+  return sample.material_family === config.material
+    && selected(config.electrode, sample.electrode)
+    && selected(config.recipe, sample.recipe_uid ?? sample.recipe_raw)
+    && selected(config.formulation, sample.material_raw)
+    && selected(config.batch, sample.batch_no_raw);
+}
+
+export function samplesForConfig(dataset: IVDataset, config: SampleFilters): Sample[] {
+  return dataset.samples.filter((sample) => matchesSample(sample, config));
 }
 
 export function seriesSamplePasses(dataset: IVDataset, sampleId: string | null | undefined, config: SeriesConfig): boolean {
   if (!sampleId) return false;
   const sample = dataset.samples.find((item) => item.sample_uid === sampleId);
-  return Boolean(sample && sample.material_family === config.material);
+  return Boolean(sample && matchesSample(sample, config));
 }
 
-export function stressesForConfig(dataset: IVDataset, config: Pick<SeriesConfig, "material" | "electrode" | "recipe">): string[] {
+export function stressesForConfig(dataset: IVDataset, config: SampleFilters): string[] {
   const sampleIds = new Set(samplesForConfig(dataset, config).map((sample) => sample.sample_uid));
   const available = unique(dataset.observations.filter((observation) => sampleIds.has(observation.sample_uid)).map((observation) => observation.test_type));
   const ordered = STRESS_ORDER.filter((stress) => available.includes(stress));
@@ -41,9 +54,11 @@ export function stressesForConfig(dataset: IVDataset, config: Pick<SeriesConfig,
 export function normalizeSeriesConfig(dataset: IVDataset, config: SeriesConfig): SeriesConfig {
   const materials = unique(dataset.samples.map((sample) => sample.material_family));
   const material = materials.includes(config.material) ? config.material : materials[0] ?? "";
-  const electrode = "all";
-  const recipe = "all";
-  const stresses = stressesForConfig(dataset, { material, electrode, recipe });
+  // Preserve explicit filters even when they currently match no observations.
+  // Broadening them silently would change the scientific population.
+  const electrode = config.electrode || "all";
+  const recipe = config.recipe || "all";
+  const stresses = stressesForConfig(dataset, { ...config, material, electrode, recipe });
   const stress = stresses.includes(config.stress) ? config.stress : stresses[0] ?? "Unaged";
   const metrics = metricOptionsFor(stress);
   const metric = metrics.includes(config.metric) ? config.metric : stress === "Outdoor" ? "outdoor_pr_pct" : "efficiency_pct";

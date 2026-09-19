@@ -1,6 +1,18 @@
 import type { MetricKey, Observation } from "./iv-data";
 import { numeric } from "./science";
 
+const SOURCE_METRIC: Record<string, MetricKey> = { eff: "efficiency_pct", efficiency_pct: "efficiency_pct", jsc: "jsc_mA_cm2", jsc_mA_cm2: "jsc_mA_cm2", voc: "voc_V", voc_V: "voc_V", ff: "ff_pct", ff_pct: "ff_pct" };
+
+// Only recognised metric-local flags may be scoped. Unknown flags remain global.
+export function sourceQualityFlagApplies(flag: string | null | undefined, metric?: MetricKey): boolean {
+  if (!flag) return false;
+  return flag.split(/[;,|]/).some((part) => {
+    const match = /^non_numeric_metric:([\w]+)$/.exec(part.trim());
+    if (!match || !SOURCE_METRIC[match[1]]) return true;
+    return metric !== undefined && SOURCE_METRIC[match[1]] === metric;
+  });
+}
+
 // Conservative review heuristic, not a diagnosis of measurement failure.
 // Compare only the same cell, protocol and unit; retain sustained/terminal failures.
 export function labQualityIssues(observations: Observation[], metric: MetricKey): Map<string, string> {
@@ -12,7 +24,7 @@ export function labQualityIssues(observations: Observation[], metric: MetricKey)
   for (const observation of observations) {
     if (observation.test_type === "Outdoor") continue;
     const value = observation[metric];
-    if (observation.data_quality_flag) issues.set(observation.observation_uid, `Source QA: ${observation.data_quality_flag}`);
+    if (sourceQualityFlagApplies(observation.data_quality_flag, metric)) issues.set(observation.observation_uid, `Source QA: ${observation.data_quality_flag}`);
     else if (numeric(value) && (value < 0 || value > upper)) issues.set(observation.observation_uid, `${metric} outside the review range 0–${upper}.`);
     if (!numeric(value) || !numeric(observation.exposure_duration_numeric) || issues.has(observation.observation_uid)) continue;
     const key = JSON.stringify([observation.sample_uid, observation.test_type, observation.exposure_unit]);
@@ -36,5 +48,5 @@ export function labQualityIssues(observations: Observation[], metric: MetricKey)
 }
 
 export function labObservationEligible(observation: Observation, issues: Map<string, string>, includeQa: boolean): boolean {
-  return includeQa || (!observation.data_quality_flag && !issues.has(observation.observation_uid));
+  return includeQa || (!sourceQualityFlagApplies(observation.data_quality_flag) && !issues.has(observation.observation_uid));
 }
