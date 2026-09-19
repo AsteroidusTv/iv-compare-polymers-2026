@@ -7,7 +7,7 @@ import type { EncapsulationCurvePair, EncapsulationGroup } from "../lib/encapsul
 import { boxStatistics, encapsulationCurvePairs, encapsulationGroups, meanPairedRelativeChange, pairedMeasurementDayRange } from "../lib/encapsulation";
 import { pointOffsets } from "../lib/encapsulation-layout";
 import type { IVDataset, Measurement } from "../lib/iv-data";
-import { analyzeIVCurve } from "../lib/iv-curve-analysis";
+import { getJVDiagnostics } from "../lib/jv-science";
 import { numeric } from "../lib/science";
 import { InfoTip } from "./InfoTip";
 
@@ -56,9 +56,7 @@ function makeCurveSeries(pair: EncapsulationCurvePair, dataset: IVDataset, color
     { measurement: pair.beforeMeasurement, label: `Before · ${formatDate(pair.beforeFile.measurement_date)}`, linePattern: "8 5" },
     { measurement: pair.afterMeasurement, label: `After · ${formatDate(pair.afterMeasurement.measurement_date)}`, linePattern: undefined },
   ].map(({ measurement, label, linePattern }) => {
-    const curve = dataset.curves[measurement.measurement_uid];
-    const points = curve.v.flatMap((x, index) => numeric(x) && numeric(curve.j[index]) ? [{ x, y: curve.j[index] as number }] : []);
-    const analysis = analyzeIVCurve(points, measurement.voc_V);
+    const analysis = getJVDiagnostics(dataset).get(measurement.measurement_uid)!.analysis;
     const primary = analysis.segments[analysis.primaryIndex];
     const operatingPoints = primary?.points.filter((point) => point.x >= -0.02 && (!numeric(measurement.voc_V) || point.x <= measurement.voc_V + 0.03)) ?? [];
     const displayedPoints = operatingPoints.length >= 3 ? operatingPoints : primary?.points ?? [];
@@ -78,6 +76,9 @@ function makeCurveSeries(pair: EncapsulationCurvePair, dataset: IVDataset, color
 
 function EncapsulationJVComparison({ dataset, pairs, selections }: { dataset: IVDataset; pairs: EncapsulationCurvePair[]; selections: { material: string; color: string }[] }) {
   const [requestedSampleUid, setRequestedSampleUid] = useState<string | null>(null);
+  const diagnostics = getJVDiagnostics(dataset);
+  // The inventory pairing and its date coverage remain independent of JV eligibility.
+  pairs = pairs.filter(pair => diagnostics.get(pair.beforeMeasurement.measurement_uid)?.quantitativeEligible && diagnostics.get(pair.afterMeasurement.measurement_uid)?.quantitativeEligible);
   const pair = pairs.find((item) => item.sample.sample_uid === requestedSampleUid) ?? pairs[0] ?? null;
   if (!pair) return <section className="chart-card encapsulation-jv"><div className="chart-title"><strong>JV diagnostic · before / after encapsulation</strong></div><div className="missing-selection"><strong>No unambiguous raw JV pair</strong><span>The distribution chart remains available, but no QA-valid before/after curve pair can be linked to the selected materials.</span></div></section>;
   const color = selections.find((item) => item.material === pair.sample.material_family)?.color ?? "#3469d4";
