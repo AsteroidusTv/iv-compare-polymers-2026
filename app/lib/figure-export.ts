@@ -10,6 +10,7 @@ export interface FigureExportContext {
   cohort?: unknown;
   seriesMetadata?: Record<string, unknown>;
   sourceCode?: unknown;
+  validation?: { quantitativeValidated: boolean };
   [key: string]: unknown;
 }
 export interface FigureBounds { xMin: number; xMax: number; yMin: number; yMax: number }
@@ -59,8 +60,16 @@ export function figureCsv(manifest: FigureManifest): string {
         contributing_value: member.value, member_metadata: member });
     }
   } else {
-    for (const series of manifest.series as CurveSeries[]) for (const segment of series.segments) for (const point of segment.points) {
+    for (const series of manifest.series as CurveSeries[]) for (const segment of series.segments) for (const [pointIndex, point] of segment.points.entries()) {
+      const source = manifest.context.seriesMetadata?.[series.id] as { measurement?: import("./iv-data").Measurement; diagnostics?: import("./jv-science").JVDiagnostic; file?: import("./iv-data").IVFile } | undefined;
+      const measurement = source?.measurement, diagnostic = source?.diagnostics;
+      const segmentIndex = diagnostic?.analysis.segments.findIndex(item => `${measurement?.measurement_uid}-${item.id}` === segment.id) ?? -1;
       rows.push({ ...shared, series_id: series.id, series_label: series.label, color: series.color, line_pattern: series.linePattern,
+        sample_uid: measurement?.sample_uid, measurement_uid: measurement?.measurement_uid, file_uid: measurement?.file_uid,
+        segment_status: diagnostic?.segments[segmentIndex]?.status ?? "unresolved", point_index: pointIndex, source_point_index: point.sourceIndex,
+        V: point.x, J: point.y, unit_interpretation: diagnostic?.conversion, surface_cm2: diagnostic?.conversion.surfaceUsed,
+        conversion_status: diagnostic?.conversion.conversionConfidence, QA_status: diagnostic?.issues,
+        validation: diagnostic?.validation, protocol: source?.file?.inferred_test_type, time: source?.file?.inferred_exposure_duration,
         series_metadata: manifest.context.seriesMetadata?.[series.id], segment_id: segment.id, primary_segment: segment.isPrimary,
         source_index: point.sourceIndex, x: point.x, plotted_y: point.y,
         plotted_point_inside_viewport: inViewport(point.x, point.y, manifest.viewport) });

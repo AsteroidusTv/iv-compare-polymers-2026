@@ -67,6 +67,30 @@ test("audited real sweeps: April17 ambiguity and residue-selected MEA-00564/0056
   const mismatches = [...diagnostics.values()].filter(d => d.currentDensityStatus === "suspicious_surface_or_units");
   assert.ok(mismatches.length >= 138);
   assert.ok(mismatches.every(d => !d.quantitativeEligible));
-  const smallAreaValid = dataset.measurements.filter(m => m.cell_area_cm2 === 0.1 && diagnostics.get(m.measurement_uid)?.quantitativeEligible);
-  assert.ok(smallAreaValid.length > 0, "0.1 cm² alone must not imply rejection");
+  const smallAreaConsistent = dataset.measurements.filter(m => m.cell_area_cm2 === 0.1 && diagnostics.get(m.measurement_uid)?.validation.numericallyConsistent);
+  assert.ok(smallAreaConsistent.length > 0, "0.1 cm² alone must not imply numerical inconsistency");
+  assert.ok([...diagnostics.values()].every(d => !d.quantitativeEligible), "Legacy metadata supplies no experimental validation");
+});
+
+test("legacy conversion text and numerical consistency never confer validation", () => {
+  const dataset = fixture();
+  dataset.measurements = [dataset.measurements[0]];
+  dataset.measurements[0].conversion_applied = "density conversion";
+  const diagnostic = getJVDiagnostics(dataset).get("M1")!;
+  assert.equal(diagnostic.validation.numericallyConsistent, true);
+  assert.equal(diagnostic.validation.unitValidated, false);
+  assert.equal(diagnostic.validation.rangeValidated, false);
+  assert.equal(diagnostic.validation.experimentallyValidated, false);
+  assert.equal(diagnostic.quantitativeEligible, false);
+});
+
+test("quantitative eligibility requires targeted evidence for all validation levels", () => {
+  const dataset = fixture();
+  dataset.measurements = [dataset.measurements[0]];
+  const evidence = { status: "validated" as const, measurement_uid: "M1", source: "synthetic test protocol", reason: "known synthetic units and acquisition", version: "test-1", segment_id: "segment-1" };
+  dataset.measurements[0].scientific_validation = { units: evidence, range: evidence, experiment: evidence };
+  assert.equal(getJVDiagnostics(dataset).get("M1")!.quantitativeEligible, true);
+  const mismatch = structuredClone(dataset);
+  mismatch.measurements[0].scientific_validation!.range = { ...evidence, segment_id: "another-segment" };
+  assert.equal(getJVDiagnostics(mismatch).get("M1")!.quantitativeEligible, false);
 });

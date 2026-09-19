@@ -1,7 +1,9 @@
 import type { IVDataset, Measurement } from "./iv-data";
 import { analyzeIVCurve, type IVCurveAnalysis } from "./iv-curve-analysis";
+import { evidenceValidated, metricConsistency, type JVMetric } from "./jv-validation";
+import { repeatedSegments, REPEAT_RULES, type SegmentInput, type SegmentRepeat } from "./jv-segments";
 
-export const JV_SCIENCE_VERSION = "1.0.0";
+export const JV_SCIENCE_VERSION = "2.0.0";
 type Point = { x: number; y: number };
 export interface JVConversion {
   voltageUnit: "V" | "mV";
@@ -69,9 +71,9 @@ export function reconstructJVMetrics(points: Point[], incidentPower_mW_cm2?: num
 
 export interface JVSegmentDiagnostic {
   index: number;
-  status: "unresolved" | "suspected_export_residue";
+  status: "acquired" | "unresolved" | "suspected_export_residue";
   repeatedFileCount: number;
-  detection: "none" | "identical_or_near_identical";
+  detection: SegmentRepeat["detection"];
 }
 export interface JVDiagnostic {
   measurementUid: string;
@@ -81,36 +83,34 @@ export interface JVDiagnostic {
   reconstructed: JVMetrics;
   currentDensityStatus: "consistent_not_calibrated" | "suspicious_surface_or_units" | "unresolved";
   quantitativeEligible: boolean;
+  validation: { numericallyConsistent: boolean; unitValidated: boolean; rangeValidated: boolean; experimentallyValidated: boolean };
+  consistency: ReturnType<typeof metricConsistency>[];
   issues: string[];
   conversion: { voltageUnitInterpretation: string; currentUnitInterpretation: string; surfaceUsed: number | null; conversionApplied: string; conversionConfidence: "documented" | "legacy_unverified" };
 }
 const finite = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
 const med = (values: number[]) => { const v = [...values].sort((a, b) => a - b), n = v.length; return n ? (v[Math.floor((n - 1) / 2)] + v[Math.floor(n / 2)]) / 2 : NaN; };
 const cache = new WeakMap<IVDataset, ReadonlyMap<string, JVDiagnostic>>();
-const signature = (points: Point[]) => points.map(p => `${p.x.toFixed(6)},${p.y.toFixed(6)}`).join(";");
 
 /** Dataset-level evidence uses distinct source files, not repeated sweeps within a file. */
 export function getJVDiagnostics(dataset: IVDataset): ReadonlyMap<string, JVDiagnostic> {
   const cached = cache.get(dataset); if (cached) return cached;
   const analyses = new Map<string, IVCurveAnalysis>();
-  const repeated = new Map<string, Set<string>>();
+  const segmentInputs: SegmentInput[] = [];
   const fileSources = new Map(dataset.files.map(f => [f.file_uid, f.source_file || f.file_uid]));
   for (const row of dataset.measurements) {
     const curve = dataset.curves[row.measurement_uid];
     const points = curve ? curve.v.flatMap((x, i) => finite(x) && finite(curve.j[i]) ? [{ x, y: curve.j[i] as number }] : []) : [];
     const analysis = analyzeIVCurve(points, row.voc_V); analyses.set(row.measurement_uid, analysis);
-    for (const segment of analysis.segments) {
-      if (segment.points.length < 10) continue;
-      const key = signature(segment.points), sources = repeated.get(key) ?? new Set<string>();
-      sources.add(fileSources.get(row.file_uid) || row.file_uid); repeated.set(key, sources);
-    }
+    for (const segment of analysis.segments) segmentInputs.push({ id: `${row.measurement_uid}:${segment.id}`, file: fileSources.get(row.file_uid) || row.file_uid, points: segment.points });
   }
+  const repeated = repeatedSegments(segmentInputs);
   const result = new Map<string, JVDiagnostic>();
   for (const row of dataset.measurements) {
     const original = analyses.get(row.measurement_uid)!;
     const segments: JVSegmentDiagnostic[] = original.segments.map((s, index) => {
-      const count = s.points.length >= 10 ? repeated.get(signature(s.points))?.size ?? 0 : 0;
-      return { index, status: count >= 3 ? "suspected_export_residue" : "unresolved", repeatedFileCount: count, detection: count >= 3 ? "identical_or_near_identical" : "none" };
+      const repeat = repeated.get(`${row.measurement_uid}:${s.id}`)!;
+      return { index, status: repeat.independentFiles >= REPEAT_RULES.minimumIndependentFiles ? "suspected_export_residue" : evidenceValidated(row.scientific_validation?.range, row.measurement_uid, s.id) ? "acquired" : "unresolved", repeatedFileCount: repeat.independentFiles, detection: repeat.detection };
     });
     // Prefer the first non-residue branch in acquisition order, not imported-Voc resemblance.
     const primaryIndex = original.segments.findIndex((s, i) => s.points.length >= 2 && segments[i].status !== "suspected_export_residue");
@@ -121,15 +121,22 @@ export function getJVDiagnostics(dataset: IVDataset): ReadonlyMap<string, JVDiag
     if (segments.some(s => s.status === "suspected_export_residue")) issues.push("Repeated segment across independent files: suspected export residue; excluded from automatic branch selection.");
     if (primaryIndex < 0) issues.push("No non-residue branch available.");
     if (reconstructed.coverage !== "complete") issues.push("Incomplete photovoltaic coverage: no extrapolation; full quantitative metrics unavailable.");
-    const mismatch = (a: number | null, b: number | null, tolerance: number, floor: number) => a !== null && b !== null && Math.abs(a - b) > Math.max(floor, tolerance * Math.abs(b));
-    const currentMismatch = mismatch(reconstructed.jsc_mA_cm2, instrument.jsc_mA_cm2, 0.25, 0.5);
-    const voltageMismatch = mismatch(reconstructed.voc_V, instrument.voc_V, 0.1, 0.05);
-    const powerMismatch = mismatch(reconstructed.pmpp_mW_cm2, instrument.pmpp_mW_cm2, 0.25, 0.5);
-    if (currentMismatch) issues.push("Reconstructed Jsc differs substantially from instrument Jsc; current units/area require adjudication (no automatic rescaling).");
-    if (voltageMismatch) issues.push("Reconstructed Voc differs substantially from instrument Voc; voltage interpretation/branch requires adjudication.");
-    if (powerMismatch) issues.push("Reconstructed power differs substantially from instrument power.");
+    const consistency = (Object.keys(instrument) as JVMetric[]).map(metric => metricConsistency(metric, instrument[metric], reconstructed[metric]));
+    const severe = consistency.filter(check => check.status === "severe_mismatch" || check.status === "physically_inconsistent");
+    const currentMismatch = severe.some(check => check.metric === "jsc_mA_cm2");
+    for (const check of severe) issues.push(`${check.metric}: ${check.status}; instrument=${check.instrument}, reconstructed=${check.reconstructed}, tolerance=${check.threshold}. No automatic correction.`);
+    const numericallyConsistent = reconstructed.coverage === "complete" && severe.length === 0;
+    const validation = {
+      numericallyConsistent,
+      unitValidated: evidenceValidated(row.scientific_validation?.units, row.measurement_uid),
+      rangeValidated: primaryIndex >= 0 && evidenceValidated(row.scientific_validation?.range, row.measurement_uid, original.segments[primaryIndex]?.id),
+      experimentallyValidated: evidenceValidated(row.scientific_validation?.experiment, row.measurement_uid),
+    };
+    if (!validation.unitValidated) issues.push("Unit interpretation unresolved: numerical consistency is not unit validation.");
+    if (!validation.rangeValidated) issues.push("Acquired range unresolved: a non-repeated branch is not proof of acquisition.");
+    if (!validation.experimentallyValidated) issues.push("Experimental validation unresolved.");
     if (row.qa_flags) issues.push(`Source QA: ${row.qa_flags}`);
-    result.set(row.measurement_uid, { measurementUid: row.measurement_uid, analysis, segments, instrument, reconstructed, currentDensityStatus: currentMismatch ? "suspicious_surface_or_units" : reconstructed.jsc_mA_cm2 !== null && instrument.jsc_mA_cm2 !== null ? "consistent_not_calibrated" : "unresolved", quantitativeEligible: primaryIndex >= 0 && reconstructed.coverage === "complete" && !currentMismatch && !voltageMismatch && !powerMismatch && !row.qa_flags, issues,
+    result.set(row.measurement_uid, { measurementUid: row.measurement_uid, analysis, segments, instrument, reconstructed, currentDensityStatus: currentMismatch ? "suspicious_surface_or_units" : reconstructed.jsc_mA_cm2 !== null && instrument.jsc_mA_cm2 !== null ? "consistent_not_calibrated" : "unresolved", quantitativeEligible: primaryIndex >= 0 && numericallyConsistent && validation.unitValidated && validation.rangeValidated && validation.experimentallyValidated && !row.qa_flags, validation, consistency, issues,
       conversion: { voltageUnitInterpretation: row.voltage_unit_interpretation || "Pack V; original unit interpretation not recorded", currentUnitInterpretation: row.current_unit_interpretation || "Pack generated mA/cm²; original conversion not independently documented", surfaceUsed: row.cell_area_cm2 ?? null, conversionApplied: row.conversion_applied || "Legacy pack transformation retained, not altered", conversionConfidence: row.conversion_applied ? "documented" : "legacy_unverified" } });
   }
   cache.set(dataset, result); return result;

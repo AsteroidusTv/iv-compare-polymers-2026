@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 
 import XLSX from "xlsx";
+import { referenceLinkDiagnostic } from "../app/lib/reference-links.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const processed = path.join(root, "data", "processed");
@@ -83,33 +84,9 @@ function sheetRows(workbook, name) {
   return XLSX.utils.sheet_to_json(sheet, { defval: null, raw: true });
 }
 
-const ORANGE_BOX_SAMPLE_IDS = new Map([
-  [1, "CVF1_R13"], [2, "CVF2_R14"], [3, "Len1_R24"], [4, "Len2_R7"],
-  [5, "Len3_R21"], [6, "Len4_R20"], [7, "Len5_R11"], [8, "Len6_R5"],
-  [9, "CVF3_R10"], [10, "CVF4_R16"], [11, "CVF5_R15"], [12, "TF4_1_R22"],
-]);
-
-// These laboratory files pre-date encapsulation and intentionally remain audit
-// references. Link them only where the box, cell number, and recorded R-reference
-// identify one inventory sample without ambiguity.
 function preEncapsulationReference(file, samples) {
-  const match = String(file.file_name ?? "").match(/^C(\d+)\s*-\s*R(\d+)\.xls$/i);
-  if (!match) return null;
-  const source = String(file.source_file ?? "");
-  if (source.includes("260803 - Orange box")) {
-    const sampleId = ORANGE_BOX_SAMPLE_IDS.get(Number(match[1]));
-    if (!sampleId) return null;
-    const candidates = samples.filter((sample) => sample.source_inventory_sheet === "Lami-results2" && sample.batch_no_raw === "A1" && sample.sample_id_raw === sampleId);
-    return candidates.length === 1 ? { sampleUid: candidates[0].sample_uid, basis: "Orange box cell + R-reference" } : null;
-  }
-  if (source.includes("260826 - Flag box") && !source.includes("/Trash/")) {
-    const rReference = match[2];
-    const candidates = samples.filter((sample) => sample.source_inventory_sheet === "Lami-results2"
-      && ["A2", "A3"].includes(sample.batch_no_raw)
-      && String(sample.sample_id_raw ?? "").match(/_R(\d+)$/i)?.[1] === rReference);
-    return candidates.length === 1 ? { sampleUid: candidates[0].sample_uid, basis: "Flag box unique R-reference" } : null;
-  }
-  return null;
+  const diagnostic = referenceLinkDiagnostic(file, samples);
+  return diagnostic.status === "matched" ? { sampleUid: diagnostic.sampleUid, basis: diagnostic.basis } : null;
 }
 
 async function readCurves() {

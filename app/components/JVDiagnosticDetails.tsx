@@ -13,6 +13,7 @@ export function JVDiagnosticDetails({ diagnostic }: { diagnostic?: JVDiagnostic 
   return <details>
     <summary>JV consistency · {diagnostic.quantitativeEligible ? "no severe inconsistency detected" : "quantitative interpretation restricted"}</summary>
     <p>Consistency is not calibration. Instrument values are preserved; reconstructed values use measured points without extrapolation.</p>
+    <dl>{Object.entries(diagnostic.validation).map(([level, validated]) => <div key={level}><dt>{level}</dt><dd>{validated ? "confirmed for this check" : "unresolved / not confirmed"}</dd></div>)}</dl>
     <table><thead><tr><th>Metric</th><th>Instrument</th><th>Reconstructed</th></tr></thead><tbody>{metrics.map(([label, instrument, reconstructed]) => <tr key={label}><th>{label}</th><td>{value(instrument)}</td><td>{value(reconstructed)}</td></tr>)}</tbody></table>
     <p>Incident power: {value(diagnostic.reconstructed.incidentPower_mW_cm2)} mW/cm². Coverage: {diagnostic.reconstructed.coverage}.</p>
     <p>{diagnostic.conversion.voltageUnitInterpretation}. {diagnostic.conversion.currentUnitInterpretation}. {diagnostic.conversion.conversionApplied}.</p>

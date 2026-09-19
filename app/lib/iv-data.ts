@@ -72,6 +72,11 @@ export interface IVFile {
 }
 
 export interface Measurement {
+  scientific_validation?: {
+    units?: import("./jv-validation").ValidationEvidence;
+    range?: import("./jv-validation").ValidationEvidence;
+    experiment?: import("./jv-validation").ValidationEvidence;
+  };
   incident_power_mW_cm2?: number | null;
   pmpp_mW_cm2?: number | null;
   voltage_unit_interpretation?: string | null;

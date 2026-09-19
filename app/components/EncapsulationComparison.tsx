@@ -76,11 +76,13 @@ function makeCurveSeries(pair: EncapsulationCurvePair, dataset: IVDataset, color
 
 function EncapsulationJVComparison({ dataset, pairs, selections }: { dataset: IVDataset; pairs: EncapsulationCurvePair[]; selections: { material: string; color: string }[] }) {
   const [requestedSampleUid, setRequestedSampleUid] = useState<string | null>(null);
+  const [inspectUnresolved, setInspectUnresolved] = useState(false);
+  const inspectionControl = <label><input type="checkbox" checked={inspectUnresolved} onChange={event => setInspectUnresolved(event.target.checked)} /> Inspect unresolved JV pairs (not quantitatively validated)</label>;
   const diagnostics = getJVDiagnostics(dataset);
   // The inventory pairing and its date coverage remain independent of JV eligibility.
-  pairs = pairs.filter(pair => diagnostics.get(pair.beforeMeasurement.measurement_uid)?.quantitativeEligible && diagnostics.get(pair.afterMeasurement.measurement_uid)?.quantitativeEligible);
+  pairs = pairs.filter(pair => inspectUnresolved || (diagnostics.get(pair.beforeMeasurement.measurement_uid)?.quantitativeEligible && diagnostics.get(pair.afterMeasurement.measurement_uid)?.quantitativeEligible));
   const pair = pairs.find((item) => item.sample.sample_uid === requestedSampleUid) ?? pairs[0] ?? null;
-  if (!pair) return <section className="chart-card encapsulation-jv"><div className="chart-title"><strong>JV diagnostic · before / after encapsulation</strong></div><div className="missing-selection"><strong>No unambiguous raw JV pair</strong><span>The distribution chart remains available, but no QA-valid before/after curve pair can be linked to the selected materials.</span></div></section>;
+  if (!pair) return <section className="chart-card encapsulation-jv"><div className="chart-title"><strong>JV diagnostic · before / after encapsulation</strong></div><div className="missing-selection">{inspectionControl}<strong>No quantitatively validated JV pair</strong><span>The PCE distribution remains available. Raw pairs can be inspected explicitly; unresolved units or acquisition ranges are not validated.</span></div></section>;
   const color = selections.find((item) => item.material === pair.sample.material_family)?.color ?? "#3469d4";
   const series = makeCurveSeries(pair, dataset, color);
   const metrics = [
@@ -101,13 +103,15 @@ function EncapsulationJVComparison({ dataset, pairs, selections }: { dataset: IV
   const diagnosticHelp = `Measured JV curves from the same physical cell are compared before and after encapsulation. At each stage, the QA-valid raw sweep closest to the independently recorded PCE is used. Exact sweep IDs: ${pair.beforeMeasurement.measurement_uid} → ${pair.afterMeasurement.measurement_uid}. This is a mechanism-screening view, not an isolated causal estimate of the process.`;
   return <section className="chart-card encapsulation-jv" aria-label="JV comparison before and after encapsulation">
     <div className="chart-title"><div className="trend-panel-title"><strong>JV diagnostic · same cell before / after encapsulation</strong><InfoTip text={diagnosticHelp} align="left" /></div></div>
+    {inspectionControl}
+    {inspectUnresolved && <p role="status">Inspection only: units, acquired range or experimental validation may be unresolved. Do not interpret these curves as validated quantitative evidence.</p>}
     <div className="encapsulation-jv-controls">
       <label>Physical cell<select value={pair.sample.sample_uid} onChange={(event) => setRequestedSampleUid(event.target.value)}>{pairs.map((item) => <option value={item.sample.sample_uid} key={item.sample.sample_uid}>{item.sample.material_raw || item.sample.material_family} · batch {item.sample.batch_no_raw || "—"} · {item.sample.sample_id_raw || item.sample.sample_uid} · {item.sample.recipe_raw || "process n/a"}</option>)}</select></label>
       <div><b>{pair.sample.material_raw || pair.sample.material_family}</b><span>Batch {pair.sample.batch_no_raw || "—"} · {recipe}{pair.sample.electrode && pair.sample.electrode !== "Cu" ? ` · ${pair.sample.electrode}` : ""}</span></div>
       <div><b>{formatDate(pair.beforeFile.measurement_date)} → {formatDate(pair.sample.encapsulation_date)} → {formatDate(pair.afterMeasurement.measurement_date)}</b><span>Before measurement · encapsulation · after measurement{postDays === null ? "" : ` · ${postDays} d after encapsulation`}</span></div>
     </div>
     <div className="chart-title encapsulation-jv-legend">{series.map((item) => <span key={item.id}><svg className="legend-stroke" viewBox="0 0 24 8" aria-hidden="true"><line x1="1" x2="23" y1="4" y2="4" stroke={item.color} strokeWidth="3" strokeDasharray={item.linePattern} /></svg>{item.label}</span>)}</div>
-    <CurveChart series={series} yAxisLabel="Generated J (mA/cm²)" currentConvention="pv" showPoints={false} showLandmarks scaleMode="primary" />
+    <CurveChart series={series} yAxisLabel="Generated J (mA/cm²)" currentConvention="pv" showPoints={false} showLandmarks scaleMode="primary" exportContext={{ qa: { inspectUnresolved }, validation: { quantitativeValidated: [pair.beforeMeasurement, pair.afterMeasurement].every(m => diagnostics.get(m.measurement_uid)?.quantitativeEligible) }, seriesMetadata: Object.fromEntries([pair.beforeMeasurement, pair.afterMeasurement].map(m => [m.measurement_uid, { measurement: m, diagnostics: diagnostics.get(m.measurement_uid) }])) }} />
     <div className="table-scroll"><table><thead><tr><th>Metric</th><th>Before sweep</th><th>After sweep</th><th>Δ after − before</th></tr></thead><tbody>{metrics.map(([label, key, unit, digits]) => {
       const before = metricValue(pair.beforeMeasurement, key);
       const after = metricValue(pair.afterMeasurement, key);

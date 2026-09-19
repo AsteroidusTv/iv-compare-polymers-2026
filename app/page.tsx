@@ -736,6 +736,7 @@ export default function Home() {
   const figureContext = {
     dataset: { name: dataset?.name, schemaVersion: dataset?.schemaVersion, provenance: dataset?.provenance, packageSha256: dataset ? datasetPackageHash(dataset) : null },
     sourceCode: buildIdentity,
+    validation: { quantitativeValidated: curveSelections.length > 0 && curveSelections.every(selection => jvDiagnostics.get(selection.measurement.measurement_uid)?.quantitativeEligible) },
     filters: seriesConfigs,
     qa: { includeFlagged: includeQa, inspectUnsafeJV },
     normalization: { mode, outdoorBaselineDays: outdoorWindow },

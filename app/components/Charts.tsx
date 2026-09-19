@@ -628,7 +628,7 @@ export function CurveChart({
   const sy = (value: number) => height - margin.bottom - ((value - yMin) / (yMax - yMin || 1)) * (height - margin.top - margin.bottom);
   const xTicks = ticks(xMin, xMax);
   const yTicks = ticks(yMin, yMax);
-  const exportTitle = `IV curves — ${yAxisLabel}`;
+  const exportTitle = `${exportContext.validation?.quantitativeValidated === false ? "UNVALIDATED INSPECTION — " : ""}IV curves — ${yAxisLabel}`;
   const exportSubtitle = `${currentConvention === "instrument" ? "Instrument current convention" : "Photovoltaic current convention"} · measured points connected in acquisition order · no smoothing`;
   const exportStem = exportFileStem("iv-curves", series);
   const manifest = figureManifest({ kind: "jv", title: exportTitle, caption: `${exportTitle}. ${exportSubtitle}.`, context: exportContext,
