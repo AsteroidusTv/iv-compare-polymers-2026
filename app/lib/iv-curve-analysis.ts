@@ -61,8 +61,8 @@ function segmentScore(segment: IVSegment, expectedVoc?: number | null): number {
   return score;
 }
 
-export function analyzeIVCurve(input: Array<{ x: number; y: number }>, expectedVoc?: number | null): IVCurveAnalysis {
-  const points: IVPoint[] = input.map((point, sourceIndex) => ({ ...point, sourceIndex }));
+export function analyzeIVCurve(input: Array<{ x: number; y: number; sourceIndex?: number }>, expectedVoc?: number | null): IVCurveAnalysis {
+  const points: IVPoint[] = input.map((point, index) => ({ ...point, sourceIndex: point.sourceIndex ?? index }));
   if (points.length < 2) {
     const segment: IVSegment = { id: "segment-1", points, startIndex: 0, endIndex: Math.max(0, points.length - 1), breakReason: "start" };
     return { segments: points.length ? [segment] : [], primaryIndex: 0, rawPointCount: points.length, primaryPointCount: points.length, jumpCount: 0, directionChangeCount: 0 };

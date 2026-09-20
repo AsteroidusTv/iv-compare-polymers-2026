@@ -11,6 +11,8 @@ export interface FigureExportContext {
   seriesMetadata?: Record<string, unknown>;
   sourceCode?: unknown;
   validation?: { quantitativeValidated: boolean };
+  analysisTrace?: Record<string, import("./normalization-trace").NormalizationTrace[]>;
+  missingness?: { seriesId: string; rows: { sampleUid: string; time: number; exclusionReasons: string[] }[] }[];
   [key: string]: unknown;
 }
 export interface FigureBounds { xMin: number; xMax: number; yMin: number; yMax: number }
@@ -29,9 +31,18 @@ export interface FigureManifest {
   preset: "publication-white";
   series: TrendSeries[] | CurveSeries[];
   display: Record<string, unknown>;
+  exclusions?: { seriesId: string; observationId: string; sampleUid: string; reasons: string[] }[];
 }
 export function figureManifest(input: Omit<FigureManifest, "schemaVersion" | "generatedAt" | "preset">): FigureManifest {
-  return { schemaVersion: "iv-compare-figure/1", generatedAt: new Date().toISOString(), preset: "publication-white", ...input };
+  const exclusions = Object.entries(input.context.analysisTrace ?? {}).flatMap(([seriesId, traces]) => traces.flatMap(trace => {
+    const reasons = [...trace.exclusions];
+    const time = trace.observation.test_type === "Unaged" ? 0 : trace.observation.exposure_duration_numeric;
+    const missingness = input.context.missingness?.find(group => group.seriesId === seriesId)?.rows.find(row => row.sampleUid === trace.observation.sample_uid && row.time === time);
+    reasons.push(...(missingness?.exclusionReasons ?? []));
+    if (input.analyticLimit.maximumX !== null && typeof time === "number" && time > input.analyticLimit.maximumX) reasons.push("outside_graph_end");
+    return reasons.length ? [{seriesId, observationId:trace.observation.observation_uid, sampleUid:trace.observation.sample_uid, reasons:[...new Set(reasons)]}] : [];
+  }));
+  return { schemaVersion: "iv-compare-figure/1", generatedAt: new Date().toISOString(), preset: "publication-white", ...input, exclusions };
 }
 function cell(value: unknown): string {
   let text = value === null || value === undefined ? "" : typeof value === "object" ? JSON.stringify(value) : String(value);
@@ -45,7 +56,8 @@ function inViewport(x: number, y: number, bounds: FigureBounds): boolean {
 export function figureCsv(manifest: FigureManifest): string {
   const shared = { figure_kind: manifest.kind, x_unit: manifest.xUnit, y_unit: manifest.yUnit,
     analytic_maximum_x: manifest.analyticLimit.maximumX, viewport: manifest.viewport,
-    intervals_visible: manifest.intervalsVisible, context: manifest.context, display: manifest.display };
+    intervals_visible: manifest.intervalsVisible, context: { dataset: manifest.context.dataset, sourceCode: manifest.context.sourceCode,
+      filters: manifest.context.filters, qa: manifest.context.qa, normalization: manifest.context.normalization, aggregation: manifest.context.aggregation }, display: manifest.display };
   const rows: Record<string, unknown>[] = [];
   if (manifest.kind === "trend") {
     for (const series of manifest.series as TrendSeries[]) for (const point of series.points) {
@@ -77,4 +89,14 @@ export function figureCsv(manifest: FigureManifest): string {
   }
   const columns = [...new Set(rows.flatMap((row) => Object.keys(row)))];
   return [columns.map(cell).join(","), ...rows.map((row) => columns.map((key) => cell(row[key])).join(","))].join("\r\n");
+}
+
+/** Full configured selection before graph end, visual hiding or cohort exclusions. */
+export function fullSelectionCsv(context: FigureExportContext): string {
+  const columns = ["series_id", "sample_uid", "observation_uid", "protocol", "time", "absolute_value", "normalized_value", "baseline", "rule", "QA_reasons", "initial_exclusions", "raw_observation", "dataset", "source_code"];
+  const rows = Object.entries(context.analysisTrace ?? {}).flatMap(([seriesId, traces])=>traces.map(trace=>[
+    seriesId, trace.observation.sample_uid, trace.observation.observation_uid, trace.observation.test_type, trace.observation.exposure_duration_numeric,
+    trace.absoluteValue, trace.value, trace.baseline, trace.rule, trace.qaReasons, trace.exclusions, trace.observation, context.dataset, context.sourceCode,
+  ]));
+  return [columns,...rows].map(row=>row.map(cell).join(",")).join("\r\n");
 }

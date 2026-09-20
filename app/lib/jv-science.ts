@@ -100,7 +100,7 @@ export function getJVDiagnostics(dataset: IVDataset): ReadonlyMap<string, JVDiag
   const fileSources = new Map(dataset.files.map(f => [f.file_uid, f.source_file || f.file_uid]));
   for (const row of dataset.measurements) {
     const curve = dataset.curves[row.measurement_uid];
-    const points = curve ? curve.v.flatMap((x, i) => finite(x) && finite(curve.j[i]) ? [{ x, y: curve.j[i] as number }] : []) : [];
+    const points = curve ? curve.v.flatMap((x, i) => finite(x) && finite(curve.j[i]) ? [{ x, y: curve.j[i] as number, sourceIndex: i }] : []) : [];
     const analysis = analyzeIVCurve(points, row.voc_V); analyses.set(row.measurement_uid, analysis);
     for (const segment of analysis.segments) segmentInputs.push({ id: `${row.measurement_uid}:${segment.id}`, file: fileSources.get(row.file_uid) || row.file_uid, points: segment.points });
   }
@@ -112,8 +112,10 @@ export function getJVDiagnostics(dataset: IVDataset): ReadonlyMap<string, JVDiag
       const repeat = repeated.get(`${row.measurement_uid}:${s.id}`)!;
       return { index, status: repeat.independentFiles >= REPEAT_RULES.minimumIndependentFiles ? "suspected_export_residue" : evidenceValidated(row.scientific_validation?.range, row.measurement_uid, s.id) ? "acquired" : "unresolved", repeatedFileCount: repeat.independentFiles, detection: repeat.detection };
     });
-    // Prefer the first non-residue branch in acquisition order, not imported-Voc resemblance.
-    const primaryIndex = original.segments.findIndex((s, i) => s.points.length >= 2 && segments[i].status !== "suspected_export_residue");
+    // Explicit, targeted acquisition evidence takes precedence; otherwise inspect
+    // the first non-residue branch without treating it as acquired.
+    const acquiredIndex = original.segments.findIndex((s, i) => s.points.length >= 2 && segments[i].status === "acquired");
+    const primaryIndex = acquiredIndex >= 0 ? acquiredIndex : original.segments.findIndex((s, i) => s.points.length >= 2 && segments[i].status !== "suspected_export_residue");
     const analysis = { ...original, primaryIndex, primaryPointCount: original.segments[primaryIndex]?.points.length ?? 0 };
     const reconstructed = reconstructJVMetrics(original.segments[primaryIndex]?.points ?? [], row.incident_power_mW_cm2);
     const instrument = { jsc_mA_cm2: finite(row.jsc_mA_cm2) ? row.jsc_mA_cm2 : null, voc_V: finite(row.voc_V) ? row.voc_V : null, ff_pct: finite(row.ff_pct) ? row.ff_pct : null, efficiency_pct: finite(row.efficiency_pct) ? row.efficiency_pct : null, pmpp_mW_cm2: finite(row.pmpp_mW_cm2) ? row.pmpp_mW_cm2 : null };
@@ -137,7 +139,7 @@ export function getJVDiagnostics(dataset: IVDataset): ReadonlyMap<string, JVDiag
     if (!validation.experimentallyValidated) issues.push("Experimental validation unresolved.");
     if (row.qa_flags) issues.push(`Source QA: ${row.qa_flags}`);
     result.set(row.measurement_uid, { measurementUid: row.measurement_uid, analysis, segments, instrument, reconstructed, currentDensityStatus: currentMismatch ? "suspicious_surface_or_units" : reconstructed.jsc_mA_cm2 !== null && instrument.jsc_mA_cm2 !== null ? "consistent_not_calibrated" : "unresolved", quantitativeEligible: primaryIndex >= 0 && numericallyConsistent && validation.unitValidated && validation.rangeValidated && validation.experimentallyValidated && !row.qa_flags, validation, consistency, issues,
-      conversion: { voltageUnitInterpretation: row.voltage_unit_interpretation || "Pack V; original unit interpretation not recorded", currentUnitInterpretation: row.current_unit_interpretation || "Pack generated mA/cm²; original conversion not independently documented", surfaceUsed: row.cell_area_cm2 ?? null, conversionApplied: row.conversion_applied || "Legacy pack transformation retained, not altered", conversionConfidence: row.conversion_applied ? "documented" : "legacy_unverified" } });
+      conversion: { voltageUnitInterpretation: row.voltage_unit_interpretation || "Pack V; original unit interpretation not recorded", currentUnitInterpretation: row.current_unit_interpretation || "Pack generated mA/cm²; original conversion not independently documented", surfaceUsed: row.cell_area_cm2 ?? null, conversionApplied: row.conversion_applied || "Legacy pack transformation retained, not altered", conversionConfidence: validation.unitValidated ? "documented" : "legacy_unverified" } });
   }
   cache.set(dataset, result); return result;
 }

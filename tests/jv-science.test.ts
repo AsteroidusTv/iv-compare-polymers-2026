@@ -79,6 +79,7 @@ test("legacy conversion text and numerical consistency never confer validation",
   const diagnostic = getJVDiagnostics(dataset).get("M1")!;
   assert.equal(diagnostic.validation.numericallyConsistent, true);
   assert.equal(diagnostic.validation.unitValidated, false);
+  assert.equal(diagnostic.conversion.conversionConfidence, "legacy_unverified");
   assert.equal(diagnostic.validation.rangeValidated, false);
   assert.equal(diagnostic.validation.experimentallyValidated, false);
   assert.equal(diagnostic.quantitativeEligible, false);
@@ -93,4 +94,12 @@ test("quantitative eligibility requires targeted evidence for all validation lev
   const mismatch = structuredClone(dataset);
   mismatch.measurements[0].scientific_validation!.range = { ...evidence, segment_id: "another-segment" };
   assert.equal(getJVDiagnostics(mismatch).get("M1")!.quantitativeEligible, false);
+});
+
+test("missing JV values do not renumber original source point indices", () => {
+  const dataset = fixture();
+  dataset.measurements = [dataset.measurements[0]];
+  dataset.curves.M1.j[4] = null;
+  const diagnostic = getJVDiagnostics(dataset).get("M1")!;
+  assert.equal(diagnostic.analysis.segments[0].points[4].sourceIndex, 5);
 });

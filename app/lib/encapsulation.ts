@@ -27,6 +27,19 @@ export function meanPairedRelativeChange(pairs: EncapsulationPair[]) {
   return changes.length ? changes.reduce((sum, value) => sum + value, 0) / changes.length : null;
 }
 
+/** Summarise individual paired deltas, never substitute a change of means. */
+export function pairedChanges(pairs: EncapsulationPair[]) {
+  const individual = pairs.map(pair => ({ sampleUid: pair.sampleUid, absolute: pair.after - pair.before,
+    relative: pair.before === 0 ? null : (pair.after - pair.before) / pair.before * 100 }));
+  const summarize = (values: number[]) => ({ n: values.length,
+    mean: values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null,
+    median: values.length ? quantile(values, 0.5) : null });
+  const totalBefore = pairs.reduce((sum, pair) => sum + pair.before, 0);
+  return { individual, absolute: summarize(individual.map(row => row.absolute)),
+    relative: summarize(individual.flatMap(row => row.relative === null ? [] : [row.relative])),
+    relativeChangeOfGroupMeans: totalBefore === 0 ? null : pairs.reduce((sum, pair) => sum + pair.after - pair.before, 0) / totalBefore * 100 };
+}
+
 export function pairedMeasurementDayRange(pairs: EncapsulationPair[]) {
   const days = pairs.flatMap((pair) => {
     if (!pair.beforeMeasurementDate) return [];

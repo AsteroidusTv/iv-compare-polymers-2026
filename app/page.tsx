@@ -4,7 +4,7 @@ import { DragEvent, Fragment, useCallback, useEffect, useMemo, useRef, useState 
 import { CurveChart, CurveSeries, TrendChart, TrendPoint, TrendSeries } from "./components/Charts";
 import { EncapsulationComparison } from "./components/EncapsulationComparison";
 import { JVDiagnosticDetails } from "./components/JVDiagnosticDetails";
-import { labQualityIssues, labObservationEligible } from "./lib/lab-quality";
+import { labQualityIssues } from "./lib/lab-quality";
 import { ageingSampleCandidates, resolveAgeingTimes, toggleAgeingTime } from "./lib/iv-ageing";
 import { FieldTitle, InfoTip } from "./components/InfoTip";
 import {
@@ -19,13 +19,16 @@ import {
 import { getJVDiagnostics, chooseSpecimenFirstMeasurement, type JVDiagnostic } from "./lib/jv-science";
 import { materialStyle } from "./lib/material-style";
 import { buildIdentity } from "./lib/build-identity";
+import { normalizationTraces } from "./lib/normalization-trace";
+import { missingnessTable } from "./lib/missingness";
+import { fullSelectionCsv } from "./lib/figure-export";
+import { downloadFigureFile } from "./lib/browser-figure-download";
 import { analysisGroups, cohortTimeline, type AnalysisGrouping } from "./lib/cohort";
 import { describeGraphElectrode } from "./lib/chart-export";
 import { resolveSelectedSampleIds, toggleSelectedSampleId } from "./lib/sample-selection";
 import {
   measurementQualityReasons,
   numeric,
-  outdoorBaseline,
   outdoorQualityReason,
   summarise,
   TimedValue,
@@ -214,7 +217,6 @@ export default function Home() {
   const comparisonMaterials = useMemo(() => seriesConfigs.map((config) => config.material).filter(Boolean), [seriesConfigs]);
   const sampleMap = useMemo(() => new Map(dataset?.samples.map((sample) => [sample.sample_uid, sample]) ?? []), [dataset]);
   const jvDiagnostics = useMemo<ReadonlyMap<string, JVDiagnostic>>(() => dataset ? getJVDiagnostics(dataset) : new Map(), [dataset]);
-  const observationMap = useMemo(() => new Map(dataset?.observations.map((item) => [item.observation_uid, item]) ?? []), [dataset]);
   const samplePasses = useCallback((sampleId: string | null | undefined, config: SeriesConfig) => dataset ? seriesSamplePasses(dataset, sampleId, config) : false, [dataset]);
 
   const outdoorQualityByMetric = useMemo(() => {
@@ -268,51 +270,34 @@ export default function Home() {
     return [...issues.values()];
   }, [seriesConfigs, outdoorQualityByMetric, samplePasses]);
 
+  const normalizationBySeries = useMemo(() => new Map(seriesConfigs.map(config => {
+    const issues = new Map(labQualityByMetric.get(config.metric) ?? []);
+    outdoorQualityByMetric.get(config.metric)?.forEach((issue, id) => issues.set(id, issue.reason));
+    return [config.id, dataset ? normalizationTraces(dataset, {
+      sampleUids: dataset.samples.filter(sample => samplePasses(sample.sample_uid, config)).map(sample => sample.sample_uid),
+      protocol: config.stress, metric: config.metric, mode, includeQa, outdoorWindow, qaIssues: issues,
+    }) : []];
+  })), [dataset, seriesConfigs, labQualityByMetric, outdoorQualityByMetric, samplePasses, mode, includeQa, outdoorWindow]);
+
   const trendSeries = useMemo<ContextTrendSeries[]>(() => {
     if (!dataset) return [];
-    const observations = [...dataset.observations].sort((left, right) => (left.exposure_duration_numeric ?? Number.POSITIVE_INFINITY) - (right.exposure_duration_numeric ?? Number.POSITIVE_INFINITY));
-    const baselineCache = new Map<string, ReturnType<typeof outdoorBaseline>>();
-    const baselineFor = (config: SeriesConfig, sampleUid: string): ReturnType<typeof outdoorBaseline> => {
-      const key = `${config.id}:${sampleUid}`;
-      if (baselineCache.has(key)) return baselineCache.get(key)!;
-      if (config.stress === "Outdoor") {
-        const qualityIssues = outdoorQualityByMetric.get(config.metric);
-        const values = observations.filter((observation) => observation.sample_uid === sampleUid && observation.test_type === "Outdoor" && !qualityIssues?.has(observation.observation_uid)).map((observation) => observation[config.metric]).filter(numeric).slice(0, 14);
-        const baseline = outdoorBaseline(values, outdoorWindow);
-        baselineCache.set(key, baseline);
-        return baseline;
-      }
-      const baseline = observations.find((observation) => observation.sample_uid === sampleUid && observation.test_type === "Unaged" && numeric(observation[config.metric]) && labObservationEligible(observation, labQualityByMetric.get(config.metric) ?? new Map(), includeQa))?.[config.metric];
-      const value = numeric(baseline) ? baseline : null;
-      const result = { value, count: value === null ? 0 : 1, sensitivityPct: null };
-      baselineCache.set(key, result);
-      return result;
-    };
     const build = (config: SeriesConfig, index: number): ContextTrendSeries => {
       const color = materialStyle(config.material).color;
       const groups = new Map<number, TrendPoint["members"]>();
       const baselineWarnings = new Set<string>();
-      dataset.observations.forEach((observation) => {
-        if (observation.test_type !== config.stress || !samplePasses(observation.sample_uid, config)) return;
-        const raw = observation[config.metric];
-        if (!numeric(raw)) return;
-        if (!labObservationEligible(observation, labQualityByMetric.get(config.metric) ?? new Map(), includeQa) || (!includeQa && outdoorQualityByMetric.get(config.metric)?.has(observation.observation_uid))) return;
+      (normalizationBySeries.get(config.id) ?? []).forEach(trace => {
+        const observation = trace.observation;
+        if (trace.baseline && trace.baseline.status !== "valid") baselineWarnings.add(`${observation.sample_uid}: ${trace.baseline.status}`);
+        if (trace.baseline?.low) baselineWarnings.add(`${observation.sample_uid}: low initial PCE; inspect absolute values`);
+        if (numeric(trace.baseline?.sensitivityPct) && trace.baseline.sensitivityPct > 5) baselineWarnings.add(`${observation.sample_uid}: baseline-window sensitivity ${trace.baseline.sensitivityPct.toFixed(1)}%`);
+        if (trace.value === null) return;
+        const value = trace.value;
         const x = config.stress === "Unaged" ? 0 : observation.exposure_duration_numeric;
         if (!numeric(x)) return;
-        let value = raw;
-        if (mode === "retention") {
-          const baseline = baselineFor(config, observation.sample_uid);
-          if (!numeric(baseline.value) || baseline.value === 0) {
-            baselineWarnings.add(`${observation.sample_uid}: reference ${baseline.value === 0 ? "zero" : "missing or QA-excluded"}; retention unavailable`);
-            return;
-          }
-          if (config.metric === "efficiency_pct" && baseline.value < 0.5) baselineWarnings.add(`${observation.sample_uid}: low PCE reference ${baseline.value}%; inspect absolute metrics`);
-          if (numeric(baseline.sensitivityPct) && baseline.sensitivityPct > 5) baselineWarnings.add(`${observation.sample_uid}: ${numberFormat.format(baseline.sensitivityPct)}% baseline-window sensitivity`);
-          value = config.stress === "Unaged" ? 100 : (raw / baseline.value) * 100;
-        }
         const members = groups.get(x) ?? [];
         const sample = sampleMap.get(observation.sample_uid);
         members.push({
+          trace,
           observationId: observation.observation_uid,
           sampleUid: observation.sample_uid,
           sampleLabel: sample?.sample_label || sample?.sample_id_raw || observation.sample_uid,
@@ -344,7 +329,7 @@ export default function Home() {
       return { id: config.id, label: `${String.fromCharCode(65 + index)} · ${config.material}`, color, points, config, xUnit: timeUnit(config.stress), yUnit: mode === "retention" ? "% of reference" : METRICS[config.metric].unit, contextLabel, exportLabel: config.material, exportLegendKey: config.id, baselineWarnings: [...baselineWarnings], sampleSetChanges: signatures.size > 1 };
     };
     return seriesConfigs.map(build);
-  }, [dataset, seriesConfigs, mode, aggregation, samplePasses, sampleMap, includeQa, outdoorQualityByMetric, labQualityByMetric, outdoorWindow]);
+  }, [dataset, seriesConfigs, mode, aggregation, sampleMap, normalizationBySeries]);
 
   const sharedCurveStress = seriesConfigs.length && seriesConfigs.every((config) => config.stress === seriesConfigs[0].stress) ? seriesConfigs[0].stress : null;
   const curveXUnit = sharedCurveStress ? timeUnit(sharedCurveStress) : "";
@@ -519,6 +504,21 @@ export default function Home() {
     };
   });
   const selectedUnsplitSeries = filteredTrendSeries;
+  const missingness = seriesConfigs.map(config => {
+    const traces = normalizationBySeries.get(config.id) ?? [];
+    const requested = trendSampleFilters[config.id];
+    const excludedSampleUids = requested === undefined ? [] : [...new Set(traces.map(trace=>trace.observation.sample_uid))].filter(id=>!requested.includes(id));
+    const points = filteredTrendSeries.find(series=>series.id===config.id)?.points ?? [];
+    const rows = missingnessTable(traces, { protocol: config.stress, excludedSampleUids }).map(row => {
+      const reasons = [...row.exclusionReasons];
+      if (cohortMode === "constant") {
+        if (row.time < cohortStart || row.time > cohortEnd) reasons.push("outside_cohort_window");
+        else if (!points.some(point=>point.members.some(member=>member.sampleUid===row.sampleUid))) reasons.push("not_in_constant_cohort");
+      }
+      return { ...row, contributes: row.contributes && reasons.length === 0, exclusionReasons: reasons };
+    });
+    return { seriesId: config.id, protocol: config.stress, metric: config.metric, rows };
+  });
   const selectedTrendSeries: ContextTrendSeries[] = selectedUnsplitSeries.flatMap((series) => {
     const ids = new Set(series.points.flatMap((point) => point.members.map((member) => member.sampleUid)));
     const groups = analysisGroups((dataset?.samples ?? []).filter((sample) => ids.has(sample.sample_uid)), grouping);
@@ -593,12 +593,14 @@ export default function Home() {
   });
   const selectAllTrendSamples = (seriesId: SeriesId) => {
     setTrendDisplay("samples");
+    setCohortMode("available");
     setHiddenSeries(new Set());
     setTrendSampleFilters((current) => Object.fromEntries(Object.entries(current).filter(([key]) => key !== seriesId)));
   };
   const toggleTrendSample = (seriesId: SeriesId, sampleId: string) => {
     const availableIds = (trendSampleOptions[seriesId] ?? []).map((member) => member.sampleUid);
     setTrendDisplay("samples");
+    setCohortMode("available");
     setHiddenSeries(new Set());
     setTrendSampleFilters((current) => {
       const nextSelection = toggleSelectedSampleId(availableIds, current[seriesId], sampleId);
@@ -649,59 +651,7 @@ export default function Home() {
   })();
 
   const exportTrend = () => {
-    if (!dataset || !selectedTrendSeries.length) return;
-    const rows = [
-      ["dataset", "schema_version", "generated_on", "pipeline_version", "series", "material", "ageing_protocol", "electrode", "recipe_uid", "metric_key", "metric", "time", "time_unit", "value_mode", "aggregation", "aggregate_value", "interval_low", "interval_high", "interval_type", "min", "max", "n", "sample_uid", "sample_label", "sample_reference", "batch", "observation_uid", "member_value", "selected_for_display", "source_file", "source_row", "qa_flag", "baseline_policy", "qa_included"],
-      ...selectedTrendSeries.flatMap((series) => series.points.flatMap((point) => {
-        return point.members.map((member) => {
-          const observation = observationMap.get(member.observationId);
-          const sampleRecord = sampleMap.get(member.sampleUid);
-          return [
-            dataset.name,
-            dataset.schemaVersion,
-            dataset.generatedOn ?? "",
-            dataset.provenance?.pipelineVersion ?? "unknown",
-            series.label,
-            series.config.material,
-            series.config.stress,
-            sampleRecord?.electrode ?? "",
-            sampleRecord?.recipe_uid ?? "",
-            series.config.metric,
-            METRICS[series.config.metric].label,
-            point.x,
-            series.xUnit,
-            mode,
-            aggregation,
-            point.y,
-            point.intervalLow,
-            point.intervalHigh,
-            point.intervalLabel,
-            point.min,
-            point.max,
-            point.n,
-            member.sampleUid,
-            member.sampleLabel,
-            member.sampleReference,
-            member.batchNo ?? "",
-            member.observationId,
-            member.value,
-            true,
-            observation?.source_file ?? "",
-            observation?.source_row ?? "",
-            observation?.data_quality_flag ?? "",
-            mode === "retention" ? (series.config.stress === "Outdoor" ? `median within first ${outdoorWindow} days; minimum 3 valid observations` : "same-sample Unaged reference") : "not applicable",
-            includeQa,
-          ];
-        });
-      })),
-    ];
-    const csv = rows.map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(";")).join("\n");
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `condition-comparison-${comparisonMaterials.join("-")}.csv`.replaceAll(/[^a-zA-Z0-9.-]+/g, "-");
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadFigureFile(fullSelectionCsv(figureContext), "iv-compare-full-selected.csv", "text/csv;charset=utf-8");
   };
 
   const report = dataset?.report;
@@ -738,6 +688,9 @@ export default function Home() {
     sourceCode: buildIdentity,
     validation: { quantitativeValidated: curveSelections.length > 0 && curveSelections.every(selection => jvDiagnostics.get(selection.measurement.measurement_uid)?.quantitativeEligible) },
     filters: seriesConfigs,
+    analysisTrace: Object.fromEntries(normalizationBySeries),
+    selectedSamples: activeTrendSampleIds,
+    missingness,
     qa: { includeFlagged: includeQa, inspectUnsafeJV },
     normalization: { mode, outdoorBaselineDays: outdoorWindow },
     aggregation: { method: aggregation, grouping },
@@ -814,7 +767,7 @@ export default function Home() {
           </div>
           <InfoTip text={HELP.retention} align="left" />
           <div className="segmented" aria-label="Trend display">
-            <button className={trendDisplay === "samples" ? "active" : ""} onClick={() => { setTrendDisplay("samples"); setHiddenSeries(new Set()); }}>Individual samples</button>
+            <button className={trendDisplay === "samples" ? "active" : ""} onClick={() => { setTrendDisplay("samples"); setCohortMode("available"); setHiddenSeries(new Set()); }}>Individual samples</button>
             <button className={trendDisplay === "aggregate" ? "active" : ""} onClick={() => { setTrendDisplay("aggregate"); setHiddenSeries(new Set()); }}>{aggregation === "mean" ? "Mean" : "Median"}</button>
           </div>
           <InfoTip text={HELP.traceDisplay} align="left" />
@@ -827,7 +780,7 @@ export default function Home() {
         }
         {view === "trend" && <section className="control-row" aria-label="Scientific analysis controls">
           <label>Analysis grouping<select value={grouping} onChange={(event) => setGrouping(event.target.value as AnalysisGrouping)}><option value="conservative">Formulation + batch + recipe + electrode (default)</option><option value="material">Material family (explicit pooling)</option><option value="formulation">Formulation</option><option value="batch">Batch</option><option value="recipe">Recipe</option><option value="electrode">Electrode</option></select></label>
-          <label>Cohort<select value={cohortMode} onChange={(event) => setCohortMode(event.target.value as "available" | "constant")}><option value="available">Available observations</option><option value="constant">Constant cohort — diagnostic</option></select></label>
+          <label>Cohort<select value={trendDisplay === "samples" ? "individual" : cohortMode} onChange={(event) => { const value = event.target.value; setCohortMode(value === "constant" ? "constant" : "available"); setTrendDisplay(value === "individual" ? "samples" : "aggregate"); }}><option value="available">Available observations</option><option value="constant">Constant cohort — diagnostic</option><option value="individual">Individual trajectories — no pooling</option></select></label>
           {cohortMode === "constant" && <><label>Window start<input type="number" value={cohortStart} onChange={(event) => setCohortStart(Number(event.target.value))}/></label><label>Window end<input type="number" value={cohortEnd} onChange={(event) => setCohortEnd(Number(event.target.value))}/></label><span role="status">Only specimens present at every recorded time within this window contribute. Missing final measurements are not zeros; omitted specimens remain in Available observations.</span></>}
           {seriesConfigs.some((config) => config.stress === "Outdoor") && <label>Outdoor reference<select value={outdoorWindow} onChange={(event) => setOutdoorWindow(Number(event.target.value) as 3 | 7 | 14)}><option value="7">B7 — primary convention (3–7 valid days)</option><option value="3">B3 — sensitivity</option><option value="14">B14 — sensitivity</option></select></label>}
           {grouping !== "conservative" && <span role="status">Explicit pooling: formulations, batches, recipes or electrodes may differ. Inspect composition below; this is not an isolated material effect.</span>}
@@ -888,6 +841,7 @@ export default function Home() {
               {selectedTrendSeries.some((series) => series.sampleSetChanges || series.baselineWarnings.length) ? <p className="caution">{selectedTrendSeries.some((series) => series.sampleSetChanges) ? "The contributing sample set changes between some durations. " : ""}{selectedTrendSeries.flatMap((series) => series.baselineWarnings).slice(0, 2).join(" · ")}</p> : null}
             </aside>
             <section className="data-table-card">
+              <details><summary>Missingness and analytical exclusions</summary>{missingness.map(group => <div key={group.seriesId}><h4>{group.protocol} · {group.metric}</h4><table><thead><tr><th>Specimen</th><th>Time</th><th>Status</th><th>Contributes</th><th>Reasons</th></tr></thead><tbody>{group.rows.map(row => <tr key={`${row.sampleUid}:${row.time}`}><td>{row.sampleUid}</td><td>{row.time}</td><td>{row.status}</td><td>{row.contributes ? "yes" : "no"}</td><td>{row.exclusionReasons.join("; ") || "—"}</td></tr>)}</tbody></table></div>)}</details>
               <details><summary>Cohort composition · n specimens / b batches at each time</summary>{cohortDiagnostics.map(({series,timeline}) => <div key={series.id}><h4>{series.label}</h4>{timeline.map((point) => <p key={point.time}><b>{point.time} {series.xUnit} · n={point.n} · b={point.batches.length}</b> · {point.sampleUids.join(", ")} {point.entered.length ? ` · entered: ${point.entered.join(", ")}` : ""}{point.left.length ? ` · no longer contributing: ${point.left.join(", ")}` : ""}{point.apparentRecoveryRisk ? " · Apparent recovery may reflect loss of low-performing specimens rather than performance recovery." : ""}</p>)}</div>)}</details>
               <div className="section-head">
                 <div><p className="eyebrow">Aggregated values</p><h4>Displayed points</h4></div>
@@ -930,7 +884,7 @@ export default function Home() {
                       <td>{point.n > 1 ? fr.format(point.intervalHigh) : "—"}</td>
                       <td><button type="button" aria-expanded={expanded} onClick={() => toggleTrendRow(rowKey)}>{point.n}</button></td>
                     </tr>
-                    {expanded && <tr><td colSpan={7}><strong>Contributing observations</strong><ul>{point.members.map(member => <li key={member.observationId}>{member.sampleUid} · {member.sampleLabel} · {member.observationId}: {fr.format(member.value)} {series.yUnit}</li>)}</ul></td></tr>}
+                    {expanded && <tr><td colSpan={7}><strong>Contributing observations</strong><ul>{point.members.map(member => <li key={member.observationId}>{member.sampleUid} · {member.sampleLabel} · {member.observationId}: {fr.format(member.value)} {series.yUnit}{member.trace && <details><summary>Absolute value and reference</summary><p>Absolute: {member.trace.absoluteValue ?? "unavailable"} · baseline: {member.trace.baseline?.value ?? "not applicable"} · {member.trace.baseline?.definition ?? "absolute value"}</p><p>Source: {member.trace.observation.source_file} · row {member.trace.observation.source_row}. Reference observations: {member.trace.baseline?.observations.map(row=>row.observation_uid).join(", ") || "—"}</p></details>}</li>)}</ul></td></tr>}
                   </Fragment>;
                 }))}
               </tbody></table></div>

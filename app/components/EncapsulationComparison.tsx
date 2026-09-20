@@ -4,12 +4,17 @@ import { useRef, useState } from "react";
 import type { CurveSeries } from "./Charts";
 import { CurveChart } from "./Charts";
 import type { EncapsulationCurvePair, EncapsulationGroup } from "../lib/encapsulation";
-import { boxStatistics, encapsulationCurvePairs, encapsulationGroups, meanPairedRelativeChange, pairedMeasurementDayRange } from "../lib/encapsulation";
+import { boxStatistics, encapsulationCurvePairs, encapsulationGroups, meanPairedRelativeChange, pairedChanges, pairedMeasurementDayRange } from "../lib/encapsulation";
 import { pointOffsets } from "../lib/encapsulation-layout";
-import type { IVDataset, Measurement } from "../lib/iv-data";
+import { datasetPackageHash, type IVDataset, type Measurement } from "../lib/iv-data";
 import { getJVDiagnostics } from "../lib/jv-science";
+import { pairedFigureCsv, pairedFigureManifest } from "../lib/paired-export";
+import { downloadFigureFile, downloadScientificGraphic } from "../lib/browser-figure-download";
+import { buildIdentity } from "../lib/build-identity";
 import { numeric } from "../lib/science";
 import { InfoTip } from "./InfoTip";
+import { StagedAgeing } from "./StagedAgeing";
+import { SynchronizedMetrics } from "./SynchronizedMetrics";
 
 const dateFormat = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
 
@@ -111,7 +116,7 @@ function EncapsulationJVComparison({ dataset, pairs, selections }: { dataset: IV
       <div><b>{formatDate(pair.beforeFile.measurement_date)} → {formatDate(pair.sample.encapsulation_date)} → {formatDate(pair.afterMeasurement.measurement_date)}</b><span>Before measurement · encapsulation · after measurement{postDays === null ? "" : ` · ${postDays} d after encapsulation`}</span></div>
     </div>
     <div className="chart-title encapsulation-jv-legend">{series.map((item) => <span key={item.id}><svg className="legend-stroke" viewBox="0 0 24 8" aria-hidden="true"><line x1="1" x2="23" y1="4" y2="4" stroke={item.color} strokeWidth="3" strokeDasharray={item.linePattern} /></svg>{item.label}</span>)}</div>
-    <CurveChart series={series} yAxisLabel="Generated J (mA/cm²)" currentConvention="pv" showPoints={false} showLandmarks scaleMode="primary" exportContext={{ qa: { inspectUnresolved }, validation: { quantitativeValidated: [pair.beforeMeasurement, pair.afterMeasurement].every(m => diagnostics.get(m.measurement_uid)?.quantitativeEligible) }, seriesMetadata: Object.fromEntries([pair.beforeMeasurement, pair.afterMeasurement].map(m => [m.measurement_uid, { measurement: m, diagnostics: diagnostics.get(m.measurement_uid) }])) }} />
+    <CurveChart series={series} yAxisLabel="Generated J (mA/cm²)" currentConvention="pv" showPoints={false} showLandmarks scaleMode="primary" exportContext={{ dataset: { name: dataset.name, packageSha256: datasetPackageHash(dataset), provenance: dataset.provenance }, sourceCode: buildIdentity, selectedSamples: [pair.sample], analysisType: "paired-jv-inspection", qa: { inspectUnresolved }, validation: { quantitativeValidated: [pair.beforeMeasurement, pair.afterMeasurement].every(m => diagnostics.get(m.measurement_uid)?.quantitativeEligible) }, seriesMetadata: Object.fromEntries([pair.beforeMeasurement, pair.afterMeasurement].map(m => [m.measurement_uid, { measurement: m, file: dataset.files.find(file => file.file_uid === m.file_uid), diagnostics: diagnostics.get(m.measurement_uid) }])) }} />
     <div className="table-scroll"><table><thead><tr><th>Metric</th><th>Before sweep</th><th>After sweep</th><th>Δ after − before</th></tr></thead><tbody>{metrics.map(([label, key, unit, digits]) => {
       const before = metricValue(pair.beforeMeasurement, key);
       const after = metricValue(pair.afterMeasurement, key);
@@ -128,11 +133,14 @@ function EncapsulationJVComparison({ dataset, pairs, selections }: { dataset: IV
 export function EncapsulationComparison({ dataset, selections }: { dataset: IVDataset | null; selections: { material: string; color: string }[] }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [hiddenGroupKeys, setHiddenGroupKeys] = useState<Set<string>>(() => new Set());
+  const [excludedGroupKeys, setExcludedGroupKeys] = useState<Set<string>>(() => new Set());
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [deltaSummary, setDeltaSummary] = useState<"mean" | "median" | "none">("median");
   const [showMeasurementInterval, setShowMeasurementInterval] = useState(false);
   const selectedMaterials = selections.map((item) => item.material);
   const { groups: availableGroups, excluded } = encapsulationGroups(dataset?.samples ?? [], dataset?.observations ?? [], selectedMaterials, dataset?.files ?? []);
   availableGroups.sort((a, b) => selections.findIndex((item) => item.material === a.family) - selections.findIndex((item) => item.material === b.family) || a.material.localeCompare(b.material) || a.batch.localeCompare(b.batch, "en", { numeric: true }) || processOrder(a.recipe) - processOrder(b.recipe) || (a.recipe || "").localeCompare(b.recipe || "") || a.electrode.localeCompare(b.electrode));
-  const groups = availableGroups.filter((group) => !hiddenGroupKeys.has(group.key));
+  const groups = availableGroups.filter((group) => !hiddenGroupKeys.has(group.key) && !excludedGroupKeys.has(group.key));
   const missing = [...new Set(selectedMaterials)].filter((material) => !availableGroups.some((group) => group.family === material));
   const values = groups.flatMap((group) => group.pairs.flatMap((pair) => [pair.before, pair.after]));
   const min = values.length ? Math.max(0, Math.floor(Math.min(...values)) - 1) : 0;
@@ -148,19 +156,25 @@ export function EncapsulationComparison({ dataset, selections }: { dataset: IVDa
     else next.add(key);
     return next;
   });
-  const exportSvg = () => {
-    if (!svgRef.current) return;
-    const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(svgRef.current)], { type: "image/svg+xml;charset=utf-8" }));
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "encapsulation-before-after.svg";
-    anchor.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const manifest = dataset ? pairedFigureManifest(dataset, availableGroups, { selectedMaterials, hiddenGroupKeys:[...hiddenGroupKeys], excludedGroupKeys:[...excludedGroupKeys], showMeasurementInterval, colors:selections, yMin:min, yMax:max, deltaSummary }) : null;
+  const exportGraphic = async (format: "svg" | "png") => {
+    if (!svgRef.current || !manifest) return;
+    setExportError(null);
+    try { await downloadScientificGraphic(svgRef.current,width,height,manifest,"encapsulation-before-after",format); }
+    catch (error) { setExportError(error instanceof Error ? error.message : "Export failed"); }
   };
   const summaryHelp = `The same physical cells are paired before encapsulation and after encapsulation, before ageing. Open points are before; filled points are after; thin lines connect the same cell. Boxes span Q1–Q3, with the median and 1.5 × IQR whiskers. Formulation, batch and distinct recorded processes remain separate. QA-flagged or ambiguous pairs are excluded. Dates come from linked raw JV files when available. ${excluded} selected-material cells have no unique valid PCE pair.`;
   return <div className="encapsulation-workspace">
     <section className="chart-card encapsulation-summary" aria-label="Before and after encapsulation">
-      <div className="chart-title"><div className="trend-panel-title"><strong>Encapsulation · PCE (η) before / after</strong><InfoTip text={summaryHelp} align="left" /></div><button type="button" className="soft-button" disabled={!groups.length} onClick={exportSvg}>Export SVG</button></div>
+      <div className="chart-title"><div className="trend-panel-title"><strong>Encapsulation · PCE (η) before / after</strong><InfoTip text={summaryHelp} align="left" /></div><button type="button" className="soft-button" disabled={!groups.length} onClick={() => void exportGraphic("svg")}>Export SVG</button></div>
+      {manifest && <div className="control-row">
+        <button type="button" disabled={!groups.length} onClick={()=>void exportGraphic("png")}>Export PNG</button>
+        <button type="button" onClick={()=>downloadFigureFile(pairedFigureCsv(manifest,"figure"),"encapsulation.figure.csv","text/csv")}>Data shown in figure CSV</button>
+        <button type="button" onClick={()=>downloadFigureFile(pairedFigureCsv(manifest,"full-selected"),"encapsulation.full-selected.csv","text/csv")}>Full selected dataset CSV</button>
+        <button type="button" onClick={()=>downloadFigureFile(JSON.stringify(manifest,null,2),"encapsulation.figure.json","application/json")}>Figure manifest JSON</button>
+        <button type="button" onClick={()=>void navigator.clipboard.writeText(manifest.caption).catch(()=>downloadFigureFile(manifest.caption,"encapsulation.caption.txt","text/plain"))}>Copy caption</button>
+      </div>}
+      {exportError && <p role="alert">{exportError}</p>}
       {missing.length > 0 && <p role="status">No paired data for: {missing.join(" · ")}. Choose another encapsulant above.</p>}
       {availableGroups.length > 0 && <fieldset className="encapsulation-group-filter">
         <legend>Displayed batches <InfoTip text="Hide a formulation/batch group from the PCE chart, summary table, SVG export and JV diagnostic. The source data remain unchanged." align="left" /></legend>
@@ -171,8 +185,10 @@ export function EncapsulationComparison({ dataset, selections }: { dataset: IVDa
             <span>{group.material} · batch {group.batch}{showProcess ? ` · ${groupProcessLabel(group, dataset)}` : ""} · n={group.pairs.length}</span>
           </label>;
         })}</div>
+        <details><summary>Exclude groups from this analysis (reason recorded: user_excluded)</summary>{availableGroups.map(group=><label key={group.key}><input type="checkbox" checked={excludedGroupKeys.has(group.key)} onChange={()=>setExcludedGroupKeys(current=>{const next=new Set(current); if(next.has(group.key)) next.delete(group.key); else next.add(group.key); return next;})} /> Exclude {group.material} · {group.batch}</label>)}</details>
         {groups.length < availableGroups.length && <button type="button" className="soft-button" onClick={() => setHiddenGroupKeys(new Set())}>Show all</button>}
       </fieldset>}
+      {availableGroups.length > 0 && <label>Paired change summary <select value={deltaSummary} onChange={event => setDeltaSummary(event.target.value as typeof deltaSummary)}><option value="median">Median of individual changes</option><option value="mean">Mean of individual changes</option><option value="none">Individual values only</option></select></label>}
       {availableGroups.length > 0 && <label className="encapsulation-interval-toggle"><input type="checkbox" checked={showMeasurementInterval} onChange={(event) => setShowMeasurementInterval(event.target.checked)} /> Show before→after interval in chart and SVG</label>}
       {availableGroups.length > 0 && groups.length === 0 && <div className="missing-selection"><strong>No batch displayed</strong><span>Select at least one batch above to restore the chart.</span></div>}
       {groups.length > 0 && <>
@@ -186,7 +202,8 @@ export function EncapsulationComparison({ dataset, selections }: { dataset: IVDa
               const center = 100 + (index + 0.5) * (width - 120) / groups.length;
               const color = selections.find((item) => item.material === group.family)?.color ?? "#336699";
               const showProcess = groups.some((candidate) => candidate.key !== group.key && candidate.material === group.material && candidate.batch === group.batch && candidate.electrode === group.electrode);
-              const relativeChange = meanPairedRelativeChange(group.pairs);
+              const changes = pairedChanges(group.pairs);
+              const relativeChange = deltaSummary === "none" ? null : changes.relative[deltaSummary];
               const dayRange = pairedMeasurementDayRange(group.pairs);
               const dayLabel = dayRange === null ? "—" : dayRange.min === dayRange.max ? `${dayRange.min} d` : `${dayRange.min}–${dayRange.max} d`;
               const beforeOffsets = pointOffsets(group.pairs.map((pair) => y(pair.before)));
@@ -211,12 +228,13 @@ export function EncapsulationComparison({ dataset, selections }: { dataset: IVDa
                 <text x={center} y={348} textAnchor="middle" fontSize={12} fontWeight="bold">{group.material}</text>
                 {showProcess && <text x={center} y={369} textAnchor="middle" fontSize={11}>{groupProcessLabel(group, dataset)}</text>}
                 <text x={center} y={showProcess ? 390 : 371} textAnchor="middle" fontSize={11}>Batch {group.batch} · n={group.pairs.length}{group.electrode === "Cu" ? "" : ` · ${group.electrode}`}</text>
-                <text x={center} y={showProcess ? 411 : 392} textAnchor="middle" fontSize={11} fill="#5f6875">Mean ΔPCErel {relativeChange === null ? "—" : `${relativeChange >= 0 ? "+" : ""}${relativeChange.toFixed(1)}%`}</text>
+                {deltaSummary !== "none" && <text x={center} y={showProcess ? 411 : 392} textAnchor="middle" fontSize={11} fill="#5f6875">{deltaSummary === "mean" ? "Mean" : "Median"} ΔPCErel {relativeChange === null ? "—" : `${relativeChange >= 0 ? "+" : ""}${relativeChange.toFixed(1)}%`} · n={changes.relative.n}</text>}
                 {showMeasurementInterval && <text x={center} y={showProcess ? 432 : 413} textAnchor="middle" fontSize={11} fill="#5f6875">Before→after {dayLabel}</text>}
               </g>;
             })}
           </svg>
         </div>
+        <details><summary>Individual paired changes and alternative summaries</summary>{groups.map(group => { const changes = pairedChanges(group.pairs); return <div key={group.key}><h4>{group.material} / {group.batch}</h4><p>Median ΔPCE: {changes.absolute.median?.toFixed(2)} pp · Median individual relative change: {changes.relative.median?.toFixed(2) ?? "—"}% (n={changes.relative.n}) · Relative change of group means: {changes.relativeChangeOfGroupMeans?.toFixed(2) ?? "—"}%</p><table><thead><tr><th>Cell</th><th>Before (%)</th><th>After (%)</th><th>Δ (pp)</th><th>Individual Δ (%)</th><th>Before→after interval</th></tr></thead><tbody>{group.pairs.map((pair,i) => { const days = pairedMeasurementDayRange([pair]); return <tr key={pair.sampleUid}><td>{pair.sampleUid}</td><td>{pair.before}</td><td>{pair.after}</td><td>{changes.individual[i].absolute.toFixed(2)}</td><td>{changes.individual[i].relative?.toFixed(2) ?? "Unavailable: before = 0"}</td><td>{days ? `${days.min}–${days.max} d` : "Unknown"}</td></tr>; })}</tbody></table></div>; })}</details>
         <div className="table-scroll"><table><thead><tr><th>Formulation / batch</th><th>Recorded process</th><th>Paired n</th><th>Mean before (%)</th><th>Mean after (%)</th><th>Mean paired Δη (pp)</th><th>Mean paired ΔPCErel (%) <InfoTip text="Mean of the relative PCE change calculated separately for each paired cell: (after − before) / before × 100%." align="right" /></th><th>Measurement timeline <InfoTip text="Before measurement → encapsulation → after measurement. Dates appear only when the raw files link unambiguously to the same physical cell." align="right" /></th></tr></thead><tbody>{groups.map((group) => {
           const beforeDates = group.pairs.map((pair) => pair.beforeMeasurementDate).filter((value): value is string => Boolean(value));
           const encapsulationDates = group.pairs.map((pair) => pair.encapsulationDate).filter((value): value is string => Boolean(value));
@@ -227,5 +245,7 @@ export function EncapsulationComparison({ dataset, selections }: { dataset: IVDa
       </>}
     </section>
     {dataset ? <EncapsulationJVComparison dataset={dataset} pairs={rawCurvePairs} selections={selections} /> : null}
+    {dataset ? <StagedAgeing dataset={dataset} materials={selectedMaterials} /> : null}
+    {dataset ? <SynchronizedMetrics dataset={dataset} materials={selectedMaterials} /> : null}
   </div>;
 }

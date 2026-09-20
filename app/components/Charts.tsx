@@ -21,6 +21,7 @@ export interface TrendPoint {
     sampleReference: string;
     batchNo?: string;
     value: number;
+    trace?: import("../lib/normalization-trace").NormalizationTrace;
   }>;
   selectedLabel?: string;
 }
