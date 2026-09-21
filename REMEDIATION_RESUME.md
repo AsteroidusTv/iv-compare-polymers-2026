@@ -1,4 +1,22 @@
-# Reprise de la remédiation — tâche active, non terminée
+# Remédiation — périmètre logiciel terminé le 21 septembre 2026
+
+Les sections A/B et les quatre gates sont closes. Rapport final A–G :
+SCIENTIFIC_REMEDIATION_REPORT.md ; preuves navigateur : UI_VALIDATION.md ;
+reconstruction : RAW_REBUILD.md et data/decisions/rebuild-validation-v1.json.
+87 tests unitaires, test HTML, build, typecheck, lint et deep validation passent.
+Neuf vues vérifiées ; deux reconstructions donnent le même hash candidat.
+Commits logiciels : 55f66bf, 71c4238, ae3639f, 12a0362, 453a77e, 9e11f83.
+
+Pas de push ni de déploiement. Raw et pack historique inchangés. Ne pas lancer
+release-main.sh sans demande explicite, ni remplacer le pack par le candidat.
+LAB_QUESTIONS.md reste unresolved ; les JV legacy sont en inspection explicite,
+pas quantitativement validées. Les adjudications futures exigent une politique
+d'application versionnée/testée, pas un simple changement de statut.
+
+Livraison native dans Downloads non confirmée dans l'IAB ; contenus générés et
+panneau de fichiers préparés avec liens, copie et aperçus vérifiés.
+
+## Historique de reprise ci-dessous — supersédé par l'état final ci-dessus
 
 Consigne utilisateur du 2026-09-20 : continuer jusqu'à fermeture de tout le
 périmètre logiciel, sans s'arrêter volontairement à une tranche intermédiaire.

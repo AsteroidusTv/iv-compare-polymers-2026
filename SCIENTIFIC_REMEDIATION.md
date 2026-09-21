@@ -11,21 +11,21 @@ typecheck, lint and deep source validation logs preserved before implementation:
 - [x] Repeated-segment detection and exclusion from automatic primary selection.
 - [x] Specimen-first JV example selection, invariant to repeated duplicate sweeps.
 - [x] Explicit cohort membership and composition-change warnings.
-- [ ] Exact figure CSV versus full selection, JV CSV and figure manifests.
-- [ ] Deterministic material identity and truthful export line styles.
+- [x] Exact figure CSV versus full selection, JV CSV and figure manifests.
+- [x] Deterministic material identity and truthful export line styles.
 - [x] Outdoor recovery wording/criterion and metric-specific source flags.
-- [ ] Orange reference R validation.
+- [x] Orange reference R validation.
 
 ## B — Methodological improvements
 
 - [x] Conservative formulation/batch grouping; recipe/electrode filters.
-- [ ] Available/constant cohort/individual trajectories and missingness diagnostics.
-- [ ] Median default; small-n points; optional untruncated mean CI with warning.
-- [ ] Explicit baseline diagnostics, absolute metrics, Outdoor sensitivity controls.
-- [ ] Paired delta median/mean, date coverage, Before/Post/Aged with exact final time.
-- [ ] Four-metric synchronized diagnostic.
-- [ ] Publication preset and copyable caption.
-- [ ] Raw rebuild with versioned decisions, provenance and non-destructive output.
+- [x] Available/constant cohort/individual trajectories and missingness diagnostics.
+- [x] Median default; small-n points; optional untruncated mean CI with warning.
+- [x] Explicit baseline diagnostics, absolute metrics, Outdoor sensitivity controls.
+- [x] Paired delta median/mean, date coverage, Before/Post/Aged with exact final time.
+- [x] Four-metric synchronized diagnostic.
+- [x] Publication preset and copyable caption.
+- [x] Raw rebuild with versioned decisions, provenance and non-destructive output.
 
 ## C — Laboratory adjudication, not automatic numerical correction
 
@@ -40,10 +40,10 @@ check is not a laboratory calibration or proof that a segment was acquired.
 
 ## Implementation gates
 
-1. Scientific safety: JV provenance/metrology, selection, cohort/grouping, exports.
-2. Statistics/views: small n, paired stages, filters, sensitivity and diagnostics.
-3. Reproducibility: rebuild, decisions and manifests without processed circular inputs.
-4. TM presentation: deterministic style, exact exports/captions, UI verification.
+- [x] Scientific safety: JV provenance/metrology, selection, cohort/grouping, exports.
+- [x] Statistics/views: small n, paired stages, filters, sensitivity and diagnostics.
+- [x] Reproducibility: rebuild, decisions and manifests without processed circular inputs.
+- [x] TM presentation: deterministic style, exact exports/captions, UI verification.
 
 Each gate requires targeted tests before completion; complete validation and a
 critical-case re-audit close the work. Commit coherent changes separately; do not
@@ -58,7 +58,17 @@ versus analytic exclusions separately. No dependency is required for the core
 calculations. New persisted metadata is additive and legacy packs remain readable.
 Unknown units or identities cannot become validated merely by fitting a curve.
 
-## Checkpoint — 2026-09-19 (not the final remediation report)
+## Closure — 2026-09-21
+
+A/B and all four software gates are closed. Evidence and limitations are in
+SCIENTIFIC_REMEDIATION_REPORT.md, UI_VALIDATION.md and RAW_REBUILD.md.
+87 unit tests, one HTML test, build, typecheck, lint and deep verification pass.
+Nine browser views were exercised; two rebuilds produce the same candidate hash.
+Section C remains unresolved. Native filesystem delivery of downloads in the
+in-app browser is not verified; prepared contents and fallback UI are verified.
+No push, deployment, raw mutation or production pack replacement was performed.
+
+## Historical checkpoint — 2026-09-19 (superseded by closure above)
 
 The interrupted implementation is compiling again. Forty-nine unit tests,
 TypeScript, ESLint, the production build and server-rendered HTML smoke test pass.
@@ -78,7 +88,7 @@ The architecture review kept calculations in pure domain modules and diagnostics
 derived from the immutable dataset. JV safety also applies to encapsulation JV
 display without altering inventory PCE pairs or their date coverage.
 
-### Still required before declaring the request complete
+### Historical pending work (now completed; retained for audit history)
 
 - Fully traced normalization inputs and exclusions/reasons in every export;
   complete paired-figure manifests/CSV and release-time revision propagation.
