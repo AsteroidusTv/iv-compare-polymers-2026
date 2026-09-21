@@ -42,3 +42,19 @@ test("Outdoor supplemental data cannot be attached to a different pack",()=>{
  assert.throws(()=>validateOutdoorBundle(bundle,"c".repeat(64)),/do not match/);
  assert.throws(()=>validateOutdoorBundle(bundle,null),/do not match/);
 });
+
+test("Outdoor loader requests a directly servable asset and decodes the shipped gzip bytes",async()=>{
+ const {readFile}=await import("node:fs/promises");
+ const {loadOutdoorBundle}=await import("../app/lib/outdoor-sensitivity-data");
+ const previous=globalThis.fetch;
+ globalThis.fetch=async(input)=>{
+  assert.equal(input,"/data/outdoor-sensitivity-v1.ivpack");
+  const bytes=await readFile(`public${input}`);
+  return new Response(bytes);
+ };
+ try {
+  const bundle=await loadOutdoorBundle("cb64ac75e1eca0f6c6ba3fa55405cea13dd5c264e6d535a311d90c035820b344",new AbortController().signal);
+  assert.ok(bundle.analysis.daily.length>0);
+  assert.ok(bundle.analysis.summaries.length>0);
+ } finally {globalThis.fetch=previous;}
+});

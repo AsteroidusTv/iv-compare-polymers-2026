@@ -31,6 +31,11 @@ outdoor-raw.json.gz, outdoor-sensitivity.json, outdoor-sensitivity.bundle.json.g
 and rebuild-report.json. The TSV preserves instrument values and derived legacy
 values side by side. Legacy conversions remain quarantined by the JV gates.
 
+The generated supplemental bundle is shipped unchanged as
+`public/data/outdoor-sensitivity-v1.ivpack` because the production server reserves
+`.gz` URLs for compression sidecars. The browser recognizes gzip by its magic
+bytes, not its extension. This does not replace the historical main dataset pack.
+
 ## Validation snapshot
 
 The independent repeat run in `/tmp/iv-compare-cleanroom-repeat-20260921`

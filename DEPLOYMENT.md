@@ -132,7 +132,8 @@ ssh -o BatchMode=yes codex-server "
     && sleep 2 \
     && systemctl is-active --quiet iv-compare.service \
     && curl -fsS --max-time 10 http://127.0.0.1:4310/ >/dev/null \
-    && curl -fsS --max-time 10 http://127.0.0.1:4310/data/iv-compare-dowsil.ivpack >/dev/null
+  && curl -fsS --max-time 10 http://127.0.0.1:4310/data/iv-compare-dowsil.ivpack >/dev/null \
+  && curl -fsS --max-time 10 http://127.0.0.1:4310/data/outdoor-sensitivity-v1.ivpack >/dev/null
   then
     echo deploy-ok
   else
@@ -165,6 +166,12 @@ curl -fsS -o /dev/null -w 'dataset=%{http_code} bytes=%{size_download}\n' --max-
 ```
 
 Both public requests must return HTTP 200. Finally, exercise the user-visible behavior changed by the release in the browser.
+
+Also require HTTP 200 for `/data/outdoor-sensitivity-v1.ivpack`, then exercise
+Outdoor sensitivity in the public browser. This supplemental asset contains gzip
+bytes but deliberately uses `.ivpack`: vinext's production static-file cache
+reserves `.gz` filenames for compression sidecars and does not serve them directly.
+The automated switch includes this asset in the automatic-rollback health check.
 
 ## 5. Manual rollback
 

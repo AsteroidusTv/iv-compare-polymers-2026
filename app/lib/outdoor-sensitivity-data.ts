@@ -15,7 +15,8 @@ export function validateOutdoorBundle(value:unknown,hash:string|null):OutdoorSen
   return bundle;
 }
 export async function loadOutdoorBundle(hash:string|null,signal:AbortSignal) {
-  const response=await fetch("/data/outdoor-sensitivity-v1.json.gz",{signal});
+  // vinext reserves .gz files as precompressed sidecars, not directly served assets.
+  const response=await fetch("/data/outdoor-sensitivity-v1.ivpack",{signal});
   if(!response.ok||!response.body)throw Error("Outdoor sensitivity package unavailable. Rebuild it from raw files before using this diagnostic.");
   const bounded=async(stream:ReadableStream<Uint8Array>)=>{
     const reader=stream.getReader(),chunks:Uint8Array[]=[];let size=0;

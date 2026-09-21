@@ -68,7 +68,8 @@ if mv "$stage" "$current" \
   && sleep 2 \
   && systemctl is-active --quiet iv-compare.service \
   && curl -fsS --max-time 10 http://127.0.0.1:4310/ >/dev/null \
-  && curl -fsS --max-time 10 http://127.0.0.1:4310/data/iv-compare-dowsil.ivpack >/dev/null
+  && curl -fsS --max-time 10 http://127.0.0.1:4310/data/iv-compare-dowsil.ivpack >/dev/null \
+  && curl -fsS --max-time 10 http://127.0.0.1:4310/data/outdoor-sensitivity-v1.ivpack >/dev/null
 then
   echo deploy-ok
 else
@@ -90,4 +91,5 @@ page_status=$(curl -fsS -o /dev/null -w '%{http_code}' --max-time 20 "$public_ur
 dataset_status=$(curl -fsS -o /dev/null -w '%{http_code}:%{size_download}' --max-time 20 "$public_url/data/iv-compare-dowsil.ivpack")
 test "$page_status" = 200
 test "${dataset_status%%:*}" = 200
+quiet "verify public Outdoor sensitivity" curl -fsS -o /dev/null --max-time 20 "$public_url/data/outdoor-sensitivity-v1.ivpack"
 step "deployed $deploy_short · page $page_status · dataset $dataset_status · rollback $deploy_backup"
