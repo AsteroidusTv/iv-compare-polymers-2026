@@ -9,6 +9,15 @@ const dataset: IVDataset=JSON.parse(gunzipSync(readFileSync("public/data/iv-comp
 const selectedMaterials=[...new Set(dataset.samples.map(sample=>sample.material_family))];
 const {groups}=encapsulationGroups(dataset.samples,dataset.observations,selectedMaterials,dataset.files);
 const options={selectedMaterials,hiddenGroupKeys:[],showMeasurementInterval:true,colors:[],yMin:0,yMax:25};
+test("caption follows the selected mean, median or individual-only annotation",()=>{
+ for(const deltaSummary of ["mean","median","none"] as const){
+  const manifest=pairedFigureManifest(dataset,groups,{...options,deltaSummary});
+  if(deltaSummary==="none")assert.match(manifest.caption,/No group delta summary is drawn/);
+  else assert.ok(manifest.caption.includes(`is the ${deltaSummary} of individual`));
+ }
+ const asymmetric=groups.find(group=>{const result=pairedChanges(group.pairs);return result.relative.mean!==result.relative.median;});
+ assert.ok(asymmetric);
+});
 test("paired manifest preserves 35 pairs, raw provenance, dates and individual deltas",()=>{
   const manifest=pairedFigureManifest(dataset,groups,options);
   const rows=manifest.candidates.filter(row=>row.analyticalEligible);

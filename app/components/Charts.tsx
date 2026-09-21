@@ -2,8 +2,10 @@
 
 import { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
 
-import { describeSeriesSelection, describeTrendExport, pointsThrough, uniqueLegendEntries } from "../lib/chart-export";
-import { figureCsv, figureManifest, type FigureExportContext, type FigureManifest } from "../lib/figure-export";
+import { describeSeriesSelection, describeTrendExport, pointsThrough, trendDisplayValues, trendIntervalVisible, uniqueLegendEntries } from "../lib/chart-export";
+import { figureCsv, figureManifest, jvMethodCaption, type FigureExportContext, type FigureManifest } from "../lib/figure-export";
+import { downloadFigureFile } from "../lib/browser-figure-download";
+import { markerPath, segmentLinePattern, type MaterialStyle } from "../lib/material-style";
 
 export interface TrendPoint {
   x: number;
@@ -27,6 +29,7 @@ export interface TrendPoint {
 }
 
 export interface TrendSeries {
+  marker?: MaterialStyle["marker"];
   id: string;
   label: string;
   color: string;
@@ -38,6 +41,7 @@ export interface TrendSeries {
 }
 
 export interface CurveSeries {
+  marker?: MaterialStyle["marker"];
   id: string;
   label: string;
   color: string;
@@ -45,6 +49,7 @@ export interface CurveSeries {
   segments: Array<{
     id: string;
     isPrimary: boolean;
+    status?: "acquired" | "unresolved" | "suspected_export_residue";
     points: Array<{ x: number; y: number; sourceIndex: number }>;
   }>;
 }
@@ -186,14 +191,7 @@ function serialiseChart(
 }
 
 function downloadBlob(blob: Blob, fileName: string) {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = fileName;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  downloadFigureFile(blob,fileName,blob.type);
 }
 
 function exportSvg(source: SVGSVGElement, title: string, subtitle: string, series: ExportSeries[], fileStem: string, width: number, height: number, manifest?: FigureManifest) {
@@ -240,6 +238,7 @@ function FigureDownloads({ manifest, stem }: { manifest: FigureManifest; stem: s
     <button type="button" onClick={() => downloadBlob(new Blob([figureCsv(manifest)], { type: "text/csv;charset=utf-8" }), `${stem}.figure.csv`)}>Data shown in this figure (CSV)</button>
     <button type="button" onClick={() => downloadManifest(manifest, stem)}>Figure manifest (JSON)</button>
     <button type="button" onClick={() => downloadBlob(new Blob([manifest.caption], { type: "text/plain;charset=utf-8" }), `${stem}.caption.txt`)}>Caption</button>
+    <button type="button" onClick={() => void navigator.clipboard.writeText(manifest.caption).catch(() => downloadBlob(new Blob([manifest.caption], { type: "text/plain;charset=utf-8" }), `${stem}.caption.txt`))}>Copy caption</button>
     <span title="SVG and PNG use a white publication background and retain the displayed colours and line patterns. A companion JSON records data, selection, provenance and view limits. CSV retains analytically plotted points outside the viewport and explicitly identifies clipping.">Publication · white ⓘ</span>
   </>;
 }
@@ -368,7 +367,7 @@ export function TrendChart({
   const all = plottedSeries.flatMap((item) => item.points);
   const isRetention = yUnit === "% of reference";
   const allTimes = all.map((point) => point.x);
-  const allValues = all.flatMap((point) => showIntervals ? [point.y, point.intervalLow, point.intervalHigh] : [point.y]);
+  const allValues = trendDisplayValues(all, showIntervals);
   const maximumPlottedTime = Math.max(...allTimes, 0);
   const fullXStep = niceStep(graphEnd ?? maximumPlottedTime);
   const fullXMin = 0;
@@ -405,7 +404,7 @@ export function TrendChart({
   const exportSubtitle = [exportSummary.subtitle, graphEndNote, scaleNote].filter(Boolean).join(" · ");
   const yAxisLabel = reportYAxisLabel ?? yUnit;
   const exportStem = exportFileStem(graphEnd === null ? "performance-over-time" : `performance-over-time-through-${graphEnd}-${xUnit}`, exportSeries);
-  const manifest = figureManifest({ kind: "trend", title: exportTitle, caption: `${exportTitle}. ${exportSubtitle}. Lines connect measured durations; no time interpolation.`, context: exportContext,
+  const manifest = figureManifest({ kind: "trend", title: exportTitle, caption: `${exportTitle}. ${exportSubtitle}. ${exportContext.methodCaption??""} Lines connect measured durations; no time interpolation.`, context: exportContext,
     xUnit, yUnit, analyticLimit: { maximumX: graphEnd, interpolation: "none" }, viewport: { xMin, xMax, yMin, yMax },
     intervalsVisible: showIntervals, series: plottedSeries, display: { zoom: viewport.zoom, yScale: manualYValid ? "manual" : "auto", clippedY, smallSampleMembersShown: true } });
 
@@ -494,6 +493,7 @@ export function TrendChart({
         <label><input type="checkbox" checked={showIntervals} onChange={(event) => { setShowIntervals(event.target.checked); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} /> Show uncertainty intervals (95% CI / IQR)</label>
         <span role="status">{scaleNote}</span>
         {all.some((point) => !point.selectedLabel && point.n < 3) && <span title="For one or two contributing cells, individual values are drawn. An interval cannot establish population precision from such a small sample.">Small n: individual values shown</span>}
+        {showIntervals && all.some(point => trendIntervalVisible(point, true) && point.intervalLabel === "95% CI" && point.n < 5) && <span role="status">Small-n 95% CI: highly uncertain, shown without truncation. Points show the observed spread.</span>}
       </div>
       <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} role="img" tabIndex={0} aria-label={`Zoomable comparative evolution chart. ${graphEnd === null ? "All QA-valid values are displayed." : `QA-valid observations through ${numberFormat.format(graphEnd)} ${xUnit} are displayed without interpolation.`}`} onKeyDown={onKeyDown} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={endPointerDrag} onPointerCancel={endPointerDrag} onDoubleClick={() => setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 })}>
         <defs><clipPath id="trend-plot-clip"><rect x={margin.left} y={margin.top} width={plotWidth} height={plotHeight} /></clipPath></defs>
@@ -507,10 +507,10 @@ export function TrendChart({
           const ordered = [...item.points].sort((a, b) => a.x - b.x);
           const path = ordered.map((point, index) => `${index ? "L" : "M"}${sx(point.x)},${sy(point.y)}`).join(" ");
           return <g key={item.label} data-export-series-index={seriesIndex}>
-            {showIntervals && ordered.filter((point) => point.n >= 3).map((point) => <line key={`range-${point.x}`} x1={sx(point.x)} x2={sx(point.x)} y1={sy(point.intervalLow)} y2={sy(point.intervalHigh)} stroke={item.color} strokeWidth="1.5" opacity=".3"><title>{`${point.intervalLabel}: ${numberFormat.format(point.intervalLow)}–${numberFormat.format(point.intervalHigh)} ${yUnit}`}</title></line>)}
-            {ordered.filter((point) => !point.selectedLabel && point.n < 3).flatMap((point) => point.members.map((member) => <circle key={`member-${point.x}-${member.observationId}`} cx={sx(point.x)} cy={sy(member.value)} r="3" fill={item.color} opacity=".7"><title>{`${member.sampleLabel} (${member.sampleUid}; batch ${member.batchNo ?? "not recorded"}): ${numberFormat.format(member.value)} ${yUnit}; n=${point.n}`}</title></circle>))}
+            {ordered.filter(point => trendIntervalVisible(point, showIntervals)).map((point) => <line key={`range-${point.x}`} x1={sx(point.x)} x2={sx(point.x)} y1={sy(point.intervalLow)} y2={sy(point.intervalHigh)} stroke={item.color} strokeWidth="1.5" opacity=".3"><title>{`${point.intervalLabel}: ${numberFormat.format(point.intervalLow)}–${numberFormat.format(point.intervalHigh)} ${yUnit}; n=${point.n}`}</title></line>)}
+            {ordered.filter((point) => !point.selectedLabel).flatMap((point) => point.members.map((member) => <path key={`member-${point.x}-${member.observationId}`} d={markerPath(item.marker,sx(point.x),sy(member.value),3)} fill={item.color} opacity=".7"><title>{`${member.sampleLabel} (${member.sampleUid}; batch ${member.batchNo ?? "not recorded"}): ${numberFormat.format(member.value)} ${yUnit}; n=${point.n}`}</title></path>))}
             <path d={path} fill="none" stroke={item.color} strokeWidth="3" strokeDasharray={item.linePattern} strokeLinejoin="round" strokeLinecap="round" />
-            {ordered.map((point) => <circle className={`trend-point${point.selectedLabel ? " selected" : ""}`} key={`point-${point.x}`} cx={sx(point.x)} cy={sy(point.y)} r={point.selectedLabel ? "2.75" : "3.5"} fill={point.selectedLabel ? item.color : "white"} stroke={item.color} strokeWidth={point.selectedLabel ? "1.4" : "1.9"} tabIndex={0} role="img" aria-label={`${item.label}, ${numberFormat.format(point.x)} ${xUnit}, ${numberFormat.format(point.y)} ${yUnit}, ${point.selectedLabel ?? `n ${point.n}`}`}><title>{`${item.label} — ${numberFormat.format(point.x)} ${xUnit}: ${numberFormat.format(point.y)} ${yUnit}${point.selectedLabel ? ` · ${point.selectedLabel}` : ` (${point.intervalLabel} ${numberFormat.format(point.intervalLow)}–${numberFormat.format(point.intervalHigh)}, n=${point.n})`}`}</title></circle>)}
+            {ordered.map((point) => <path className={`trend-point${point.selectedLabel ? " selected" : ""}`} key={`point-${point.x}`} d={markerPath(item.marker,sx(point.x),sy(point.y),point.selectedLabel?2.75:3.5)} fill={point.selectedLabel ? item.color : "white"} stroke={item.color} strokeWidth={point.selectedLabel ? "1.4" : "1.9"} tabIndex={0} role="img" aria-label={`${item.label}, ${numberFormat.format(point.x)} ${xUnit}, ${numberFormat.format(point.y)} ${yUnit}, ${point.selectedLabel ?? `n ${point.n}`}`}><title>{`${item.label} — ${numberFormat.format(point.x)} ${xUnit}: ${numberFormat.format(point.y)} ${yUnit}${point.selectedLabel ? ` · ${point.selectedLabel}` : ` (${point.intervalLabel} ${numberFormat.format(point.intervalLow)}–${numberFormat.format(point.intervalHigh)}, n=${point.n})`}`}</title></path>)}
           </g>;
         })}</g>
       </svg>
@@ -632,7 +632,7 @@ export function CurveChart({
   const exportTitle = `${exportContext.validation?.quantitativeValidated === false ? "UNVALIDATED INSPECTION — " : ""}IV curves — ${yAxisLabel}`;
   const exportSubtitle = `${currentConvention === "instrument" ? "Instrument current convention" : "Photovoltaic current convention"} · measured points connected in acquisition order · no smoothing`;
   const exportStem = exportFileStem("iv-curves", series);
-  const manifest = figureManifest({ kind: "jv", title: exportTitle, caption: `${exportTitle}. ${exportSubtitle}.`, context: exportContext,
+  const manifest = figureManifest({ kind: "jv", title: exportTitle, caption: `${exportTitle}. ${exportSubtitle}. ${exportContext.methodCaption??""} ${jvMethodCaption(exportContext,series)}`, context: exportContext,
     xUnit: "V", yUnit: yAxisLabel, analyticLimit: { maximumX: null, interpolation: "none" }, viewport: { xMin, xMax, yMin, yMax },
     intervalsVisible: false, series, display: { currentConvention, scaleMode, showPoints, showLandmarks, zoom: viewport.zoom } });
 
@@ -702,8 +702,8 @@ export function CurveChart({
           {series.flatMap((item, seriesIndex) => item.segments.map((segment) => {
             const path = segment.points.map((point, index) => `${index ? "L" : "M"}${sx(point.x)},${sy(point.y)}`).join(" ");
             return <g key={segment.id} opacity={segment.isPrimary ? 1 : .48} data-export-series-index={seriesIndex}>
-              <path d={path} fill="none" stroke={item.color} strokeWidth={segment.isPrimary ? 3.5 : 2.25} strokeDasharray={segment.isPrimary ? item.linePattern : "3 4"} strokeLinejoin="round" strokeLinecap="round"><title>{`${item.label} — ${segment.isPrimary ? "primary sweep" : "retained segment"}`}</title></path>
-              {showPoints ? segment.points.map((point) => <circle key={`${segment.id}-${point.sourceIndex}`} cx={sx(point.x)} cy={sy(point.y)} r={segment.isPrimary ? 2.2 : 1.8} fill="white" stroke={item.color} strokeWidth="1.3"><title>{`${item.label} — point ${point.sourceIndex + 1}: ${numberFormat.format(point.x)} V, ${numberFormat.format(point.y)} mA/cm²`}</title></circle>) : null}
+              <path d={path} fill="none" stroke={item.color} strokeWidth={segment.isPrimary ? 3.5 : 2.25} strokeDasharray={segmentLinePattern(segment.isPrimary,segment.status,item.linePattern)} strokeLinejoin="round" strokeLinecap="round"><title>{`${item.label} — ${segment.isPrimary ? "primary sweep" : "retained segment"} · ${segment.status??"unresolved"}`}</title></path>
+              {showPoints ? segment.points.map((point) => <path key={`${segment.id}-${point.sourceIndex}`} d={markerPath(item.marker,sx(point.x),sy(point.y),segment.isPrimary?2.2:1.8)} fill="white" stroke={item.color} strokeWidth="1.3"><title>{`${item.label} — point ${point.sourceIndex + 1}: ${numberFormat.format(point.x)} V, ${numberFormat.format(point.y)} mA/cm²`}</title></path>) : null}
             </g>;
           }))}
           {showLandmarks ? series.map((item) => {

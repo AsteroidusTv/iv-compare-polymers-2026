@@ -2,14 +2,14 @@
 import { useRef, useState } from "react";
 import { datasetPackageHash, type IVDataset } from "../lib/iv-data";
 import { synchronizedMetrics } from "../lib/synchronized-metrics";
-import { materialStyle } from "../lib/material-style";
+import { materialStyle, identityLinePattern } from "../lib/material-style";
 import { buildIdentity } from "../lib/build-identity";
 import { rowsCsv } from "../lib/tabular-export";
 import { downloadFigureFile, downloadScientificGraphic } from "../lib/browser-figure-download";
 import { InfoTip } from "./InfoTip";
 
 const labels={efficiency_pct:"PCE / PCE₀",jsc_mA_cm2:"Jsc / Jsc₀",voc_V:"Voc / Voc₀",ff_pct:"FF / FF₀"};
-const dashes=["","7 3","2 3","8 3 2 3"];
+
 export function SynchronizedMetrics({dataset,materials}:{dataset:IVDataset;materials:string[]}) {
   const [protocol,setProtocol]=useState<"DH"|"TC">("DH");
   const [cutoff,setCutoff]=useState<number|null>(null);
@@ -50,10 +50,10 @@ export function SynchronizedMetrics({dataset,materials}:{dataset:IVDataset;mater
         {Array.from({length:5},(_,i)=>end*i/4).map((v,i)=><text key={i} x={x(v)} y={top+ph+20} textAnchor="middle" fontSize={11}>{v.toFixed(0)}</text>)}
         <text x={left+pw} y={top+ph+38} textAnchor="end" fontSize={12}>{analysis.unit}</text>
         <g clipPath={`url(#sync-${panel.metric})`}><line x1={left} x2={left+pw} y1={y(100)} y2={y(100)} stroke="#888" strokeDasharray="4 4"/>
-        {visibleIds.map((id,si)=>{const cells=panel.cells.filter(cell=>cell.sampleUid===id),color=materialStyle(samples.find(sample=>sample.sample_uid===id)!.material_family).color;return <g key={id}>{cells.map((cell,i)=>{const prev=cells[i-1];return cell.value===null?null:<g key={cell.time}>{prev?.value!==null&&prev?.value!==undefined&&<line x1={x(prev.time)} x2={x(cell.time)} y1={y(prev.value)} y2={y(cell.value)} stroke={color} strokeWidth={1.6} strokeDasharray={dashes[si%dashes.length]}/>}<circle cx={x(cell.time)} cy={y(cell.value)} r={3} fill={color}><title>{id} · {cell.time} {analysis.unit}: {cell.value.toFixed(2)}%; absolute {cell.trace?.absoluteValue}, baseline {cell.trace?.baseline?.value}</title></circle></g>;})}</g>;})}</g>
+        {visibleIds.map((id)=>{const cells=panel.cells.filter(cell=>cell.sampleUid===id),color=materialStyle(samples.find(sample=>sample.sample_uid===id)!.material_family).color;return <g key={id}>{cells.map((cell,i)=>{const prev=cells[i-1];return cell.value===null?null:<g key={cell.time}>{prev?.value!==null&&prev?.value!==undefined&&<line x1={x(prev.time)} x2={x(cell.time)} y1={y(prev.value)} y2={y(cell.value)} stroke={color} strokeWidth={1.6} strokeDasharray={identityLinePattern(id)}/>}<circle cx={x(cell.time)} cy={y(cell.value)} r={3} fill={color}><title>{id} · {cell.time} {analysis.unit}: {cell.value.toFixed(2)}%; absolute {cell.trace?.absoluteValue}, baseline {cell.trace?.baseline?.value}</title></circle></g>;})}</g>;})}</g>
         <text x={left} y={top+ph+57} fontSize={11} fill="#666">Missing / excluded metric slots: {panel.cells.filter(cell=>cell.value===null).length}</text>
       </g>;})}
-      {visibleIds.map((id,i)=>{const sample=samples.find(row=>row.sample_uid===id)!,left=65+i%4*285,top=760+Math.floor(i/4)*20,color=materialStyle(sample.material_family).color;return <g key={id}><line x1={left} x2={left+25} y1={top} y2={top} stroke={color} strokeWidth={2} strokeDasharray={dashes[i%dashes.length]}/><text x={left+32} y={top+4} fontSize={10}>{id} · {sample.material_raw||sample.material_family}</text></g>;})}
+      {visibleIds.map((id,i)=>{const sample=samples.find(row=>row.sample_uid===id)!,left=65+i%4*285,top=760+Math.floor(i/4)*20,color=materialStyle(sample.material_family).color;return <g key={id}><line x1={left} x2={left+25} y1={top} y2={top} stroke={color} strokeWidth={2} strokeDasharray={identityLinePattern(id)}/><text x={left+32} y={top+4} fontSize={10}>{id} · {sample.material_raw||sample.material_family}</text></g>;})}
     </svg></div>
     <details><summary>Shared grid, missing metrics and normalization references</summary><table><thead><tr><th>Metric</th><th>Specimen</th><th>Time</th><th>Retention (%)</th><th>Absolute</th><th>Reference</th><th>Reasons</th></tr></thead><tbody>{analysis.panels.flatMap(panel=>panel.cells.map(cell=><tr key={`${panel.metric}:${cell.sampleUid}:${cell.time}`}><td>{labels[panel.metric]}</td><td>{cell.sampleUid}</td><td>{cell.time}</td><td>{cell.value?.toFixed(2)??"Missing"}</td><td>{cell.trace?.absoluteValue??"—"}</td><td>{cell.trace?.baseline?.value??"—"}</td><td>{cell.reasons.join("; ")||"observed"}</td></tr>))}</tbody></table></details>
   </section>;

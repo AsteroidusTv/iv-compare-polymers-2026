@@ -90,3 +90,40 @@ Lines break at missing grid cells. No pooled estimator or undocumented physical
 independence is inferred. The shared Y viewport can be adjusted without changing
 analytical rows; graph end is an analytical cutoff. Full-selection exports retain
 the traces beyond this cutoff.
+
+## Small samples and display limits
+
+Median is the default. Quantiles use linear interpolation at `(n−1) × p`
+(Hyndman–Fan type 7), not median-of-halves. Boxplot whiskers terminate at the
+outermost observed values inside Q1−1.5 IQR and Q3+1.5 IQR. All observations
+remain visible. n=1 has no interval; n=2 median mode shows both observations
+without an IQR. For n≥3, median and IQR accompany individual observations.
+
+Optional mean/95% CI uses the sample standard error and the existing two-sided
+t critical table through n=30; above that it uses the normal approximation 1.96.
+It is a conditional precision diagnostic, not a claim of specimen independence.
+For n=2 the t multiplier is 12.706: values 60 and 120 have mean 90 and CI
+approximately −291.18 to 471.18. This does not mean any cell measured 471%.
+Such small-n intervals are explicitly warned about and never truncated silently.
+Rendering and automatic scaling use the same interval policy. Hiding intervals
+removes them from the visual scale only, not from the recorded calculations.
+Automatic scales also include every displayed individual value, including
+values outside the IQR. Manual viewport clipping is reported, not an exclusion.
+
+## Outdoor sensitivity
+
+Raw logger rows are filtered separately at irradiance ≥100/200/300 W/m²;
+the daily statistic is the median. PR and Pmpp flags apply to their own metrics;
+unknown/global flags remain conservative. Missing irradiance cannot support
+threshold sensitivity. Duplicate sample/date sources are ambiguous, not pooled.
+B3/B7/B14 use the first up to 3/7/14 QA-valid days, requiring at least 3;
+200 W/m² and B7 remain the principal convention. Baseline days, dates and value
+are retained, never optimized for a favorable trend. Relative values require a
+positive baseline. Missing/zero baselines have explicit exclusion reasons.
+
+The full-record sensitivity table intentionally ignores graph end and visual
+hiding. Its last valid dates are scenario-specific, so its final differences are
+not common-time causal comparisons. Figure rows obey graph end. Hiding a
+threshold does not alter its statistics or analytical contributor membership.
+Logger PR metrology remains unresolved. The supplemental browser artifact is
+bound to compatible package hashes; unrelated imported packs cannot silently use it.

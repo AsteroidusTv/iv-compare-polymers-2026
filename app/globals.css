@@ -78,6 +78,11 @@ button, a, label { -webkit-tap-highlight-color: transparent; }
 .info-tip-bubble { width: 320px; max-width: calc(100vw - 24px); padding: 13px 14px; position: fixed; z-index: 10000; border: 1px solid #cfd3da; border-radius: 10px; background: #17243f; box-shadow: 0 12px 32px rgba(23,36,63,.28); color: white; font-size: 13px; font-weight: 500; letter-spacing: 0; line-height: 1.5; pointer-events: none; text-align: left; text-transform: none; white-space: normal; }
 .info-tip:hover, .info-tip:focus { z-index: 40; }
 .control-row { min-height: 44px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.chart-card .control-row { margin: 12px 0; }
+.chart-card .control-row button, .chart-card .control-row select, .chart-card .control-row input[type=number] { border: 1px solid #ddd8cf; border-radius: 8px; padding: 8px 10px; background: white; color: inherit; font: inherit; }
+.chart-card .control-row input[type=number] { width: 100px; }
+#prepared-figure-exports { position: fixed; z-index: 200; right: 16px; bottom: 16px; max-width: min(520px, calc(100vw - 32px)); max-height: 45vh; overflow: auto; display: grid; gap: 8px; padding: 16px; background: white; color: #15233d; border: 1px solid #ccc; border-radius: 12px; box-shadow: 0 4px 24px #0002; font-size: 12px; }
+#prepared-figure-exports a { overflow-wrap: anywhere; }
 .segmented { display: inline-flex; padding: 3px; border: 1px solid var(--line); border-radius: 11px; background: #f4f2ed; }
 .segmented button { padding: 9px 13px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 12px; font-weight: 800; cursor: pointer; }
 .segmented button.active { background: white; color: var(--ink); box-shadow: 0 1px 4px rgba(23,36,63,.12); }

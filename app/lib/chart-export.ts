@@ -5,6 +5,28 @@ export type TrendExportPoint = {
 
 export type TrendExportMode = "individual" | "aggregate" | "mixed";
 
+type PlottedTrendPoint = TrendExportPoint & {
+  y: number;
+  intervalLow: number;
+  intervalHigh: number;
+  intervalLabel: string;
+  members: Array<{ value: number }>;
+};
+
+// Rendering and automatic scaling must use the same interval policy. Optional
+// mean CIs remain untruncated, including the very imprecise n=2 diagnostic.
+export function trendIntervalVisible(point: PlottedTrendPoint, enabled: boolean): boolean {
+  return enabled && !point.selectedLabel && ((point.intervalLabel === "95% CI" && point.n >= 2)
+    || (point.intervalLabel === "IQR" && point.n >= 3));
+}
+
+export function trendDisplayValues(points: PlottedTrendPoint[], intervals: boolean): number[] {
+  return points.flatMap(point => [point.y,
+    ...(!point.selectedLabel ? point.members.map(member => member.value) : []),
+    ...(trendIntervalVisible(point, intervals) ? [point.intervalLow, point.intervalHigh] : []),
+  ]).filter(Number.isFinite);
+}
+
 export function uniqueLegendEntries<T extends { label: string; exportLegendKey?: string }>(series: T[]): T[] {
   const seen = new Set<string>();
   return series.filter((item) => {

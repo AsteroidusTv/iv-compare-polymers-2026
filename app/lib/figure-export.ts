@@ -1,4 +1,6 @@
 import type { CurveSeries, TrendSeries } from "../components/Charts";
+import { trendIntervalVisible } from "./chart-export";
+import { segmentLinePattern } from "./material-style";
 
 /** Caller-owned scientific context; chart-owned limits and points are never inferred from it. */
 export interface FigureExportContext {
@@ -10,12 +12,28 @@ export interface FigureExportContext {
   cohort?: unknown;
   seriesMetadata?: Record<string, unknown>;
   sourceCode?: unknown;
+  analyticalTrendSeries?: TrendSeries[];
   validation?: { quantitativeValidated: boolean };
   analysisTrace?: Record<string, import("./normalization-trace").NormalizationTrace[]>;
   missingness?: { seriesId: string; rows: { sampleUid: string; time: number; exclusionReasons: string[] }[] }[];
   [key: string]: unknown;
 }
 export interface FigureBounds { xMin: number; xMax: number; yMin: number; yMax: number }
+export function jvMethodCaption(context:FigureExportContext,series:CurveSeries[]):string {
+  const ids=[...new Set(series.flatMap(item=>{
+    const source=context.seriesMetadata?.[item.id] as {measurement?:{sample_uid?:string|null}}|undefined;
+    return source?.measurement?.sample_uid?[source.measurement.sample_uid]:[];
+  }))];
+  const selected=context.selectedSampleMetadata??context.selectedSamples;
+  const samples=(Array.isArray(selected)?selected:[]).filter((sample):sample is import("./iv-data").Sample=>typeof sample==="object"&&sample!==null&&ids.includes(sample.sample_uid));
+  const descriptions=samples.map(sample=>`${sample.sample_uid}: ${sample.material_raw??sample.material_family}, batch ${sample.batch_no_raw??"unknown"}`);
+  const conditions=series.flatMap(item=>{
+    const source=context.seriesMetadata?.[item.id] as {file?:import("./iv-data").IVFile}|undefined;
+    const file=source?.file;
+    return file?[`${file.inferred_test_type??"protocol unrecorded"}, exposure ${file.inferred_exposure_duration??"not recorded"}${file.inferred_test_type==="TC"?" cycles":file.inferred_test_type==="DH"?" h":""}, measured ${file.measurement_date??"date unknown"}`]:[];
+  });
+  return `${ids.length} inventory specimen${ids.length===1?"":"s"}; ${descriptions.join("; ")||ids.join(", ")}. ${series.map(item=>item.label).join("; ")}. ${[...new Set(conditions)].join("; ")}. Absolute JV, no baseline normalization or pooling; no confidence interval. Secondary segments are dashed; suspected repeated residues are dotted. ${context.validation?.quantitativeValidated===false?"Unresolved units/ranges or experimental validation: inspection only, not quantitative evidence.":"Eligibility and QA decisions recorded in the manifest."}`;
+}
 export interface FigureManifest {
   schemaVersion: "iv-compare-figure/1";
   generatedAt: string;
@@ -31,6 +49,9 @@ export interface FigureManifest {
   preset: "publication-white";
   series: TrendSeries[] | CurveSeries[];
   display: Record<string, unknown>;
+  actualContributors?: string[];
+  visibleContributors?: string[];
+  pointExclusions?: {seriesId:string;segmentId:string;sourcePointIndices:number[];reason:string}[];
   exclusions?: { seriesId: string; observationId: string; sampleUid: string; reasons: string[] }[];
 }
 export function figureManifest(input: Omit<FigureManifest, "schemaVersion" | "generatedAt" | "preset">): FigureManifest {
@@ -42,7 +63,25 @@ export function figureManifest(input: Omit<FigureManifest, "schemaVersion" | "ge
     if (input.analyticLimit.maximumX !== null && typeof time === "number" && time > input.analyticLimit.maximumX) reasons.push("outside_graph_end");
     return reasons.length ? [{seriesId, observationId:trace.observation.observation_uid, sampleUid:trace.observation.sample_uid, reasons:[...new Set(reasons)]}] : [];
   }));
-  return { schemaVersion: "iv-compare-figure/1", generatedAt: new Date().toISOString(), preset: "publication-white", ...input, exclusions };
+  const trendIds = (series: TrendSeries[]) => [...new Set(series.flatMap(item=>item.points
+    .filter(point=>input.analyticLimit.maximumX===null||point.x<=input.analyticLimit.maximumX)
+    .flatMap(point=>point.members.map(member=>member.sampleUid))))].sort();
+  const jvIds = (series: CurveSeries[]) => [...new Set(series.filter(item=>item.segments.some(segment=>segment.points.length)).flatMap(item=>{
+    const metadata=input.context.seriesMetadata?.[item.id] as {measurement?:{sample_uid?:string|null}}|undefined;
+    return metadata?.measurement?.sample_uid?[metadata.measurement.sample_uid]:[];
+  }))].sort();
+  const visibleContributors=input.kind==="trend"?trendIds(input.series as TrendSeries[]):jvIds(input.series as CurveSeries[]);
+  const actualContributors=input.kind==="trend"?trendIds(input.context.analyticalTrendSeries??input.series as TrendSeries[]):jvIds((input.context.analyticalCurveSeries??input.series) as CurveSeries[]);
+  const pointExclusions=input.kind!=="jv"?[]:(input.series as CurveSeries[]).flatMap(item=>{
+    const source=input.context.seriesMetadata?.[item.id] as {measurement?:import("./iv-data").Measurement;diagnostics?:import("./jv-science").JVDiagnostic}|undefined;
+    return source?.diagnostics?.analysis.segments.flatMap(segment=>{
+      const selected=item.segments.find(s=>s.id===`${source.measurement?.measurement_uid}-${segment.id}`);
+      const kept=new Set(selected?.points.map(point=>point.sourceIndex));
+      const removed=segment.points.filter(point=>!kept.has(point.sourceIndex)).map(point=>point.sourceIndex);
+      return removed.length?[{seriesId:item.id,segmentId:segment.id,sourcePointIndices:removed,reason:selected?"outside_selected_operating_range":"unselected_segment"}]:[];
+    })??[];
+  });
+  return { schemaVersion: "iv-compare-figure/1", generatedAt: new Date().toISOString(), preset: "publication-white", ...input, exclusions, actualContributors, visibleContributors,pointExclusions };
 }
 function cell(value: unknown): string {
   let text = value === null || value === undefined ? "" : typeof value === "object" ? JSON.stringify(value) : String(value);
@@ -65,6 +104,7 @@ export function figureCsv(manifest: FigureManifest): string {
       const common = { ...shared, series_id: series.id, series_label: series.label, color: series.color, line_pattern: series.linePattern,
         x: point.x, plotted_y: point.y, n: point.n, minimum: point.min, maximum: point.max,
         interval_low: point.intervalLow, interval_high: point.intervalHigh, interval_method: point.intervalLabel,
+        interval_drawn: trendIntervalVisible(point,manifest.intervalsVisible),
         plotted_point_inside_viewport: inViewport(point.x, point.y, manifest.viewport), point_metadata: point };
       if (!point.members.length) rows.push(common);
       for (const member of point.members) rows.push({ ...common, observation_id: member.observationId, sample_uid: member.sampleUid,
@@ -79,10 +119,11 @@ export function figureCsv(manifest: FigureManifest): string {
       rows.push({ ...shared, series_id: series.id, series_label: series.label, color: series.color, line_pattern: series.linePattern,
         sample_uid: measurement?.sample_uid, measurement_uid: measurement?.measurement_uid, file_uid: measurement?.file_uid,
         segment_status: diagnostic?.segments[segmentIndex]?.status ?? "unresolved", point_index: pointIndex, source_point_index: point.sourceIndex,
+        segment_line_pattern: segmentLinePattern(segment.isPrimary,segment.status,series.linePattern),
         V: point.x, J: point.y, unit_interpretation: diagnostic?.conversion, surface_cm2: diagnostic?.conversion.surfaceUsed,
         conversion_status: diagnostic?.conversion.conversionConfidence, QA_status: diagnostic?.issues,
         validation: diagnostic?.validation, protocol: source?.file?.inferred_test_type, time: source?.file?.inferred_exposure_duration,
-        series_metadata: manifest.context.seriesMetadata?.[series.id], segment_id: segment.id, primary_segment: segment.isPrimary,
+        series_metadata: {measurement:source?.measurement,file:source?.file,validation:diagnostic?.validation,issues:diagnostic?.issues}, segment_id: segment.id, primary_segment: segment.isPrimary,
         source_index: point.sourceIndex, x: point.x, plotted_y: point.y,
         plotted_point_inside_viewport: inViewport(point.x, point.y, manifest.viewport) });
     }

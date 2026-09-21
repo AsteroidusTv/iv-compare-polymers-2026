@@ -1,9 +1,26 @@
 /** Browser I/O only; scientific data and decisions are supplied by callers. */
+const prepared: {url:string;row:HTMLElement}[]=[];
+/** Keep a real user-clickable fallback: some embedded browsers suppress synthetic downloads. */
 export function downloadFigureFile(contents: BlobPart, name: string, type: string) {
   const blob = contents instanceof Blob ? contents : new Blob([contents], {type});
   const url = URL.createObjectURL(blob), anchor = document.createElement("a");
-  anchor.href = url; anchor.download = name; document.body.appendChild(anchor); anchor.click(); anchor.remove();
-  window.setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  let panel=document.getElementById("prepared-figure-exports");
+  if(!panel){
+    panel=document.createElement("aside");panel.id="prepared-figure-exports";panel.setAttribute("aria-label","Prepared figure exports");
+    const heading=document.createElement("strong");heading.textContent="Export ready · click a filename if the download did not start";panel.appendChild(heading);
+    const close=document.createElement("button");close.textContent="Close exports";close.onclick=()=>{for(const item of prepared)URL.revokeObjectURL(item.url);prepared.length=0;panel?.remove();};panel.appendChild(close);document.body.appendChild(panel);
+  }
+  const row=document.createElement("div");
+  anchor.href=url;anchor.download=name;anchor.textContent=`${name} (${Math.ceil(blob.size/1024)} kB)`;row.appendChild(anchor);panel.appendChild(row);
+  if(blob.type.startsWith("image/")){
+    const preview=document.createElement("details"),summary=document.createElement("summary"),image=document.createElement("img");
+    summary.textContent=`Preview ${name}`;image.src=url;image.alt=`Export preview ${name}`;image.style.maxWidth="100%";preview.append(summary,image);row.appendChild(preview);
+  }else{
+    const copy=document.createElement("button");copy.textContent=`Copy ${name}`;
+    copy.onclick=()=>{void blob.text().then(text=>navigator.clipboard.writeText(text)).then(()=>{copy.textContent=`Copied ${name}`;}).catch(()=>{copy.textContent=`Copy failed — download ${name}`;});};row.appendChild(copy);
+  }
+  prepared.push({url,row});while(prepared.length>6){const oldest=prepared.shift()!;URL.revokeObjectURL(oldest.url);oldest.row.remove();}
+  anchor.click();
 }
 export async function downloadScientificGraphic(svg: SVGSVGElement, width: number, height: number, manifest: unknown, stem: string, format: "svg" | "png") {
   const clone = svg.cloneNode(true) as SVGSVGElement;

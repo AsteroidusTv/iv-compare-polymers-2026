@@ -15,6 +15,7 @@ import { numeric } from "../lib/science";
 import { InfoTip } from "./InfoTip";
 import { StagedAgeing } from "./StagedAgeing";
 import { SynchronizedMetrics } from "./SynchronizedMetrics";
+import { fullJVSelectionCsv } from "../lib/jv-full-export";
 
 const dateFormat = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
 
@@ -109,6 +110,7 @@ function EncapsulationJVComparison({ dataset, pairs, selections }: { dataset: IV
   return <section className="chart-card encapsulation-jv" aria-label="JV comparison before and after encapsulation">
     <div className="chart-title"><div className="trend-panel-title"><strong>JV diagnostic · same cell before / after encapsulation</strong><InfoTip text={diagnosticHelp} align="left" /></div></div>
     {inspectionControl}
+    <button onClick={()=>downloadFigureFile(fullJVSelectionCsv(dataset,dataset.measurements.filter(measurement=>measurement.file_uid===pair.beforeFile.file_uid||measurement.file_uid===pair.afterMeasurement.file_uid).map(measurement=>measurement.measurement_uid)),"paired-jv.full-selected.csv","text/csv")}>Full selected JV dataset CSV</button>
     {inspectUnresolved && <p role="status">Inspection only: units, acquired range or experimental validation may be unresolved. Do not interpret these curves as validated quantitative evidence.</p>}
     <div className="encapsulation-jv-controls">
       <label>Physical cell<select value={pair.sample.sample_uid} onChange={(event) => setRequestedSampleUid(event.target.value)}>{pairs.map((item) => <option value={item.sample.sample_uid} key={item.sample.sample_uid}>{item.sample.material_raw || item.sample.material_family} · batch {item.sample.batch_no_raw || "—"} · {item.sample.sample_id_raw || item.sample.sample_uid} · {item.sample.recipe_raw || "process n/a"}</option>)}</select></label>

@@ -3,8 +3,10 @@
 import { DragEvent, Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CurveChart, CurveSeries, TrendChart, TrendPoint, TrendSeries } from "./components/Charts";
 import { EncapsulationComparison } from "./components/EncapsulationComparison";
+import { OutdoorSensitivity } from "./components/OutdoorSensitivity";
 import { JVDiagnosticDetails } from "./components/JVDiagnosticDetails";
 import { labQualityIssues } from "./lib/lab-quality";
+import { sourceQualityFlagApplies } from "./lib/source-quality";
 import { ageingSampleCandidates, resolveAgeingTimes, toggleAgeingTime } from "./lib/iv-ageing";
 import { FieldTitle, InfoTip } from "./components/InfoTip";
 import {
@@ -17,11 +19,12 @@ import {
   MetricKey,
 } from "./lib/iv-data";
 import { getJVDiagnostics, chooseSpecimenFirstMeasurement, type JVDiagnostic } from "./lib/jv-science";
-import { materialStyle } from "./lib/material-style";
+import { materialStyle, identityLinePattern } from "./lib/material-style";
 import { buildIdentity } from "./lib/build-identity";
 import { normalizationTraces } from "./lib/normalization-trace";
 import { missingnessTable } from "./lib/missingness";
 import { fullSelectionCsv } from "./lib/figure-export";
+import { fullJVSelectionCsv, fullJVMeasurementIds, jvSelectionLedger } from "./lib/jv-full-export";
 import { downloadFigureFile } from "./lib/browser-figure-download";
 import { analysisGroups, cohortTimeline, type AnalysisGrouping } from "./lib/cohort";
 import { describeGraphElectrode } from "./lib/chart-export";
@@ -70,7 +73,6 @@ type ContextTrendSeries = TrendSeries & {
   parentSeriesId?: string;
 };
 
-const SAMPLE_LINE_PATTERNS = [undefined, "8 4", "2 4", "11 4 2 4", "14 4", "5 3"];
 
 const METRIC_HELP: Record<MetricKey, string> = {
   efficiency_pct: "Efficiency is the maximum electrical power delivered divided by the incident light power. It combines the effects of Jsc, Voc, and fill factor.",
@@ -228,7 +230,7 @@ export default function Home() {
       dataset.observations.forEach((observation) => {
         const value = observation[metric];
         const time = observation.exposure_duration_numeric;
-        if (observation.test_type !== "Outdoor" || !numeric(value) || !numeric(time) || observation.data_quality_flag) return;
+        if (observation.test_type !== "Outdoor" || !numeric(value) || !numeric(time) || sourceQualityFlagApplies(observation.data_quality_flag,metric)) return;
         const peers = peersBySample.get(observation.sample_uid) ?? [];
         peers.push({ time, value });
         peersBySample.set(observation.sample_uid, peers);
@@ -326,7 +328,7 @@ export default function Home() {
       const signatures = new Set(points.map((point) => point.members.map((member) => member.sampleUid).sort().join("|")));
       const electrodeNote = describeGraphElectrode(points.flatMap((point) => point.members.map((member) => sampleMap.get(member.sampleUid)?.electrode)));
       const contextLabel = [config.stress, METRICS[config.metric].label, electrodeNote].filter(Boolean).join(" · ");
-      return { id: config.id, label: `${String.fromCharCode(65 + index)} · ${config.material}`, color, points, config, xUnit: timeUnit(config.stress), yUnit: mode === "retention" ? "% of reference" : METRICS[config.metric].unit, contextLabel, exportLabel: config.material, exportLegendKey: config.id, baselineWarnings: [...baselineWarnings], sampleSetChanges: signatures.size > 1 };
+      return { id: config.id, label: `${String.fromCharCode(65 + index)} · ${config.material}`, color, marker:materialStyle(config.material).marker, points, config, xUnit: timeUnit(config.stress), yUnit: mode === "retention" ? "% of reference" : METRICS[config.metric].unit, contextLabel, exportLabel: config.material, exportLegendKey: config.id, baselineWarnings: [...baselineWarnings], sampleSetChanges: signatures.size > 1 };
     };
     return seriesConfigs.map(build);
   }, [dataset, seriesConfigs, mode, aggregation, sampleMap, normalizationBySeries]);
@@ -406,7 +408,7 @@ export default function Home() {
 
   const ageingCurveSelections = useMemo(() => {
     if (!dataset || !resolvedAgeingSample || !seriesConfigs[0]) return [];
-    return selectedAgeingTimes.flatMap((time, index) => {
+    return selectedAgeingTimes.flatMap((time) => {
       const candidate = resolvedAgeingSample.times.find((item) => item.time === time);
       if (!candidate) return [];
       const key = `ageing:${resolvedAgeingSample.sampleUid}:${time}`;
@@ -424,7 +426,7 @@ export default function Home() {
         material: seriesConfigs[0].material,
         config: seriesConfigs[0],
         color: materialStyle(seriesConfigs[0].material).color,
-        linePattern: SAMPLE_LINE_PATTERNS[index % SAMPLE_LINE_PATTERNS.length],
+        linePattern: identityLinePattern(`ageing:${time}`),
         measurement,
         file,
         actualTime: time,
@@ -445,6 +447,7 @@ export default function Home() {
         ? [`${fr.format(selection.actualTime)} ${timeUnit(selection.config.stress)}`, resolvedAgeingSample?.label, electrodeNote].filter(Boolean).join(" · ")
         : [`${String.fromCharCode(65 + seriesConfigs.findIndex((config) => config.id === selection.seriesId))} · ${selection.material}`, electrodeNote].filter(Boolean).join(" · "),
       color: selection.color,
+      marker: materialStyle(selection.material).marker,
       linePattern: selection.linePattern,
       segments: (sweepView === "primary"
         ? [selection.analysis.segments[selection.analysis.primaryIndex]]
@@ -452,6 +455,7 @@ export default function Home() {
       ).filter(Boolean).map((segment) => ({
         id: `${selection.measurement.measurement_uid}-${segment.id}`,
         isPrimary: segment.id === selection.analysis.segments[selection.analysis.primaryIndex]?.id,
+        status: jvDiagnostics.get(selection.measurement.measurement_uid)?.segments[selection.analysis.segments.indexOf(segment)]?.status,
         points: segment.points.map((point) => ({ x: point.x, y: point.y * currentPolarity, sourceIndex: point.sourceIndex })),
       })),
     };
@@ -522,7 +526,7 @@ export default function Home() {
   const selectedTrendSeries: ContextTrendSeries[] = selectedUnsplitSeries.flatMap((series) => {
     const ids = new Set(series.points.flatMap((point) => point.members.map((member) => member.sampleUid)));
     const groups = analysisGroups((dataset?.samples ?? []).filter((sample) => ids.has(sample.sample_uid)), grouping);
-    return groups.map((group, groupIndex) => {
+    return groups.map((group) => {
       const memberIds = new Set(group.samples.map((sample) => sample.sample_uid));
       const points = series.points.flatMap((point) => {
         const members = point.members.filter((member) => memberIds.has(member.sampleUid));
@@ -530,7 +534,7 @@ export default function Home() {
         const summary = summarise(members.map((member) => member.value), aggregation);
         return [{ ...point, y: summary.value, min: summary.min, max: summary.max, intervalLow: summary.intervalLow, intervalHigh: summary.intervalHigh, intervalLabel: summary.intervalLabel, n: summary.n, members }];
       });
-      return { ...series, id: `${series.id}::group:${group.key}`, parentSeriesId: series.id, label: group.label, exportLabel: group.label, contextLabel: [series.config.stress, METRICS[series.config.metric].label, describeGraphElectrode(group.samples.map(sample => sample.electrode))].filter(Boolean).join(" · "), exportLegendKey: `${series.id}:${group.key}`, linePattern: SAMPLE_LINE_PATTERNS[groupIndex % SAMPLE_LINE_PATTERNS.length], points, sampleSetChanges: new Set(points.map((point) => point.members.map((member) => member.sampleUid).sort().join("|"))).size > 1 };
+      return { ...series, id: `${series.id}::group:${group.key}`, parentSeriesId: series.id, label: group.label, exportLabel: group.label, contextLabel: [series.config.stress, METRICS[series.config.metric].label, describeGraphElectrode(group.samples.map(sample => sample.electrode))].filter(Boolean).join(" · "), exportLegendKey: `${series.id}:${group.key}`, linePattern: identityLinePattern(group.key), points, sampleSetChanges: new Set(points.map((point) => point.members.map((member) => member.sampleUid).sort().join("|"))).size > 1 };
     });
   });
   const cohortDiagnostics = selectedTrendSeries.map((series) => ({ series, timeline: cohortTimeline(series.points.flatMap((point) => point.members.map((member) => ({ time: point.x, sampleUid: member.sampleUid, value: member.value, batch: member.batchNo }))), aggregation) }));
@@ -563,7 +567,7 @@ export default function Home() {
         exportLegendKey: series.id,
         exportDetail: series.contextLabel,
         parentSeriesId: series.id,
-        linePattern: SAMPLE_LINE_PATTERNS[sampleIndex % SAMPLE_LINE_PATTERNS.length],
+        linePattern: identityLinePattern(sample.sampleUid),
       };
     })
   ));
@@ -688,9 +692,15 @@ export default function Home() {
     sourceCode: buildIdentity,
     validation: { quantitativeValidated: curveSelections.length > 0 && curveSelections.every(selection => jvDiagnostics.get(selection.measurement.measurement_uid)?.quantitativeEligible) },
     filters: seriesConfigs,
-    analysisTrace: Object.fromEntries(normalizationBySeries),
-    selectedSamples: activeTrendSampleIds,
-    missingness,
+    analysisTrace: view==="curves"?undefined:Object.fromEntries(normalizationBySeries),
+    selectedSamples: view==="curves"?curveSelections.map(selection=>selection.measurement.sample_uid):activeTrendSampleIds,
+    selectedSampleMetadata: dataset?.samples.filter(sample=>seriesConfigs.some(config=>samplePasses(sample.sample_uid,config))),
+    missingness: view==="curves"?undefined:missingness,
+    hiddenSeries: [...hiddenSeries],
+    analyticalTrendSeries: view==="curves"?undefined:displayedTrendSeries,
+    analyticalCurveSeries: view==="curves"?curveSeries:undefined,
+    jvSelection: view==="curves"&&dataset?jvSelectionLedger(dataset,fullJVMeasurementIds(dataset,seriesConfigs,curveComparison,resolvedAgeingSample?.sampleUid??null),curveSelections.map(selection=>selection.measurement.measurement_uid),curveSelections.map(selection=>selection.actualTime),includeQa,inspectUnsafeJV):undefined,
+    methodCaption: view==="curves"?`${curveComparison==="ageing"?"Same specimen at selected ageing times":"Specimen-first examples at a shared protocol/time"}; no pooling of sweeps. ${inspectUnsafeJV?"Unresolved inspection; not quantitative validation.":"Quantitatively eligible sweeps only."}`:`${seriesConfigs.map(config=>`${config.stress} / ${METRICS[config.metric].label}`).join("; ")}. ${mode==="retention"?`Same-specimen normalization ×100; unique Unaged reference for DH/TC, B${outdoorWindow} for Outdoor (minimum 3 valid days).`:"Absolute measured values."} ${trendDisplay==="samples"?"Individual trajectories, no pooling":`${aggregation}; grouping=${grouping}; cohort=${cohortMode}`}. QA-flagged data ${includeQa?"included explicitly for review":"excluded"}.`,
     qa: { includeFlagged: includeQa, inspectUnsafeJV },
     normalization: { mode, outdoorBaselineDays: outdoorWindow },
     aggregation: { method: aggregation, grouping },
@@ -822,7 +832,7 @@ export default function Home() {
                   const panelKey = overlayCompatible ? `shared-${first.xUnit}` : `series-${first.parentSeriesId ?? first.id}-${first.xUnit}`;
                   return <section className="trend-panel" key={panelKey}>
                     <div className="trend-panel-head"><div><span className="trend-panel-title"><strong>{panelTitle}</strong>{helpMetric ? <InfoTip text={METRIC_HELP[helpMetric]} align="left" /> : null}</span><span className="trend-panel-context">{trendDisplay === "samples" ? `${panel.length} individual sample trajectories · ${first.xUnit}` : panel.length > 1 ? `${panel.length} compatible series · ${first.xUnit}` : first.contextLabel}</span></div></div>
-                    <TrendChart series={visiblePanel.map((series) => ({ ...series, exportDetail: series.contextLabel }))} xUnit={first.xUnit} yUnit={first.yUnit} reportTitle={reportTitle} reportSubtitle={reportSubtitle} reportYAxisLabel={reportYAxisLabel} exportContext={figureContext} />
+                    <TrendChart series={visiblePanel.map((series) => ({ ...series, exportDetail: series.contextLabel }))} xUnit={first.xUnit} yUnit={first.yUnit} reportTitle={reportTitle} reportSubtitle={reportSubtitle} reportYAxisLabel={reportYAxisLabel} exportContext={{...figureContext,analyticalTrendSeries:panel}} />
                   </section>;
                 })}
               </div>
@@ -839,6 +849,7 @@ export default function Home() {
               </dl>
               {outdoorIssueExample ? <div className="quality-alert" role="status"><strong>{relevantOutdoorIssues.length} outdoor anomal{relevantOutdoorIssues.length > 1 ? "ies" : "y"} {includeQa ? "included for review" : "excluded from analysis"}</strong><span>{outdoorIssueSample?.material_family ?? outdoorIssueExample.sampleUid}{numeric(outdoorIssueExample.time) ? ` · day ${fr.format(outdoorIssueExample.time)}` : ""}: {outdoorIssueExample.reason}{relevantOutdoorIssues.length > 1 ? ` ${relevantOutdoorIssues.length - 1} additional flagged value${relevantOutdoorIssues.length > 2 ? "s" : ""}.` : ""}</span></div> : null}
               {selectedTrendSeries.some((series) => series.sampleSetChanges || series.baselineWarnings.length) ? <p className="caution">{selectedTrendSeries.some((series) => series.sampleSetChanges) ? "The contributing sample set changes between some durations. " : ""}{selectedTrendSeries.flatMap((series) => series.baselineWarnings).slice(0, 2).join(" · ")}</p> : null}
+              {trendDisplay!=="samples" && cohortDiagnostics.some(group=>group.timeline.some(point=>point.apparentRecoveryRisk)) && <p className="caution" role="status">Apparent recovery may be affected by changing cohort composition. Inspect the contributing specimens below.</p>}
             </aside>
             <section className="data-table-card">
               <details><summary>Missingness and analytical exclusions</summary>{missingness.map(group => <div key={group.seriesId}><h4>{group.protocol} · {group.metric}</h4><table><thead><tr><th>Specimen</th><th>Time</th><th>Status</th><th>Contributes</th><th>Reasons</th></tr></thead><tbody>{group.rows.map(row => <tr key={`${row.sampleUid}:${row.time}`}><td>{row.sampleUid}</td><td>{row.time}</td><td>{row.status}</td><td>{row.contributes ? "yes" : "no"}</td><td>{row.exclusionReasons.join("; ") || "—"}</td></tr>)}</tbody></table></div>)}</details>
@@ -892,6 +903,7 @@ export default function Home() {
           </div>
         ) : (
           <div className="curve-workspace">
+            <button onClick={()=>{if(dataset)downloadFigureFile(fullJVSelectionCsv(dataset,fullJVMeasurementIds(dataset,seriesConfigs,curveComparison,resolvedAgeingSample?.sampleUid??null)),"jv.full-selected.csv","text/csv");}}>Full selected JV dataset CSV</button>
             <div className="segmented" aria-label="IV comparison mode">
               <button className={curveComparison === "ageing" ? "active" : ""} onClick={() => { setCurveComparison("ageing"); setHiddenSeries(new Set()); setCurveMeasurementIds({}); }}>One cell over ageing</button>
               <button className={curveComparison === "materials" ? "active" : ""} onClick={() => { setCurveComparison("materials"); setHiddenSeries(new Set()); setCurveMeasurementIds({}); }}>Materials at one time</button>
@@ -933,7 +945,7 @@ export default function Home() {
                 <span>{currentConvention === "instrument" ? "Instrument convention · negative photocurrent" : "PV convention · positive generated current"}</span>
               </div>
               {curveAudit.raw ? <div className={`curve-audit ${curveAudit.raw === curveAudit.primary ? "clean" : "segmented"}`} role="status"><span className="curve-audit-title"><strong>{displayedPointCount}/{curveAudit.raw} points displayed</strong><InfoTip text={HELP.pointAudit} align="left" /></span><span>{curveAudit.raw === curveAudit.primary ? "Continuous sweep" : `${curveAudit.raw - curveAudit.primary} additional points retained · ${curveAudit.segments} segments detected`}</span></div> : null}
-              <CurveChart series={visibleCurveSeries} yAxisLabel={currentConvention === "instrument" ? "Instrument J (mA/cm²)" : "Generated J (mA/cm²)"} currentConvention={currentConvention} showPoints={showCurvePoints} showLandmarks={showLandmarks} scaleMode={curveScale} exportContext={figureContext} />
+              {!curveSelections.length ? <div className="empty-chart" role="status"><strong>{inspectUnsafeJV?"No JV measurements match this selection":"No quantitatively eligible JV curves"}</strong><span>{inspectUnsafeJV?"Check the specimen, exact times and QA filters.":"Unresolved units, acquired range or experimental validation remain quarantined. Use explicit inspection only to review the source curves; this does not validate them."}</span></div> : <CurveChart series={visibleCurveSeries} yAxisLabel={currentConvention === "instrument" ? "Instrument J (mA/cm²)" : "Generated J (mA/cm²)"} currentConvention={currentConvention} showPoints={showCurvePoints} showLandmarks={showLandmarks} scaleMode={curveScale} exportContext={figureContext} />}
             </section>
             <div className="measurement-grid">
               {curveSelections.map((selection) => <article className="measurement-card" key={selection.seriesId} style={{ borderTopColor: selection.color }}>
@@ -957,6 +969,7 @@ export default function Home() {
         )}
       </section>
 
+      {dataset&&view==="trend"&&seriesConfigs.some(config=>config.stress==="Outdoor")&&<OutdoorSensitivity dataset={dataset} materials={seriesConfigs.filter(config=>config.stress==="Outdoor").map(config=>config.material)}/>}
       <footer>
         <span>IV Compare · format .ivpack v{dataset?.schemaVersion ?? "1.0"}</span>
         <span>Extreme values remain available through the QA control.</span>
