@@ -1,17 +1,8 @@
 import type { MetricKey, Observation } from "./iv-data";
 import { numeric } from "./science";
 
-const SOURCE_METRIC: Record<string, MetricKey> = { eff: "efficiency_pct", efficiency_pct: "efficiency_pct", jsc: "jsc_mA_cm2", jsc_mA_cm2: "jsc_mA_cm2", voc: "voc_V", voc_V: "voc_V", ff: "ff_pct", ff_pct: "ff_pct" };
-
-// Only recognised metric-local flags may be scoped. Unknown flags remain global.
-export function sourceQualityFlagApplies(flag: string | null | undefined, metric?: MetricKey): boolean {
-  if (!flag) return false;
-  return flag.split(/[;,|]/).some((part) => {
-    const match = /^non_numeric_metric:([\w]+)$/.exec(part.trim());
-    if (!match || !SOURCE_METRIC[match[1]]) return true;
-    return metric !== undefined && SOURCE_METRIC[match[1]] === metric;
-  });
-}
+import { sourceQualityFlagApplies } from "./source-quality";
+export { sourceQualityFlagApplies } from "./source-quality";
 
 // Conservative review heuristic, not a diagnosis of measurement failure.
 // Compare only the same cell, protocol and unit; retain sustained/terminal failures.

@@ -1,4 +1,5 @@
 import type { Aggregation, Measurement, MetricKey, Observation } from "./iv-data";
+import { sourceQualityFlagApplies } from "./source-quality";
 
 export function numeric(value: number | null | undefined): value is number {
   return typeof value === "number" && Number.isFinite(value);
@@ -133,7 +134,7 @@ export interface TimedValue {
 export function outdoorQualityReason(observation: Observation, metric: MetricKey, peers: TimedValue[]): string | null {
   const value = observation[metric];
   if (!numeric(value)) return null;
-  if (observation.data_quality_flag) return `Source QA flag: ${observation.data_quality_flag}`;
+  if (sourceQualityFlagApplies(observation.data_quality_flag,metric)) return `Source QA flag: ${observation.data_quality_flag}`;
   if (metric === "outdoor_pr_pct" && (value < 0 || value > 150)) return `PR ${value} is outside the 0–150% plausibility range.`;
   if (metric === "outdoor_irradiance_W_m2" && (value < 0 || value > 1_600)) return `Irradiance ${value} W/m² is outside the 0–1,600 W/m² sensor range.`;
   if (metric === "outdoor_pmpp_W" && value < 0) return "Outdoor Pmpp cannot be negative.";
