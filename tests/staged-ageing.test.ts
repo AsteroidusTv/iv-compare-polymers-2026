@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import type { IVDataset } from "../app/lib/iv-data";
-import { stagedAgeing } from "../app/lib/staged-ageing";
+import { stagedAgeing, stagedDisplayGroups } from "../app/lib/staged-ageing";
 import { analysisGroups } from "../app/lib/cohort";
 test("descriptive staged grouping combines unknown processes only with known matching formulation and batch",()=>{
  const samples=["a","b","c"].map(sample_uid=>({sample_uid,material_family:"TPO",material_raw:"TPO2",batch_no_raw:"A1",electrode:"Cu"}));
@@ -10,6 +10,19 @@ test("descriptive staged grouping combines unknown processes only with known mat
  assert.equal(analysisGroups([...samples,{...samples[0],sample_uid:"d",batch_no_raw:"A2"}],"conservative",true).length,2);
  assert.equal(analysisGroups(samples.map(s=>({...s,batch_no_raw:null})),"conservative",true).length,3);
  assert.equal(analysisGroups([...samples,{...samples[0],sample_uid:"e",recipe_uid:"known"}],"conservative",true).length,2);
+});
+test("optional staged display pools visible groups by material and retains source groups",()=>{
+ const samples=[
+  {sample_uid:"a",material_family:"TPO",batch_no_raw:"A1"},
+  {sample_uid:"b",material_family:"TPO",batch_no_raw:"A2"},
+  {sample_uid:"c",material_family:"TPO",batch_no_raw:"A2"},
+  {sample_uid:"d",material_family:"EVA",batch_no_raw:"A1"},
+ ];
+ const groups=[{key:"a1",label:"TPO A1",sampleUids:["a"]},{key:"a2",label:"TPO A2",sampleUids:["b","c"]},{key:"eva",label:"EVA A1",sampleUids:["d"]}];
+ assert.equal(stagedDisplayGroups(groups,samples,[],[],false).length,3);
+ const pooled=stagedDisplayGroups(groups,samples,[],["d"],true);
+ assert.deepEqual(pooled,[{key:"material:TPO",label:"TPO",materialFamily:"TPO",sampleUids:["a","b","c"],sourceGroupKeys:["a1","a2"]}]);
+ assert.deepEqual(stagedDisplayGroups(groups,samples,["a1"],[],true)[0].sampleUids,["b","c"]);
 });
 const dataset={samples:[{sample_uid:"a",material_family:"EVA",initial_efficiency_pct:12},{sample_uid:"b",material_family:"EVA",initial_efficiency_pct:10}],observations:[
   {sample_uid:"a",observation_uid:"pa",test_type:"Unaged",efficiency_pct:10},

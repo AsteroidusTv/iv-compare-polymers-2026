@@ -1,10 +1,11 @@
-import type { IVDataset, Observation } from "./iv-data";
+import type { IVDataset, Observation, Sample } from "./iv-data";
 import { labQualityIssues } from "./lab-quality";
 import { numeric } from "./science";
 import { analysisGroups } from "./cohort";
 
 export type AgedTime = { mode: "exact"; time: number } | { mode: "last-common" };
 export interface StageValue { value: number | null; reasons: string[]; observations: Observation[] }
+export interface StagedDisplayGroup { key:string; label:string; materialFamily:string; sampleUids:string[]; sourceGroupKeys:string[] }
 
 /** No nearest time, interpolation, or per-specimen last value is ever substituted. */
 export function stagedAgeing(dataset: IVDataset, options: { sampleUids: string[]; protocol: "DH" | "TC"; aged: AgedTime; excludedSampleUids?: string[]; groupUnknownMetadata?: boolean }) {
@@ -40,4 +41,37 @@ export function stagedAgeing(dataset: IVDataset, options: { sampleUids: string[]
     time, availableTimes:times, commonTimes, rows, groups:groups.map(group=>({key:group.key,label:group.label,sampleUids:group.samples.map(sample=>sample.sample_uid)})),
     counts: Object.fromEntries((["before","post","aged"] as const).map(key=>[key,rows.filter(row=>!row.excluded && row[key].value!==null).length])),
     policy:{qa:"metric-local source flags and laboratory review heuristics excluded",missingIsZero:false,interpolation:"none",timeSelection:"one exact time for all specimens",retention:"100 * aged / post; never post / before"} };
+}
+
+export function stagedDisplayGroups(
+  groups: Array<{key:string;label:string;sampleUids:string[]}>,
+  samples: Sample[],
+  hiddenGroupKeys: string[],
+  excludedSampleUids: string[],
+  aggregateAcrossBatches: boolean,
+): StagedDisplayGroup[] {
+  const sampleByUid = new Map(samples.map(sample => [sample.sample_uid, sample]));
+  const hidden = new Set(hiddenGroupKeys), excluded = new Set(excludedSampleUids);
+  const output = new Map<string, {label:string;materialFamily:string;sampleUids:Set<string>;sourceGroupKeys:Set<string>}>();
+  for (const group of groups) {
+    if (hidden.has(group.key)) continue;
+    const memberUids = group.sampleUids.filter(uid => !excluded.has(uid));
+    if (!memberUids.length) continue;
+    const materialFamily = sampleByUid.get(memberUids[0])?.material_family;
+    if (!materialFamily) continue;
+    const key = aggregateAcrossBatches ? `material:${materialFamily}` : group.key;
+    const display = output.get(key) ?? {
+      label:aggregateAcrossBatches ? materialFamily : group.label,
+      materialFamily,
+      sampleUids:new Set<string>(),
+      sourceGroupKeys:new Set<string>(),
+    };
+    memberUids.forEach(uid => display.sampleUids.add(uid));
+    display.sourceGroupKeys.add(group.key);
+    output.set(key, display);
+  }
+  return [...output].map(([key,group])=>({
+    key,label:group.label,materialFamily:group.materialFamily,
+    sampleUids:[...group.sampleUids],sourceGroupKeys:[...group.sourceGroupKeys],
+  }));
 }

@@ -109,6 +109,14 @@ match; unknown formulation/batch remain specimen-specific, and known process
 differences remain separate. This option is not evidence of process equivalence
 and is recorded in the export manifest.
 
+A separate opt-in display can pool all currently visible analysis groups within
+each selected material family. It may combine batches, formulations, and
+recorded processes, so the resulting median/boxplot is a descriptive overview,
+not a controlled material comparison. Individual values remain visible and
+export rows retain their original specimen and group provenance; the manifest
+records the pooling choice and source groups. Hidden or excluded groups are not
+drawn into that view.
+
 Optional mean/95% CI uses the sample standard error and the existing two-sided
 t critical table through n=30; above that it uses the normal approximation 1.96.
 It is a conditional precision diagnostic, not a claim of specimen independence.
