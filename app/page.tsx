@@ -893,7 +893,7 @@ export default function Home() {
                       <td>{fr.format(point.y)} {series.yUnit}</td>
                       <td>{point.n > 1 ? fr.format(point.intervalLow) : "—"}</td>
                       <td>{point.n > 1 ? fr.format(point.intervalHigh) : "—"}</td>
-                      <td><button type="button" aria-expanded={expanded} onClick={() => toggleTrendRow(rowKey)}>{point.n}</button></td>
+                      <td><button className="n-toggle" type="button" aria-label={`Show contributors: n=${point.n}`} aria-expanded={expanded} onClick={() => toggleTrendRow(rowKey)}>{point.n}<span aria-hidden="true">{expanded ? "−" : "+"}</span></button></td>
                     </tr>
                     {expanded && <tr><td colSpan={7}><strong>Contributing observations</strong><ul>{point.members.map(member => <li key={member.observationId}>{member.sampleUid} · {member.sampleLabel} · {member.observationId}: {fr.format(member.value)} {series.yUnit}{member.trace && <details><summary>Absolute value and reference</summary><p>Absolute: {member.trace.absoluteValue ?? "unavailable"} · baseline: {member.trace.baseline?.value ?? "not applicable"} · {member.trace.baseline?.definition ?? "absolute value"}</p><p>Source: {member.trace.observation.source_file} · row {member.trace.observation.source_row}. Reference observations: {member.trace.baseline?.observations.map(row=>row.observation_uid).join(", ") || "—"}</p></details>}</li>)}</ul></td></tr>}
                   </Fragment>;

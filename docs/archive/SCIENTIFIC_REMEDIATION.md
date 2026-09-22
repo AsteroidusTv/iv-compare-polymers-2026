@@ -1,5 +1,8 @@
 # Scientific remediation plan
 
+> Historical plan closed on 21 September 2026. The checklist and release
+> statements below are retained as a record of that work.
+
 Reference commit: `7300b5cb170c2eb034a9e445ba4ede3cbeb3e22a`.
 Reference pack, manifest, audit summary and successful full test/build/HTML,
 typecheck, lint and deep source validation logs preserved before implementation:
@@ -61,7 +64,9 @@ Unknown units or identities cannot become validated merely by fitting a curve.
 ## Closure — 2026-09-21
 
 A/B and all four software gates are closed. Evidence and limitations are in
-SCIENTIFIC_REMEDIATION_REPORT.md, UI_VALIDATION.md and RAW_REBUILD.md.
+[scientific remediation report](SCIENTIFIC_REMEDIATION_REPORT.md),
+[browser validation](UI_VALIDATION.md) and
+[raw reconstruction](../data/RAW_REBUILD.md).
 87 unit tests, one HTML test, build, typecheck, lint and deep verification pass.
 Nine browser views were exercised; two rebuilds produce the same candidate hash.
 Section C remains unresolved. Native filesystem delivery of downloads in the
@@ -101,7 +106,7 @@ display without altering inventory PCE pairs or their date coverage.
 - Non-circular raw rebuild, versioned matching/override registry, clean-room
   reconstruction/hash comparison. No raw or packaged dataset has been replaced.
 - Publication/caption UI verification for every figure, complete critical-case
-  re-audit and final A–G report. LAB_QUESTIONS.md records unresolved lab decisions.
+  re-audit and final A–G report. [LAB_QUESTIONS.md](../science/LAB_QUESTIONS.md) records unresolved lab decisions.
 
 This checkpoint is not a claim that phases 1–4 are complete or that all figures
 are scientifically validated. Consistency checks cannot establish experimental

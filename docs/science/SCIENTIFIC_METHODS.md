@@ -99,6 +99,16 @@ outermost observed values inside Q1−1.5 IQR and Q3+1.5 IQR. All observations
 remain visible. n=1 has no interval; n=2 median mode shows both observations
 without an IQR. For n≥3, median and IQR accompany individual observations.
 
+Before/post/aged plots use this same boxplot convention, with available
+observations and counts reported separately at each stage. Connecting the same
+cell is optional and off by default in both encapsulation views; hiding these
+lines does not alter pairing or change calculations. An explicit descriptive
+grouping option can combine specimens with matching recorded metadata despite
+missing process/electrode information. Known formulation and batch must still
+match; unknown formulation/batch remain specimen-specific, and known process
+differences remain separate. This option is not evidence of process equivalence
+and is recorded in the export manifest.
+
 Optional mean/95% CI uses the sample standard error and the existing two-sided
 t critical table through n=30; above that it uses the normal approximation 1.96.
 It is a conditional precision diagnostic, not a claim of specimen independence.

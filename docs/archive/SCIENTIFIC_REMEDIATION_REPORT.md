@@ -1,5 +1,8 @@
 # Rapport final de remédiation scientifique — 21 septembre 2026
 
+> Rapport historique daté. Les effectifs, résultats de tests et indications sur
+> le déploiement ci-dessous décrivent l'état du 21 septembre 2026.
+
 Référence : `7300b5cb170c2eb034a9e445ba4ede3cbeb3e22a`.
 Périmètre logiciel A/B et quatre gates terminés ; adjudications expérimentales
 explicitement non résolues. Aucun push, déploiement ou remplacement du pack
@@ -15,7 +18,7 @@ historique. Ceci n'est pas une certification expérimentale des données.
 | 453a77e | `rebuild-from-raw.ts`, parsers, boundary et registry ; sensibilité Outdoor et flags métriques ; rapport de reconstruction. |
 | 9e11f83 | `trendDisplayValues`/`trendIntervalVisible`, styles déterministes, `figureManifest`/`figureCsv`, `jvSelectionLedger`, exports complets JV, UI Outdoor et régressions finales. |
 
-Les règles et seuils sont décrits dans [SCIENTIFIC_METHODS.md](SCIENTIFIC_METHODS.md).
+Les règles et seuils sont décrits dans [SCIENTIFIC_METHODS.md](../science/SCIENTIFIC_METHODS.md).
 Les calculs restent dans les modules de domaine ; React possède les sélections
 d'affichage. Les diagnostics ne réécrivent pas les mesures instrumentales.
 
@@ -50,7 +53,7 @@ d'affichage. Les diagnostics ne réécrivent pas les mesures instrumentales.
 
 ## C. Questions encore ouvertes — laboratoire uniquement
 
-Voir [LAB_QUESTIONS.md](LAB_QUESTIONS.md) : unités/surface des fichiers V–I du
+Voir [LAB_QUESTIONS.md](../science/LAB_QUESTIONS.md) : unités/surface des fichiers V–I du
 17 avril ; origine et plage des segments répétés ; hiérarchie specimen/pixel/
 substrate/channel ; indépendance des batches ; équivalence formulations/recettes
 et validité des électrodes Ag ; causes de disparition ; conditions de mesure,
@@ -95,7 +98,7 @@ n'est pas une identité binaire avec l'ancien pack.
   1 043 400 points, 5 115 courbes non vides ; 203 122 lignes Outdoor brutes.
 - Pack historique toujours SHA-256
   `cb64ac75e1eca0f6c6ba3fa55405cea13dd5c264e6d535a311d90c035820b344`.
-  Détails et procédure : [RAW_REBUILD.md](RAW_REBUILD.md).
+  Détails et procédure : [RAW_REBUILD.md](../data/RAW_REBUILD.md).
 
 Analyse adverse : un pack cohérent peut rester métrologiquement faux ; une
 absence peut être informative sans cause connue ; un regroupement peut masquer

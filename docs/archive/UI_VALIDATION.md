@@ -1,5 +1,8 @@
 # Scientific remediation: browser verification
 
+> Historical browser validation for the local September 2026 remediation build.
+> It does not assert that the current production UI has the same controls.
+
 Local application: `http://localhost:4312/`, September 20–21, 2026.
 These checks concern the local remediation source, not the deployed website.
 Selections, tables, counts, missingness, explanatory information and export

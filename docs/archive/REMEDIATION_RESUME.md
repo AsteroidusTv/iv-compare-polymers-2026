@@ -1,8 +1,14 @@
 # Remédiation — périmètre logiciel terminé le 21 septembre 2026
 
+> Historical checkpoint. The release statements and test counts below describe
+> September 2026 only; consult the current code and deployment runbook for the
+> present state.
+
 Les sections A/B et les quatre gates sont closes. Rapport final A–G :
-SCIENTIFIC_REMEDIATION_REPORT.md ; preuves navigateur : UI_VALIDATION.md ;
-reconstruction : RAW_REBUILD.md et data/decisions/rebuild-validation-v1.json.
+[rapport final](SCIENTIFIC_REMEDIATION_REPORT.md) ; preuves navigateur :
+[validation UI](UI_VALIDATION.md) ; reconstruction :
+[reconstruction brute](../data/RAW_REBUILD.md) et
+[`rebuild-validation-v1.json`](../../data/decisions/rebuild-validation-v1.json).
 87 tests unitaires, test HTML, build, typecheck, lint et deep validation passent.
 Neuf vues vérifiées ; deux reconstructions donnent le même hash candidat.
 Commits logiciels : 55f66bf, 71c4238, ae3639f, 12a0362, 453a77e, 9e11f83.
@@ -33,7 +39,7 @@ Demande initiale :
 - HEAD : `71c4238`, précédent commit scientifique `55f66bf`.
 - 49 tests unitaires, build, HTML, typecheck, lint et deep validation réussis
   lors de la tranche précédente. Ne pas les confondre avec la validation finale.
-- Les gates restent ouvertes dans SCIENTIFIC_REMEDIATION.md.
+- Les gates restent ouvertes dans [SCIENTIFIC_REMEDIATION.md](SCIENTIFIC_REMEDIATION.md).
 - Données brutes et pack inchangés. Ne pas écraser les datasets de production.
 - Commits locaux cohérents autorisés ; push et déploiement explicitement interdits.
 
@@ -50,7 +56,8 @@ Implémentés depuis le checkpoint : niveaux de validation JV séparés, exigenc
 de preuves ciblées avant éligibilité quantitative, contrôle FF/PCE et limites
 explicites, détection exacte/proche/multiplicative avec index de candidats,
 validation Orange C+R, inspection avant/après explicite, colonnes JV CSV.
-Tests unitaires (56), build, HTML et lint réussis. Voir SCIENTIFIC_METHODS.md.
+Tests unitaires (56), build, HTML et lint réussis. Voir
+[SCIENTIFIC_METHODS.md](../science/SCIENTIFIC_METHODS.md).
 La gate 1 n'est pas encore déclarée fermée : terminer les exclusions et la
 traçabilité des normalisations/manifestes de toutes les vues, puis validation UI.
 Continuer ensuite la suite obligatoire ci-dessous, sans s'arrêter à ce document.
@@ -79,5 +86,5 @@ les vues ; pipeline raw → processed non circulaire et registry versionné ;
 clean-room rebuild ; validations navigateur ; ré-audit ciblé ; rapport final A–G.
 
 Les seules décisions pouvant rester ouvertes à la fin sont les adjudications
-expérimentales listées dans LAB_QUESTIONS.md. Elles n'excusent pas une tâche
+expérimentales listées dans [LAB_QUESTIONS.md](../science/LAB_QUESTIONS.md). Elles n'excusent pas une tâche
 logicielle inachevée. Un checkpoint n'est pas une déclaration de fin.

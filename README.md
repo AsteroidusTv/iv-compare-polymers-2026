@@ -2,9 +2,15 @@
 
 Internal scientific application for comparing photovoltaic encapsulants, ageing observations, outdoor logger data, and raw IV curves.
 
+## Documentation
+
+The [documentation index](docs/README.md) points to the current scientific
+methods, open laboratory questions, raw-data rebuild procedure and dated audit
+records. The [deployment runbook](DEPLOYMENT.md) remains at the repository root.
+
 ## Scientific scope
 
-The application supports exploratory comparison after damp heat (DH), thermal cycling (TC), outdoor exposure, or in the initial state. Following laboratory confirmation, lamination recipes are treated as the standard recipe assigned to each polymer rather than an independent comparison variable. Cu is the default electrode and the single Ag case is pooled with it. Recipe and electrode metadata remain preserved in exports for traceability; ageing protocol and metric remain explicit comparison controls.
+The application supports exploratory comparison after damp heat (DH), thermal cycling (TC), outdoor exposure, or in the initial state. Lamination recipes are recorded as process metadata, not a causal comparison variable. Grouping preserves known formulation, batch, process and electrode differences; a separate descriptive option allows matching specimens with missing process metadata to appear together. The laboratory has not resolved the validity of every recorded Ag electrode. Ageing protocol and metric remain explicit comparison controls.
 
 - Mean aggregation is shown with a 95% confidence interval.
 - Median aggregation is shown with an interquartile range.
@@ -53,7 +59,7 @@ Lab trend QA is applied before aggregation and reference normalization. Besides 
 
 The third chart tab compares PCE (`initial_efficiency_pct`, from Initial Eff) with the same cell's unique, unflagged `Unaged` observation. It uses the selected material families, independently of ageing settings and trend sample filters. Missing, non-finite, negative or ambiguous pairs are excluded; measured zero after encapsulation remains included. Formulations, batches and electrode metadata are kept separate. The exact measurement interval around encapsulation is not documented.
 
-Box plots show linearly interpolated Q1/median/Q3 and whiskers at the extreme observations within 1.5 IQR. All points remain visible, including outliers; groups with fewer than three pairs show points only. The table reports paired mean differences in percentage points, not relative percent. The self-contained SVG export includes the method and source caveat. Older imports without initial PCE remain usable but cannot supply this comparison.
+Box plots show linearly interpolated Q1/median/Q3 and whiskers at the extreme observations within 1.5 IQR. All points remain visible, including outliers; groups with fewer than three pairs show points only. The table reports paired mean differences in percentage points, not relative percent. Lines connecting the same cell can be enabled but are off by default. The Before/Post/Aged diagnostic also shows stage-specific box plots when at least three observations are available; counts can differ between stages. The self-contained SVG export includes the method and source caveat. Older imports without initial PCE remain usable but cannot supply this comparison.
 
 ```bash
 pnpm install

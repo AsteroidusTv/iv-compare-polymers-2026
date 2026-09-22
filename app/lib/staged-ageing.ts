@@ -7,7 +7,7 @@ export type AgedTime = { mode: "exact"; time: number } | { mode: "last-common" }
 export interface StageValue { value: number | null; reasons: string[]; observations: Observation[] }
 
 /** No nearest time, interpolation, or per-specimen last value is ever substituted. */
-export function stagedAgeing(dataset: IVDataset, options: { sampleUids: string[]; protocol: "DH" | "TC"; aged: AgedTime; excludedSampleUids?: string[] }) {
+export function stagedAgeing(dataset: IVDataset, options: { sampleUids: string[]; protocol: "DH" | "TC"; aged: AgedTime; excludedSampleUids?: string[]; groupUnknownMetadata?: boolean }) {
   const samples = dataset.samples.filter(sample => options.sampleUids.includes(sample.sample_uid));
   const qa = labQualityIssues(dataset.observations, "efficiency_pct");
   const stage = (rows: Observation[]): StageValue => {
@@ -22,7 +22,7 @@ export function stagedAgeing(dataset: IVDataset, options: { sampleUids: string[]
   const atTime = (sampleUid: string, time: number) => stage(dataset.observations.filter(row => row.sample_uid === sampleUid && row.test_type === options.protocol && row.exposure_duration_numeric === time));
   const commonTimes = cohort.length ? times.filter(time => cohort.every(sample => atTime(sample.sample_uid,time).value !== null)) : [];
   const time = options.aged.mode === "exact" ? Number.isFinite(options.aged.time) && options.aged.time >= 0 ? options.aged.time : null : commonTimes.at(-1) ?? null;
-  const groups = analysisGroups(samples);
+  const groups = analysisGroups(samples, "conservative", options.groupUnknownMetadata);
   const rows = samples.map(sample => {
     const before: StageValue = { value: numeric(sample.initial_efficiency_pct) && sample.initial_efficiency_pct >= 0 && sample.initial_efficiency_pct <= 50 ? sample.initial_efficiency_pct : null, reasons: [], observations: [] };
     if (before.value === null) before.reasons.push(numeric(sample.initial_efficiency_pct) ? "qa_initial_pce" : "missing_initial_pce");

@@ -9,6 +9,14 @@ const dataset: IVDataset=JSON.parse(gunzipSync(readFileSync("public/data/iv-comp
 const selectedMaterials=[...new Set(dataset.samples.map(sample=>sample.material_family))];
 const {groups}=encapsulationGroups(dataset.samples,dataset.observations,selectedMaterials,dataset.files);
 const options={selectedMaterials,hiddenGroupKeys:[],showMeasurementInterval:true,colors:[],yMin:0,yMax:25};
+test("connection visibility changes caption without changing paired contributors",()=>{
+ const disconnected=pairedFigureManifest(dataset,groups,options);
+ const connected=pairedFigureManifest(dataset,groups,{...options,showConnections:true});
+ assert.match(disconnected.caption,/No connecting lines/);
+ assert.match(connected.caption,/Lines connect the same cell/);
+ assert.deepEqual(disconnected.actualContributors,connected.actualContributors);
+ assert.deepEqual(disconnected.groups,connected.groups);
+});
 test("caption follows the selected mean, median or individual-only annotation",()=>{
  for(const deltaSummary of ["mean","median","none"] as const){
   const manifest=pairedFigureManifest(dataset,groups,{...options,deltaSummary});

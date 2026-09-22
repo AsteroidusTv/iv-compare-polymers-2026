@@ -2,6 +2,15 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import type { IVDataset } from "../app/lib/iv-data";
 import { stagedAgeing } from "../app/lib/staged-ageing";
+import { analysisGroups } from "../app/lib/cohort";
+test("descriptive staged grouping combines unknown processes only with known matching formulation and batch",()=>{
+ const samples=["a","b","c"].map(sample_uid=>({sample_uid,material_family:"TPO",material_raw:"TPO2",batch_no_raw:"A1",electrode:"Cu"}));
+ assert.equal(analysisGroups(samples).length,3);
+ assert.equal(analysisGroups(samples,"conservative",true).length,1);
+ assert.equal(analysisGroups([...samples,{...samples[0],sample_uid:"d",batch_no_raw:"A2"}],"conservative",true).length,2);
+ assert.equal(analysisGroups(samples.map(s=>({...s,batch_no_raw:null})),"conservative",true).length,3);
+ assert.equal(analysisGroups([...samples,{...samples[0],sample_uid:"e",recipe_uid:"known"}],"conservative",true).length,2);
+});
 const dataset={samples:[{sample_uid:"a",material_family:"EVA",initial_efficiency_pct:12},{sample_uid:"b",material_family:"EVA",initial_efficiency_pct:10}],observations:[
   {sample_uid:"a",observation_uid:"pa",test_type:"Unaged",efficiency_pct:10},
   {sample_uid:"b",observation_uid:"pb",test_type:"Unaged",efficiency_pct:8},
