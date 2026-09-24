@@ -144,6 +144,7 @@ export function EncapsulationComparison({ dataset, selections }: { dataset: IVDa
   const { groups: availableGroups, excluded } = encapsulationGroups(dataset?.samples ?? [], dataset?.observations ?? [], selectedMaterials, dataset?.files ?? []);
   availableGroups.sort((a, b) => selections.findIndex((item) => item.material === a.family) - selections.findIndex((item) => item.material === b.family) || a.material.localeCompare(b.material) || a.batch.localeCompare(b.batch, "en", { numeric: true }) || processOrder(a.recipe) - processOrder(b.recipe) || (a.recipe || "").localeCompare(b.recipe || "") || a.electrode.localeCompare(b.electrode));
   const groups = availableGroups.filter((group) => !hiddenGroupKeys.has(group.key) && !excludedGroupKeys.has(group.key));
+  const commonBatch = groups.length > 1 && groups[0].batch !== "unknown" && groups.every((group) => group.batch === groups[0].batch) ? groups[0].batch : null;
   const missing = [...new Set(selectedMaterials)].filter((material) => !availableGroups.some((group) => group.family === material));
   const values = groups.flatMap((group) => group.pairs.flatMap((pair) => [pair.before, pair.after]));
   const min = values.length ? Math.max(0, Math.floor(Math.min(...values)) - 1) : 0;
@@ -200,7 +201,8 @@ export function EncapsulationComparison({ dataset, selections }: { dataset: IVDa
           <svg ref={svgRef} xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Paired PCE before and after encapsulation, grouped by formulation, batch and lamination recipe" style={{ background: "white", fontFamily: "Arial, sans-serif", color: "#222" }}>
             <rect width={width} height={height} fill="white" />
             <text x={width / 2} y={28} textAnchor="middle" fontSize={18} fontWeight="bold">PCE before / after encapsulation</text>
-            <text x={20} y={180} transform="rotate(-90 20 180)" textAnchor="middle" fontSize={14}>PCE η (%)</text>
+            {commonBatch && <text x={width / 2} y={47} textAnchor="middle" fontSize={11}>Batch {commonBatch}</text>}
+            <text x={20} y={180} transform="rotate(-90 20 180)" textAnchor="middle" fontSize={14}>PCE (%)</text>
             {Array.from({ length: 6 }, (_, i) => min + (max - min) * i / 5).map((value) => <g key={value}><line x1={65} x2={width - 20} y1={y(value)} y2={y(value)} stroke="#ddd" /><text x={55} y={y(value) + 4} textAnchor="end" fontSize={12}>{value.toFixed(1)}</text></g>)}
             {groups.map((group, index) => {
               const center = 100 + (index + 0.5) * (width - 120) / groups.length;
@@ -229,10 +231,10 @@ export function EncapsulationComparison({ dataset, selections }: { dataset: IVDa
                     <text x={x} y={323} textAnchor="middle" fontSize={12}>{stageIndex ? "After" : "Before"}</text>
                   </g>;
                 })}
-                <text x={center} y={348} textAnchor="middle" fontSize={12} fontWeight="bold">{group.material}</text>
+                <text x={center} y={348} textAnchor="middle" fontSize={12} fontWeight="bold">{group.material.replace("_", " / ")}</text>
                 {showProcess && <text x={center} y={369} textAnchor="middle" fontSize={11}>{groupProcessLabel(group, dataset)}</text>}
-                <text x={center} y={showProcess ? 390 : 371} textAnchor="middle" fontSize={11}>Batch {group.batch} · N={group.pairs.length}{group.electrode === "Cu" ? "" : ` · ${group.electrode}`}</text>
-                {deltaSummary !== "none" && <text x={center} y={showProcess ? 411 : 392} textAnchor="middle" fontSize={11} fill="#5f6875">{deltaSummary === "mean" ? "Mean" : "Median"} ΔPCErel {relativeChange === null ? "—" : `${relativeChange >= 0 ? "+" : ""}${relativeChange.toFixed(1)}%`}{changes.relative.n === group.pairs.length ? "" : ` · N=${changes.relative.n}`}</text>}
+                <text x={center} y={showProcess ? 390 : 371} textAnchor="middle" fontSize={11}>{commonBatch ? "" : `Batch ${group.batch} · `}<tspan fontStyle="italic">n</tspan> = {group.pairs.length}{group.electrode === "Cu" ? "" : ` · ${group.electrode}`}</text>
+                {deltaSummary !== "none" && <text x={center} y={showProcess ? 411 : 392} textAnchor="middle" fontSize={11} fill="#5f6875"><tspan>{deltaSummary === "mean" ? "Mean" : "Median"} ΔPCE</tspan><tspan baselineShift="sub" fontSize={8}>rel</tspan><tspan> = {relativeChange === null ? "—" : `${relativeChange < 0 ? "−" : relativeChange > 0 ? "+" : ""}${Math.abs(relativeChange).toFixed(1)} %`}{changes.relative.n === group.pairs.length ? "" : ` · n = ${changes.relative.n}`}</tspan></text>}
                 {showMeasurementInterval && <text x={center} y={showProcess ? 432 : 413} textAnchor="middle" fontSize={11} fill="#5f6875">Before→after {dayLabel}</text>}
               </g>;
             })}

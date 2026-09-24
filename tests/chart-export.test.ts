@@ -66,6 +66,7 @@ test("mixed exports describe each series without a redundant global subtitle", (
 
 test("report preset mutes known material colours without altering unknown colours", () => {
   assert.equal(reportInkColor("#0072B2"), "#365f80");
+  assert.equal(reportInkColor("#7F3C8D"), "#674771");
   assert.equal(reportInkColor("#009E73"), "#376f5b");
   assert.equal(reportInkColor("white"), "white");
 });

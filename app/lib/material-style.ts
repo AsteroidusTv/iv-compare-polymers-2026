@@ -23,7 +23,7 @@ const REGISTRY: Record<string, MaterialStyle> = {
   "POE-3 / Cybrid T22": { color: "#CC79A7", marker: "triangle", dash: "3 3" },
   "Silicone / PDMS": { color: "#009E73", marker: "circle", dash: "8 3 2 3" },
   "TPO-1 / DNP-CVF": { color: "#A65300", marker: "diamond", dash: "" },
-  "TPO-2 / Lenzing": { color: "#56B4E9", marker: "triangle", dash: "7 3" },
+  "TPO-2 / Lenzing": { color: "#7F3C8D", marker: "triangle", dash: "7 3" },
   "Ionomer NA390": { color: "#595959", marker: "square", dash: "3 3" },
 };
 export function materialStyle(material: string): MaterialStyle {
