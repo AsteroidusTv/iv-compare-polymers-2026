@@ -2,7 +2,7 @@
 
 import { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
 
-import { describeSeriesSelection, describeTrendExport, pointsThrough, showTrendMarkers, trendDisplayValues, trendIntervalVisible, uniqueLegendEntries } from "../lib/chart-export";
+import { legendSelectionsByKey, pointsThrough, showTrendMarkers, trendDisplayValues, trendExportScaleWarning, trendIntervalVisible, uniqueLegendEntries } from "../lib/chart-export";
 import { figureCsv, figureManifest, jvMethodCaption, type FigureExportContext, type FigureManifest } from "../lib/figure-export";
 import { downloadFigureFile } from "../lib/browser-figure-download";
 import { markerPath, segmentLinePattern, type MaterialStyle } from "../lib/material-style";
@@ -125,8 +125,9 @@ function serialiseChart(
 ): { content: string; width: number; height: number } {
   const legendSeries = uniqueLegendEntries(series);
   const legendRows = Math.max(1, Math.ceil(legendSeries.length / EXPORT_COLUMNS));
-  const legendRowHeight = legendSeries.some((item) => item.exportSelection) ? 40 : legendSeries.some((item) => item.exportDetail) ? 30 : 20;
-  const headerHeight = 54 + legendRows * legendRowHeight;
+  const legendRowHeight = legendSeries.some((item) => item.exportDetail && item.exportSelection) ? 40 : legendSeries.some((item) => item.exportSelection || item.exportDetail) ? 30 : 20;
+  const legendTop = subtitle ? 62 : 50;
+  const headerHeight = legendTop - 8 + legendRows * legendRowHeight;
   const exportHeight = height + headerHeight;
   const root = document.createElementNS(SVG_NAMESPACE, "svg");
   root.setAttribute("xmlns", SVG_NAMESPACE);
@@ -150,14 +151,14 @@ function serialiseChart(
   root.appendChild(background);
 
   appendSvgText(root, title, 24, 24, "export-title");
-  appendSvgText(root, subtitle, 24, 42, "export-subtitle");
+  if (subtitle) appendSvgText(root, subtitle, 24, 42, "export-subtitle");
   const legend = document.createElementNS(SVG_NAMESPACE, "g");
   legend.setAttribute("class", "export-legend");
   legendSeries.forEach((item, index) => {
     const column = index % EXPORT_COLUMNS;
     const row = Math.floor(index / EXPORT_COLUMNS);
     const x = 24 + column * EXPORT_COLUMN_WIDTH;
-    const y = 62 + row * legendRowHeight;
+    const y = legendTop + row * legendRowHeight;
     const marker = document.createElementNS(SVG_NAMESPACE, "line");
     marker.setAttribute("x1", String(x));
     marker.setAttribute("x2", String(x + 16));
@@ -170,7 +171,7 @@ function serialiseChart(
     legend.appendChild(marker);
     appendSvgText(legend, item.exportLabel ?? item.label, x + 22, y, "export-legend");
     if (item.exportDetail) appendSvgText(legend, item.exportDetail.slice(0, 48), x + 22, y + 11, "export-subtitle");
-    if (item.exportSelection) appendSvgText(legend, item.exportSelection.slice(0, 48), x + 22, y + 22, "export-subtitle");
+    if (item.exportSelection) appendSvgText(legend, item.exportSelection.slice(0, 48), x + 22, y + (item.exportDetail ? 22 : 11), "export-subtitle");
   });
   root.appendChild(legend);
 
@@ -292,7 +293,6 @@ export function TrendChart({
   xUnit,
   yUnit,
   reportTitle,
-  reportSubtitle,
   reportYAxisLabel,
   exportContext = {},
 }: {
@@ -300,7 +300,6 @@ export function TrendChart({
   xUnit: string;
   yUnit: string;
   reportTitle?: string;
-  reportSubtitle?: string;
   reportYAxisLabel?: string;
   exportContext?: FigureExportContext;
 }) {
@@ -393,18 +392,17 @@ export function TrendChart({
   const xTicks = viewport.zoom === 1 ? (graphEnd === null ? tickSequence(fullXMin, fullXMax, fullXStep) : ticks(fullXMin, fullXMax)) : ticks(xMin, xMax);
   const yTicks = viewport.zoom === 1 && !manualYValid ? tickSequence(fullYMin, fullYMax, autoYStep) : ticks(yMin, yMax);
   const clippedY = allValues.some((value) => value < yMin || value > yMax);
-  const exportSummary = describeTrendExport(all, reportSubtitle);
+  const legendSelections = legendSelectionsByKey(plottedSeries);
   const exportSeries = plottedSeries.map((item) => ({
     ...item,
-    exportSelection: describeSeriesSelection(item.points, exportSummary.mode),
+    exportSelection: legendSelections.get(item.exportLegendKey ?? item.label),
   }));
   const exportTitle = reportTitle ?? `Performance over time — ${yUnit}`;
-  const graphEndNote = graphEnd === null ? null : `shown through ${numberFormat.format(graphEnd)} ${xUnit} · observed points only`;
   const scaleNote = `${manualYValid ? "Manual" : "Auto"} Y: ${numberFormat.format(yMin)}–${numberFormat.format(yMax)} ${yUnit}${clippedY ? " · values or intervals clipped" : ""}${showIntervals ? "" : " · uncertainty intervals hidden"}`;
-  const exportSubtitle = [exportSummary.subtitle, graphEndNote, scaleNote].filter(Boolean).join(" · ");
+  const exportSubtitle = trendExportScaleWarning(clippedY, showIntervals);
   const yAxisLabel = reportYAxisLabel ?? yUnit;
   const exportStem = exportFileStem(graphEnd === null ? "performance-over-time" : `performance-over-time-through-${graphEnd}-${xUnit}`, exportSeries);
-  const manifest = figureManifest({ kind: "trend", title: exportTitle, caption: `${exportTitle}. ${exportSubtitle}. ${exportContext.methodCaption??""} Lines connect measured durations; no time interpolation.`, context: exportContext,
+  const manifest = figureManifest({ kind: "trend", title: exportTitle, caption: [exportTitle, exportSubtitle, exportContext.methodCaption, "Lines connect measured durations; no time interpolation"].filter(Boolean).join(". ") + ".", context: exportContext,
     xUnit, yUnit, analyticLimit: { maximumX: graphEnd, interpolation: "none" }, viewport: { xMin, xMax, yMin, yMax },
     intervalsVisible: showIntervals, series: plottedSeries, display: { zoom: viewport.zoom, yScale: manualYValid ? "manual" : "auto", clippedY, smallSampleMembersShown: true } });
 

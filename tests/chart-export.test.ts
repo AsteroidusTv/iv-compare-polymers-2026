@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { describeGraphElectrode, describeSeriesSelection, describeTrendExport, pointsThrough, showTrendMarkers, uniqueLegendEntries } from "../app/lib/chart-export";
+import { describeGraphElectrode, describeSeriesSelection, legendSelectionsByKey, pointsThrough, showTrendMarkers, trendExportScaleWarning, uniqueLegendEntries } from "../app/lib/chart-export";
 
 test("dense daily curves keep their data points but omit decorative markers", () => {
   assert.equal(showTrendMarkers("days", 100), false);
@@ -32,34 +32,32 @@ test("graph-end limits keep only observations at or before the boundary", () => 
   assert.deepEqual(pointsThrough(points, null), points);
 });
 
-test("individual specimen exports do not claim an aggregate or n=1", () => {
+test("individual specimen legends omit laboratory identifiers", () => {
   const points = [
     { n: 1, selectedLabel: "Cell 1 · Ref A" },
     { n: 1, selectedLabel: "Cell 1 · Ref A" },
   ];
-  const summary = describeTrendExport(points, "Mean with 95% CI when estimable");
-
-  assert.equal(summary.mode, "individual");
-  assert.equal(summary.subtitle, "Individual specimen trajectories · one line per specimen · no aggregation");
-  assert.doesNotMatch(summary.subtitle, /mean|median|n=1/i);
-  assert.equal(describeSeriesSelection(points, summary.mode), "Individual specimen · Cell 1 · Ref A");
+  assert.equal(describeSeriesSelection(points), "Individual specimen");
+  assert.equal(describeSeriesSelection([{ n: 1, selectedLabel: "Cell 1" }, { n: 1, selectedLabel: "Cell 2" }]), "2 individual specimens");
 });
 
-test("aggregate exports retain their estimator and sample-size range", () => {
-  const summary = describeTrendExport([{ n: 2 }, { n: 4 }], "Median with IQR when estimable");
-
-  assert.equal(summary.mode, "aggregate");
-  assert.equal(summary.subtitle, "Median with IQR when estimable · n=2–4 per series and duration");
+test("shared material legend counts distinct individual specimens", () => {
+  const series = [
+    { label: "POE-2 / TF4", exportLegendKey: "tf4", points: [{ n: 1, selectedLabel: "Cell 3 · Ref 2" }] },
+    { label: "POE-2 / TF4", exportLegendKey: "tf4", points: [{ n: 1, selectedLabel: "Cell 4 · Ref 2" }] },
+    { label: "EVA", exportLegendKey: "eva", points: [{ n: 3 }] },
+  ];
+  assert.deepEqual([...legendSelectionsByKey(series)], [["tf4", "2 individual specimens"], ["eva", "Aggregate values"]]);
 });
 
-test("mixed exports identify both observation types and only count aggregate points", () => {
-  const summary = describeTrendExport(
-    [{ n: 1, selectedLabel: "Cell 1 · Ref A" }, { n: 3 }],
-    "Mean with 95% CI when estimable",
-  );
+test("aggregate legends state only the display type", () => {
+  assert.equal(describeSeriesSelection([{ n: 2 }, { n: 4 }]), "Aggregate values");
+});
 
-  assert.equal(summary.mode, "mixed");
-  assert.match(summary.subtitle, /individual observations and aggregate values/);
-  assert.match(summary.subtitle, /aggregates: Mean with 95% CI when estimable; n=3/);
-  assert.doesNotMatch(summary.subtitle, /n=1/);
+test("mixed exports describe each series without a redundant global subtitle", () => {
+  assert.equal(describeSeriesSelection([{ n: 1, selectedLabel: "Cell 1 · Ref A" }, { n: 3 }]), "Individual specimen and aggregate values");
+  assert.equal(trendExportScaleWarning(false, true), "");
+  assert.equal(trendExportScaleWarning(false, false), "");
+  assert.equal(trendExportScaleWarning(true, false), "Some values extend beyond the y-axis");
+  assert.equal(trendExportScaleWarning(true, true), "Some values or intervals extend beyond the y-axis");
 });

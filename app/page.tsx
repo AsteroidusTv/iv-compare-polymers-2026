@@ -526,7 +526,7 @@ export default function Home() {
   const selectedTrendSeries: ContextTrendSeries[] = selectedUnsplitSeries.flatMap((series) => {
     const ids = new Set(series.points.flatMap((point) => point.members.map((member) => member.sampleUid)));
     const groups = analysisGroups((dataset?.samples ?? []).filter((sample) => ids.has(sample.sample_uid)), grouping);
-    return groups.map((group) => {
+    return groups.map((group, groupIndex) => {
       const memberIds = new Set(group.samples.map((sample) => sample.sample_uid));
       const points = series.points.flatMap((point) => {
         const members = point.members.filter((member) => memberIds.has(member.sampleUid));
@@ -534,7 +534,7 @@ export default function Home() {
         const summary = summarise(members.map((member) => member.value), aggregation);
         return [{ ...point, y: summary.value, min: summary.min, max: summary.max, intervalLow: summary.intervalLow, intervalHigh: summary.intervalHigh, intervalLabel: summary.intervalLabel, n: summary.n, members }];
       });
-      return { ...series, id: `${series.id}::group:${group.key}`, parentSeriesId: series.id, label: group.label, exportLabel: group.label, contextLabel: [series.config.stress, METRICS[series.config.metric].label, describeGraphElectrode(group.samples.map(sample => sample.electrode))].filter(Boolean).join(" · "), exportLegendKey: `${series.id}:${group.key}`, linePattern: identityLinePattern(group.key), points, sampleSetChanges: new Set(points.map((point) => point.members.map((member) => member.sampleUid).sort().join("|"))).size > 1 };
+      return { ...series, id: `${series.id}::group:${group.key}`, parentSeriesId: series.id, label: group.label, exportLabel: groups.length > 1 ? `${series.config.material} · group ${groupIndex + 1}` : series.config.material, contextLabel: [series.config.stress, METRICS[series.config.metric].label, describeGraphElectrode(group.samples.map(sample => sample.electrode))].filter(Boolean).join(" · "), exportLegendKey: `${series.id}:${group.key}`, linePattern: identityLinePattern(group.key), points, sampleSetChanges: new Set(points.map((point) => point.members.map((member) => member.sampleUid).sort().join("|"))).size > 1 };
     });
   });
   const cohortDiagnostics = selectedTrendSeries.map((series) => ({ series, timeline: cohortTimeline(series.points.flatMap((point) => point.members.map((member) => ({ time: point.x, sampleUid: member.sampleUid, value: member.value, batch: member.batchNo }))), aggregation) }));
@@ -565,7 +565,6 @@ export default function Home() {
         contextLabel: [series.config.stress, METRICS[series.config.metric].label, sample.sampleUid, `Excel ref. ${sample.sampleReference}`, describeGraphElectrode([sampleMap.get(sample.sampleUid)?.electrode])].filter(Boolean).join(" · "),
         exportLabel: series.config.material,
         exportLegendKey: series.id,
-        exportDetail: series.contextLabel,
         parentSeriesId: series.id,
         linePattern: identityLinePattern(sample.sampleUid),
       };
@@ -828,11 +827,10 @@ export default function Home() {
                     : `${reportMetric}${mode === "retention" ? " retention" : ""} during ${reportAgeing}`;
                   const reportReference = first.config.stress === "Outdoor" ? "reference baseline" : "initial value";
                   const reportYAxisLabel = mode === "retention" ? `${reportMetric} retention (% of ${reportReference})` : `${reportMetric} (${first.yUnit})`;
-                  const reportSubtitle = aggregation === "mean" ? "Mean with 95% CI when estimable" : "Median with IQR when estimable";
                   const panelKey = overlayCompatible ? `shared-${first.xUnit}` : `series-${first.parentSeriesId ?? first.id}-${first.xUnit}`;
                   return <section className="trend-panel" key={panelKey}>
                     <div className="trend-panel-head"><div><span className="trend-panel-title"><strong>{panelTitle}</strong>{helpMetric ? <InfoTip text={METRIC_HELP[helpMetric]} align="left" /> : null}</span><span className="trend-panel-context">{trendDisplay === "samples" ? `${panel.length} individual sample trajectories · ${first.xUnit}` : panel.length > 1 ? `${panel.length} compatible series · ${first.xUnit}` : first.contextLabel}</span></div></div>
-                    <TrendChart series={visiblePanel.map((series) => ({ ...series, exportDetail: series.contextLabel }))} xUnit={first.xUnit} yUnit={first.yUnit} reportTitle={reportTitle} reportSubtitle={reportSubtitle} reportYAxisLabel={reportYAxisLabel} exportContext={{...figureContext,analyticalTrendSeries:panel}} />
+                    <TrendChart series={visiblePanel.map((series) => ({ ...series, exportDetail: describeGraphElectrode(series.points.flatMap((point) => point.members.map((member) => sampleMap.get(member.sampleUid)?.electrode))) }))} xUnit={first.xUnit} yUnit={first.yUnit} reportTitle={reportTitle} reportYAxisLabel={reportYAxisLabel} exportContext={{...figureContext,analyticalTrendSeries:panel}} />
                   </section>;
                 })}
               </div>
