@@ -54,6 +54,13 @@ test("Outdoor dropout recovery requires positive valid neighbours on both sides"
   assert.match(outdoorQualityReason(observation, "outdoor_pmpp_W", [...peers, { time: 11, value: 10 }]) ?? "", /recovery/);
 });
 
+test("Outdoor day-0 startup dropout needs two stable recovery days", () => {
+  const first: Observation = { observation_uid: "first", sample_uid: "s", test_type: "Outdoor", exposure_duration_numeric: 0, outdoor_pr_pct: 0.06 };
+  assert.match(outdoorQualityReason(first, "outdoor_pr_pct", [{ time: 0, value: 0.06 }, { time: 1, value: 78 }, { time: 2, value: 80 }]) ?? "", /Installation-day dropout/);
+  assert.equal(outdoorQualityReason(first, "outdoor_pr_pct", [{ time: 0, value: 0.06 }, { time: 1, value: 78 }]), null);
+  assert.equal(outdoorQualityReason(first, "outdoor_pr_pct", [{ time: 0, value: 0.06 }, { time: 1, value: 0.1 }, { time: 2, value: 0.2 }]), null);
+});
+
 test("Outdoor B3/B7/B14 are explicit windows with minimum three valid observations", () => {
   const values = Array.from({ length: 14 }, (_, i) => i + 1);
   assert.equal(outdoorBaseline(values, 3).value, 2);

@@ -93,10 +93,10 @@ export function parseIV(bytes,source,registry){
  return {file,measurements,curves,rawPoints};
 }
 
-export function parseOutdoor(bytes,source,entry){
+export function parseOutdoor(bytes,source,entry,metricAdjudications=[]){
  const workbook=XLSX.read(bytes,{type:"buffer",raw:true}),rows=XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]],{defval:null,raw:true});
  const installation=serialDate(entry.installation_date);
- return rows.map((row,i)=>{
+ const parsed=rows.map((row,i)=>{
   const value=String(row.Time??row.RecTime??row.time??"");
   const us=/^(\d{1,2})\/(\d{1,2})\/(\d{4})(.*)$/.exec(value);
   const timestamp=us?`${us[3]}-${us[1].padStart(2,"0")}-${us[2].padStart(2,"0")}${us[4]}`:value;
@@ -104,4 +104,17 @@ export function parseOutdoor(bytes,source,entry){
   const date=timestamp.slice(0,10),irr=number(row.Irr),pr=number(row.PR),pmpp=number(row.Pmpp??row.pmpp);
   return {sample_uid:entry.sample_uid,source_file:source,source_row:i+2,timestamp,measurement_date:date,installation_date:installation,exposure_days:(Date.parse(date)-Date.parse(installation))/86400000,irradiance_W_m2:irr,performance_ratio_pct:pr,pmpp_W:pmpp,impp_A:number(row.Impp??row.impp),umpp_V:number(row.Umpp??row.umpp),qa_flags:[irr===null?"irradiance_missing":null,pr===null?"pr_missing":null].filter(Boolean).join(";")||null};
  });
+ for(const adjudication of metricAdjudications){
+  const decision=adjudication.decision;
+  if(adjudication.target!==source||decision.sample_uid!==entry.sample_uid)throw Error(`Outdoor adjudication identity mismatch: ${source}`);
+  const matching=parsed.filter(row=>row.measurement_date===decision.measurement_date);
+  const daylight=matching.filter(row=>row.irradiance_W_m2!==null&&row.irradiance_W_m2>=decision.irradiance_threshold_W_m2);
+  const ordered=daylight.flatMap(row=>row.performance_ratio_pct===null?[]:[row.performance_ratio_pct]).sort((a,b)=>a-b),middle=Math.floor(ordered.length/2),actual=ordered.length?(ordered.length%2?ordered[middle]:(ordered[middle-1]+ordered[middle])/2):null;
+  if(daylight.length!==decision.expected_daylight_count||actual===null||Math.abs(actual-adjudication.oldValue)>1e-9)throw Error(`Outdoor adjudication value/count mismatch: ${source} ${decision.measurement_date}`);
+  for(const row of matching){
+   row.qa_flags=[row.qa_flags,"outdoor_pr_adjudicated_fault"].filter(Boolean).join(";");
+   row.qa_reason=adjudication.reason;
+  }
+ }
+ return parsed;
 }

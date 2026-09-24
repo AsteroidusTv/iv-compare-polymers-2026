@@ -56437,5 +56437,71 @@
     }
   ],
   "manualExclusions": [],
-  "experimentalAdjudications": []
+  "experimentalAdjudications": [],
+  "outdoorMetricAdjudications": [
+    {
+      "target": "Outdoor/Installed_14Apr26/EVA3_21July26.csv",
+      "oldValue": 0,
+      "decision": {
+        "sample_uid": "SMP-103",
+        "measurement_date": "2026-04-14",
+        "metric": "outdoor_pr_pct",
+        "scope": "daily_aggregate",
+        "qa_flag": "outdoor_pr_adjudicated_fault",
+        "irradiance_threshold_W_m2": 200,
+        "expected_daylight_count": 30
+      },
+      "reason": "Owner adjudicated this Outdoor PR daily aggregate as a measurement bug. Exclude PR only; instrumental cause is unverified.",
+      "source": "Owner review of the Outdoor graph and raw logger data, 2026-09-23",
+      "status": "owner_adjudicated_excluded"
+    },
+    {
+      "target": "Outdoor/Installed_14Apr26/TPO2_Lenzing1_21July26.csv",
+      "oldValue": 0.00800000037997961,
+      "decision": {
+        "sample_uid": "SMP-112",
+        "measurement_date": "2026-04-14",
+        "metric": "outdoor_pr_pct",
+        "scope": "daily_aggregate",
+        "qa_flag": "outdoor_pr_adjudicated_fault",
+        "irradiance_threshold_W_m2": 200,
+        "expected_daylight_count": 33
+      },
+      "reason": "Owner adjudicated this Outdoor PR daily aggregate as a measurement bug. Exclude PR only; instrumental cause is unverified.",
+      "source": "Owner review of the Outdoor graph and raw logger data, 2026-09-23",
+      "status": "owner_adjudicated_excluded"
+    },
+    {
+      "target": "Outdoor/Installed_14Apr26/EVA3_21July26.csv",
+      "oldValue": 21.473999977111816,
+      "decision": {
+        "sample_uid": "SMP-103",
+        "measurement_date": "2026-07-10",
+        "metric": "outdoor_pr_pct",
+        "scope": "daily_aggregate",
+        "qa_flag": "outdoor_pr_adjudicated_fault",
+        "irradiance_threshold_W_m2": 200,
+        "expected_daylight_count": 40
+      },
+      "reason": "Owner adjudicated this Outdoor PR daily aggregate as a measurement bug. Exclude PR only; instrumental cause is unverified.",
+      "source": "Owner review of the Outdoor graph and raw logger data, 2026-09-23",
+      "status": "owner_adjudicated_excluded"
+    },
+    {
+      "target": "Outdoor/Installed_14Apr26/TPO2_Lenzing1_21July26.csv",
+      "oldValue": 26.552499771118164,
+      "decision": {
+        "sample_uid": "SMP-112",
+        "measurement_date": "2026-07-10",
+        "metric": "outdoor_pr_pct",
+        "scope": "daily_aggregate",
+        "qa_flag": "outdoor_pr_adjudicated_fault",
+        "irradiance_threshold_W_m2": 200,
+        "expected_daylight_count": 40
+      },
+      "reason": "Owner adjudicated this Outdoor PR daily aggregate as a measurement bug. Exclude PR only; instrumental cause is unverified.",
+      "source": "Owner review of the Outdoor graph and raw logger data, 2026-09-23",
+      "status": "owner_adjudicated_excluded"
+    }
+  ]
 }

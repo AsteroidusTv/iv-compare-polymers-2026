@@ -41,7 +41,7 @@ try{
   if(index%100===0)console.log(`Parsed ${index+1}/${registry.matching.length} IV files`);
  }
 }finally{await pointsFile.close();}
-const outdoor:ReturnType<typeof parseOutdoor>=registry.outdoor.flatMap((entry:{target:string;decision:Parameters<typeof parseOutdoor>[2]})=>parseOutdoor(rawBytes.get(entry.target),entry.target,entry.decision));
+const outdoor:ReturnType<typeof parseOutdoor>=registry.outdoor.flatMap((entry:{target:string;decision:Parameters<typeof parseOutdoor>[2]})=>parseOutdoor(rawBytes.get(entry.target),entry.target,entry.decision,registry.outdoorMetricAdjudications.filter((item:{target:string})=>item.target===entry.target)));
 const sensitivity=outdoorSensitivity(outdoor);
 const groups=new Map<string,typeof outdoor>();
 for(const row of outdoor){const key=JSON.stringify([row.sample_uid,row.source_file,row.measurement_date]);const rows=groups.get(key)??[];rows.push(row);groups.set(key,rows);}
@@ -49,15 +49,17 @@ const daily=sensitivity.daily.filter(row=>row.threshold===200);
 const observations=[...inventory.observations,...daily.map((row,index)=>{
  const raw=groups.get(JSON.stringify([row.sampleUid,row.source,row.date]))!;
  const electricalOnly=row.reason==="irradiance_missing";
+ const prAdjudication=row.metricExcludedRows.pr.find(item=>item.flag?.split(/[;,|]/).includes("outdoor_pr_adjudicated_fault"));
  const positive=raw.flatMap(item=>item.pmpp_W!==null&&item.pmpp_W>0?[item.pmpp_W]:[]).sort((a:number,b:number)=>a-b);
  const mid=positive.length?((positive[Math.floor((positive.length-1)/2)]+positive[Math.ceil((positive.length-1)/2)])/2):null;
  return {observation_uid:`ODD-${String(index+1).padStart(5,"0")}`,sample_uid:row.sampleUid,test_type:"Outdoor",exposure_duration_numeric:row.time,exposure_unit:"days",efficiency_pct:null,jsc_mA_cm2:null,voc_V:null,ff_pct:null,
-  outdoor_pr_pct:row.pr,outdoor_pmpp_W:electricalOnly?mid:row.pmpp,outdoor_irradiance_W_m2:row.irradiance,
-  action_or_status:"outdoor_daily_aggregate",data_quality_flag:electricalOnly?"irradiance_missing;pmpp_without_irradiance_filter;pr_missing;pr_unavailable":row.reason,
+  outdoor_pr_pct:row.prObserved,outdoor_pmpp_W:electricalOnly?mid:row.pmpp,outdoor_irradiance_W_m2:row.irradiance,
+  action_or_status:"outdoor_daily_aggregate",data_quality_flag:electricalOnly?"irradiance_missing;pmpp_without_irradiance_filter;pr_missing;pr_unavailable":prAdjudication?"outdoor_pr_adjudicated_fault":row.reason,
+  comments:prAdjudication?.reason??null,
   source_file:row.source,measurement_date:row.date,raw_count:row.rawCount,daylight_count:row.retainedRows,aggregation_protocol:"Daily median at irradiance >=200 W/m2; electrical-only positive Pmpp fallback flagged",raw_source_rows:raw.map(item=>item.source_row)};
 })];
 const report={samples:inventory.samples.length,recipes:inventory.recipes.length,observations:observations.length,files:files.length,measurements:measurements.length,points:Object.values(curves).reduce((n,curve)=>n+curve.v.length,0),matchedFiles:files.filter(file=>file.match_status?.startsWith("matched_")).length,reviewFiles:files.filter(file=>["ambiguous","unmatched"].includes(file.match_status)).length};
-const provenance={pipelineVersion:"raw-rebuild/1",registrySha256:sha(registryBytes),rawFileHashes:registry.rawHashes,notes:["Raw-only reconstruction. Legacy interpretation and matching decisions retained without experimental validation."]};
+const provenance={pipelineVersion:"raw-rebuild/2",registrySha256:sha(registryBytes),rawFileHashes:registry.rawHashes,notes:["Raw-only reconstruction. Legacy interpretation and matching decisions retained without experimental validation.","Owner-adjudicated Outdoor PR dates are metric-local exclusions; source logger values remain unchanged."]};
 const payload={schemaVersion:"1.2",name:"IV Compare — raw reconstruction candidate",provenance,report,samples:inventory.samples,recipes:inventory.recipes,observations,files,measurements,curves};
 validateDataset(payload);
 const bytes=gzipSync(JSON.stringify(payload),{level:9});

@@ -19,3 +19,17 @@ test("missing, zero and ambiguous references never silently produce retention", 
   assert.deepEqual(trace([row("B","Unaged",0),row("A","DH",5)])[0].exclusions,["zero_baseline"]);
   assert.deepEqual(trace([row("B","Unaged",10),row("B2","Unaged",20),row("A","DH",5)])[0].exclusions,["ambiguous_baseline"]);
 });
+test("Outdoor adjudicated PR stays inspectable, is excluded by default, and can be included explicitly",()=>{
+  const rows=[0,20,30,40].map((value,index)=>({
+    ...row(`O${index}`,"Outdoor",value),exposure_duration_numeric:index,
+    ...(index===0?{data_quality_flag:"outdoor_pr_adjudicated_fault"}:{}),
+    outdoor_pr_pct:value,
+  }));
+  const run=(includeQa:boolean)=>normalizationTraces({observations:rows} as IVDataset,{sampleUids:["S1"],protocol:"Outdoor",metric:"outdoor_pr_pct",mode:"retention",includeQa,outdoorWindow:7,qaIssues:new Map()});
+  const excluded=run(false),included=run(true);
+  assert.equal(excluded[0].absoluteValue,0);
+  assert.equal(excluded[0].value,null);
+  assert.ok(excluded[0].exclusions.includes("qa_metric"));
+  assert.deepEqual(excluded[0].baseline?.observations.map(item=>item.observation_uid),["O1","O2","O3"]);
+  assert.equal(included[0].value,0);
+});

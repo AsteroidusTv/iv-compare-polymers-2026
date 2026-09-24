@@ -1,5 +1,5 @@
 {
-  "pipelineVersion": "2.1.0",
+  "pipelineVersion": "2.2.0",
   "generatedOn": "2026-09-13",
   "inventory": {
     "source": "data/raw/IV/Summary.xlsx",
@@ -20,6 +20,7 @@
     "dailyPR": "Median PR for rows with irradiance >= 200 W/m2.",
     "dailyPmpp": "Median Pmpp over the same daylight rows. For electrical-only files without irradiance, median positive Pmpp is retained with an explicit QA flag.",
     "dailyIrradiance": "Median irradiance over the same daylight rows.",
+    "manualMetricAdjudications": "The versioned decision registry may exclude a source-bound daily PR aggregate by sample and date after owner QA adjudication; the PR metric only is excluded, raw rows and other metrics are retained, and the cause is not inferred.",
     "retentionBaseline": "Median of the first 3 to 7 QA-valid daily values for the same sample and metric; 3/7/14-day sensitivity is reported when enough data exist."
   },
   "notes": [

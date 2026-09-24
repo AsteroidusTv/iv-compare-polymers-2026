@@ -31,7 +31,7 @@ export function validateDecisionRegistry(registry) {
   for (const [source, hash] of sources) {
     if (!/^(IV|Outdoor)\//.test(source) || source.includes("\\") || source.split("/").some(part => !part || part === ".." || part === ".") || !/^[a-f0-9]{64}$/.test(hash)) fail("source path/hash");
   }
-  const limits = { inventoryIds:10000, observationIds:100000, measurementIds:100000, materialMappings:1000, recipes:1000, recipeLinks:1000, dates:10000, matching:10000, outdoor:10000, manualExclusions:10000, experimentalAdjudications:10000, ignoredRawSources:1000 };
+  const limits = { inventoryIds:10000, observationIds:100000, measurementIds:100000, materialMappings:1000, recipes:1000, recipeLinks:1000, dates:10000, matching:10000, outdoor:10000, manualExclusions:10000, experimentalAdjudications:10000, outdoorMetricAdjudications:1000, ignoredRawSources:1000 };
   for (const [key, limit] of Object.entries(limits)) if (!Array.isArray(registry[key]) || registry[key].length > limit) fail(key);
   for (const key of ["materialMappings", "recipes", "recipeLinks", "dates", "matching", "outdoor", "manualExclusions", "experimentalAdjudications", "ignoredRawSources"]) {
     const targets = new Set();
@@ -46,6 +46,22 @@ export function validateDecisionRegistry(registry) {
     for (const item of registry[key]) { if (!item || typeof item[id] !== "string" || !item[id] || ids.has(item[id])) fail(`${key} duplicate/invalid identity`); ids.add(item[id]); }
   }
   for (const item of [...registry.matching, ...registry.outdoor]) if (!(item.target in registry.rawHashes)) fail("decision source missing from hashes");
+  const outdoorTargets = new Map(registry.outdoor.map(item => [item.target, item.decision.sample_uid]));
+  const outdoorAdjudications = new Set();
+  for (const item of registry.outdoorMetricAdjudications) {
+    const decision = item?.decision;
+    if (!item || typeof item.target !== "string" || !(item.target in registry.rawHashes)
+      || typeof item.reason !== "string" || !item.reason.trim() || typeof item.source !== "string" || !item.source.trim()
+      || item.status !== "owner_adjudicated_excluded" || !Number.isFinite(item.oldValue)
+      || !decision || decision.scope !== "daily_aggregate" || decision.metric !== "outdoor_pr_pct"
+      || decision.qa_flag !== "outdoor_pr_adjudicated_fault" || decision.irradiance_threshold_W_m2 !== 200
+      || outdoorTargets.get(item.target) !== decision.sample_uid
+      || !/^\d{4}-\d{2}-\d{2}$/.test(decision.measurement_date)
+      || !Number.isInteger(decision.expected_daylight_count) || decision.expected_daylight_count < 3) fail("Outdoor metric adjudication evidence");
+    const key = JSON.stringify([item.target, decision.sample_uid, decision.measurement_date, decision.metric]);
+    if (outdoorAdjudications.has(key)) fail("duplicate Outdoor metric adjudication");
+    outdoorAdjudications.add(key);
+  }
   if (registry.units?.status !== "legacy_unverified" || registry.units?.decision?.voltageScaleToV !== 0.001) fail("unit interpretation requires parser version review");
   // Never silently ignore a future adjudication. A supported application policy is required before import.
   if (registry.manualExclusions.length || registry.experimentalAdjudications.length) fail("new exclusions/adjudications require explicit application-policy review");

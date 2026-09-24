@@ -17,9 +17,14 @@ format/version, unit interpretation, date interpretation, matching, recipes and
 material mappings. Each decision has target, old value, interpretation, source,
 reason and status. `migrate-decision-registry.mjs` is the one-time migration of
 historical decisions, not the reconstruction pipeline. Migrated decisions are
-`legacy_unverified`; their preservation is not experimental validation. Future
-manual exclusions or experimental adjudications currently fail closed rather
-than being silently ignored or treated as proof.
+`legacy_unverified`; their preservation is not experimental validation.
+General manual exclusions and experimental adjudications still fail closed.
+The narrowly scoped `outdoorMetricAdjudications` policy accepts only documented
+daily Outdoor PR exclusions, tied to a source file, specimen, date, threshold,
+expected raw-day count and expected median. It flags all raw PR records for that
+specimen-date, excludes that day's PR aggregate from the analysis and its
+baseline, and leaves Pmpp, irradiance and the immutable CSV unchanged. The
+underlying cause must not be inferred from the adjudication.
 
 Summary.xlsx is the active inventory. Summary_v2.xlsx is byte-identical; v1 is a
 superseded archive. Both remain hash-checked and explicitly recorded as ignored

@@ -158,6 +158,7 @@ button, a, label { -webkit-tap-highlight-color: transparent; }
 .reference-baseline text { fill: #5f6875; font-size: 9px; font-weight: 700; }
 .trend-point { transition: r .12s ease, stroke-width .12s ease; }
 .trend-point:hover { r: 5px; stroke-width: 2.5px; }
+.trend-point-hit:hover, .trend-point-hit:focus-visible { fill: white; stroke-opacity: 1; }
 .landmark-guide { stroke-width: 1; stroke-dasharray: 4 4; opacity: .5; }
 .landmark-point { stroke-width: 1.5; }
 .landmark-label { font-size: 8px; font-weight: 800; paint-order: stroke; stroke: white; stroke-width: 3px; stroke-linejoin: round; }

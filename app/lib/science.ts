@@ -141,6 +141,17 @@ export function outdoorQualityReason(observation: Observation, metric: MetricKey
   if (!numeric(observation.exposure_duration_numeric)) return null;
 
   const time = observation.exposure_duration_numeric;
+  // The installation-day logger value can precede a stable operating state.
+  // Only reject an isolated day-0 dropout with two consecutive, agreeing days;
+  // persistent low output remains available as a possible real failure.
+  if (time === 0 && (metric === "outdoor_pr_pct" || metric === "outdoor_pmpp_W")) {
+    const next = [1, 2].map((day) => peers.find((peer) => peer.time === day)?.value);
+    if (next.every((peer): peer is number => numeric(peer) && peer > 0)
+      && Math.max(...next) / Math.min(...next) < 1.35
+      && value < Math.min(...next) * 0.25) {
+      return `Installation-day dropout (${value}) followed by stable recovery on days 1 and 2; startup measurement is not a valid baseline.`;
+    }
+  }
   const local = peers
     .filter((peer) => peer.time !== time)
     .sort((left, right) => Math.abs(left.time - time) - Math.abs(right.time - time))

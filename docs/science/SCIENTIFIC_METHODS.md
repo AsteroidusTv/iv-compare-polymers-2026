@@ -68,9 +68,10 @@ explicit diagnostic. This adds validation rather than inferring new identities.
 Normalization traces retain the absolute observation and its unique same-specimen
 Unaged reference (or explicit Outdoor B3/B7/B14 reference rows). Duplicate
 specimen/time rows are ambiguous, not additional independent specimens. A
-measured zero is retained; the cause of an absent observation remains unknown
-unless sourced follow-up evidence exists. Low PCE references (<0.5%) are flagged
-for inspection, not adjusted.
+measured zero is retained in the source. Analytical exclusion requires a
+source-specific owner adjudication or a documented QA criterion; neither alters
+the raw measurement or establishes a physical cause. Low PCE references
+(<0.5%) are flagged for inspection, not adjusted.
 
 Paired changes are computed per cell. Both mean and median of absolute and
 relative changes are retained. The relative change of group means is an explicitly
@@ -134,6 +135,16 @@ Raw logger rows are filtered separately at irradiance ≥100/200/300 W/m²;
 the daily statistic is the median. PR and Pmpp flags apply to their own metrics;
 unknown/global flags remain conservative. Missing irradiance cannot support
 threshold sensitivity. Duplicate sample/date sources are ambiguous, not pooled.
+Bespoke owner adjudications for Outdoor PR are enumerated in the decision
+registry with exact source file, sample, date, expected daily median and raw-day
+count; they are excluded from PR points and reference windows, not from Pmpp.
+The raw logger measurements remain unchanged, and the adjudication does not
+identify the underlying instrument fault.
+For daily Outdoor PR and Pmpp, an installation-day reading is provisionally
+excluded from plotting and baseline calculation only when days 1 and 2 both
+recover to positive, mutually similar values (ratio <1.35) and day 0 is below
+25% of the smaller value. This reproducible QA screen retains the raw reading;
+it does not diagnose the instrument or exclude sustained low output.
 B3/B7/B14 use the first up to 3/7/14 QA-valid days, requiring at least 3;
 200 W/m² and B7 remain the principal convention. Baseline days, dates and value
 are retained, never optimized for a favorable trend. Relative values require a

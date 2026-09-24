@@ -46,6 +46,16 @@ test("outdoor raw parser preserves metric-specific absence and source row",()=>{
  assert.equal(result[0].performance_ratio_pct,null);assert.equal(result[0].pmpp_W,.4);
  assert.equal(result[0].source_row,2);assert.equal(result[0].qa_flags,"pr_missing");
 });
+test("Outdoor metric adjudication is source/date/value-bound, PR-only and raw-preserving",()=>{
+ const rows="Time,Irr,PR,Pmpp\n2026-01-02 12:00:00,200,10,0.4\n2026-01-02 12:10:00,250,20,0.5\n2026-01-02 12:20:00,300,30,0.6\n";
+ const reason="Owner adjudicated this Outdoor PR daily aggregate as a measurement bug. Instrumental cause is unverified.";
+ const adjudication={target:"Outdoor/test.csv",oldValue:20,reason,decision:{sample_uid:"S1",measurement_date:"2026-01-02",metric:"outdoor_pr_pct",scope:"daily_aggregate",qa_flag:"outdoor_pr_adjudicated_fault",irradiance_threshold_W_m2:200,expected_daylight_count:3}};
+ const result=parseOutdoor(Buffer.from(rows),"Outdoor/test.csv",{installation_date:46023,sample_uid:"S1"},[adjudication]) as Array<{qa_flags:string|null;qa_reason?:string;pmpp_W:number|null}>;
+ assert.ok(result.every(row=>row.qa_flags?.includes("outdoor_pr_adjudicated_fault")&&row.qa_reason===reason));
+ assert.deepEqual(result.map(row=>row.pmpp_W),[.4,.5,.6]);
+ assert.throws(()=>parseOutdoor(Buffer.from(rows),"Outdoor/test.csv",{installation_date:46023,sample_uid:"S1"},[{...adjudication,oldValue:21}]),/value\/count mismatch/);
+ assert.throws(()=>parseOutdoor(Buffer.from(rows),"Outdoor/other.csv",{installation_date:46023,sample_uid:"S1"},[adjudication]),/identity mismatch/);
+});
 
 test("rebuild refuses occupied outputs and symlink redirection to production before mkdir",async()=>{
  const root=await fs.mkdtemp(path.join(os.tmpdir(),"iv-boundary-test-"));
@@ -68,6 +78,7 @@ test("registry rejects traversal, duplicate identities and unapplied future deci
  validateRawCoverage(Object.keys(registry.rawHashes),registry);
  assert.throws(()=>validateDecisionRegistry({...registry,rawHashes:{"IV/../processed.xlsx":"a".repeat(64)}}),/source path/);
  assert.throws(()=>validateDecisionRegistry({...registry,inventoryIds:[...registry.inventoryIds,registry.inventoryIds[0]]}),/duplicate/);
+ assert.throws(()=>validateDecisionRegistry({...registry,outdoorMetricAdjudications:[{...registry.outdoorMetricAdjudications[0],decision:{...registry.outdoorMetricAdjudications[0].decision,metric:"outdoor_pmpp_W"}}]}),/Outdoor metric adjudication evidence/);
  assert.throws(()=>validateDecisionRegistry({...registry,experimentalAdjudications:[{target:"M1",oldValue:null,decision:true,reason:"fixture",source:"fixture",status:"validated"}]}),/application-policy review/);
  const code=await fs.readFile("scripts/rebuild-from-raw.ts","utf8");
  assert.ok(!code.includes("data/processed"));

@@ -8,6 +8,7 @@ import { gzipSync } from "node:zlib";
 
 import XLSX from "xlsx";
 import { referenceLinkDiagnostic } from "../app/lib/reference-links.mjs";
+import { validateDecisionRegistry } from "./rebuild-boundary.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const processed = path.join(root, "data", "processed");
@@ -112,6 +113,10 @@ async function readCurves() {
 
 async function buildPayload() {
   const protocol = JSON.parse(await fs.readFile(protocolPath, "utf8"));
+  const decisionRegistryBytes = await fs.readFile(path.join(root, "data", "decisions", "registry-v1.json"));
+  const decisionRegistry = validateDecisionRegistry(JSON.parse(decisionRegistryBytes.toString("utf8")));
+  const outdoorMetricAdjudications = decisionRegistry.outdoorMetricAdjudications;
+  const appliedOutdoorAdjudications = new Set();
   const workbookBytes = await fs.readFile(workbookPath);
   const workbook = XLSX.read(workbookBytes, { type: "buffer", cellDates: true, raw: true });
   const samples = sheetRows(workbook, "Samples").map((row) => keep(row, [
@@ -129,27 +134,44 @@ async function buildPayload() {
     ff_pct: number(row.ff_pct),
     source_row: number(row.source_inventory_row),
   }));
-  observations.push(...sheetRows(workbook, "Outdoor_Daily").map((row) => ({
-    observation_uid: row.outdoor_daily_uid,
-    sample_uid: row.sample_uid,
-    test_type: "Outdoor",
-    exposure_duration_numeric: number(row.exposure_days),
-    exposure_unit: "days",
-    efficiency_pct: null,
-    jsc_mA_cm2: null,
-    voc_V: null,
-    ff_pct: null,
-    outdoor_pr_pct: number(row.performance_ratio_pct_median),
-    outdoor_pmpp_W: number(row.pmpp_W_daylight_median ?? row.pmpp_W_max),
-    outdoor_irradiance_W_m2: number(row.irradiance_W_m2_daylight_median ?? row.irradiance_W_m2_max),
-    action_or_status: "outdoor_daily_aggregate",
-    comments: text(row.aggregation_protocol),
-    data_quality_flag: text(row.qa_flags),
-    source_file: text(row.source_file),
-    aggregation_protocol: text(row.aggregation_protocol),
-    raw_count: number(row.raw_count),
-    daylight_count: number(row.daylight_count_irr_ge_200),
-  })));
+  observations.push(...sheetRows(workbook, "Outdoor_Daily").map((row) => {
+    const matches = outdoorMetricAdjudications.filter((item) => item.target === text(row.source_file)
+      && item.decision.sample_uid === text(row.sample_uid)
+      && item.decision.measurement_date === date(row.measurement_date));
+    if (matches.length > 1) throw new Error(`Multiple Outdoor PR adjudications match ${row.source_file} ${row.measurement_date}`);
+    const adjudication = matches[0];
+    if (adjudication) {
+      if (number(row.daylight_count_irr_ge_200) !== adjudication.decision.expected_daylight_count
+        || number(row.performance_ratio_pct_median) === null
+        || Math.abs(number(row.performance_ratio_pct_median) - adjudication.oldValue) > 1e-9) {
+        throw new Error(`Outdoor PR adjudication value/count mismatch: ${row.source_file} ${adjudication.decision.measurement_date}`);
+      }
+      appliedOutdoorAdjudications.add(adjudication);
+    }
+    const flags = [...new Set([text(row.qa_flags), adjudication?.decision.qa_flag].filter(Boolean))];
+    return {
+      observation_uid: row.outdoor_daily_uid,
+      sample_uid: row.sample_uid,
+      test_type: "Outdoor",
+      exposure_duration_numeric: number(row.exposure_days),
+      exposure_unit: "days",
+      efficiency_pct: null,
+      jsc_mA_cm2: null,
+      voc_V: null,
+      ff_pct: null,
+      outdoor_pr_pct: number(row.performance_ratio_pct_median),
+      outdoor_pmpp_W: number(row.pmpp_W_daylight_median ?? row.pmpp_W_max),
+      outdoor_irradiance_W_m2: number(row.irradiance_W_m2_daylight_median ?? row.irradiance_W_m2_max),
+      action_or_status: "outdoor_daily_aggregate",
+      comments: adjudication ? `${text(row.aggregation_protocol) ?? ""} Owner adjudication: ${adjudication.reason}`.trim() : text(row.aggregation_protocol),
+      data_quality_flag: flags.join(";") || null,
+      source_file: text(row.source_file),
+      aggregation_protocol: text(row.aggregation_protocol),
+      raw_count: number(row.raw_count),
+      daylight_count: number(row.daylight_count_irr_ge_200),
+    };
+  }));
+  if (appliedOutdoorAdjudications.size !== outdoorMetricAdjudications.length) throw new Error("An Outdoor PR adjudication did not match exactly one daily source row.");
   const files = sheetRows(workbook, "IV_Files").map((row) => ({
     ...keep(row, ["file_uid", "source_file", "file_name", "measurement_group", "inferred_test_type", "inferred_exposure_unit", "material_family_inferred", "sample_uid", "match_status", "match_reasons", "matched_observation_uid", "matched_measurement_sheet"]),
     inferred_exposure_duration: number(row.inferred_exposure_duration),
@@ -206,6 +228,7 @@ async function buildPayload() {
       normalizedWorkbookSha256: sha256(workbookBytes),
       curvePointsSha256: await sha256File(pointsPath),
       outdoorRawSha256: await sha256File(outdoorRawPath),
+      decisionRegistrySha256: sha256(decisionRegistryBytes),
       rawFileCount: rawTree.count,
       notes: protocol.notes,
     },

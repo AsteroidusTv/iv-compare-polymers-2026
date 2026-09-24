@@ -50,9 +50,13 @@ test("the shipped package satisfies the complete dataset invariants", () => {
   assert.equal(dataset.report.matchedFiles, 364);
   assert.equal(dataset.report.reviewFiles, 3);
   assert.equal(dataset.report.auditFiles, 42);
-  assert.equal(dataset.provenance?.pipelineVersion, "2.1.0");
+  assert.equal(dataset.provenance?.pipelineVersion, "2.2.0");
   assert.equal(dataset.files.filter((file) => file.reference_sample_uid).length, 27);
   assert.equal(dataset.samples.find((sample) => sample.sample_uid === "SMP-003")?.encapsulation_date, "2026-03-19");
   assert.equal(dataset.files.find((file) => file.file_uid === "FIL-0001")?.measurement_date, "2026-03-31");
   assert.equal(dataset.measurements.find((measurement) => measurement.measurement_uid === "MEA-00001")?.measurement_date, "2026-03-31");
+  const adjudicated = ["ODD-00742", "ODD-00822", "ODD-00832", "ODD-00912"].map(id => dataset.observations.find(row => row.observation_uid === id)!);
+  assert.deepEqual(adjudicated.map(row => row.outdoor_pr_pct), [0, 21.473999977111816, 0.00800000037997961, 26.552499771118164]);
+  assert.ok(adjudicated.every(row => row.data_quality_flag === "outdoor_pr_adjudicated_fault"));
+  assert.ok(adjudicated.every(row => row.outdoor_pmpp_W !== null && row.outdoor_pmpp_W !== undefined));
 });

@@ -20,6 +20,12 @@ export function trendIntervalVisible(point: PlottedTrendPoint, enabled: boolean)
     || (point.intervalLabel === "IQR" && point.n >= 3));
 }
 
+// Dense daily curves remain fully sampled; only their decorative symbols are
+// suppressed. Every observed point keeps its accessible SVG hit target.
+export function showTrendMarkers(xUnit: string, pointCount: number): boolean {
+  return xUnit !== "days" || pointCount <= 28;
+}
+
 export function trendDisplayValues(points: PlottedTrendPoint[], intervals: boolean): number[] {
   return points.flatMap(point => [point.y,
     ...(!point.selectedLabel ? point.members.map(member => member.value) : []),

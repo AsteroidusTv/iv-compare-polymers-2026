@@ -2,7 +2,7 @@
 
 import { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
 
-import { describeSeriesSelection, describeTrendExport, pointsThrough, trendDisplayValues, trendIntervalVisible, uniqueLegendEntries } from "../lib/chart-export";
+import { describeSeriesSelection, describeTrendExport, pointsThrough, showTrendMarkers, trendDisplayValues, trendIntervalVisible, uniqueLegendEntries } from "../lib/chart-export";
 import { figureCsv, figureManifest, jvMethodCaption, type FigureExportContext, type FigureManifest } from "../lib/figure-export";
 import { downloadFigureFile } from "../lib/browser-figure-download";
 import { markerPath, segmentLinePattern, type MaterialStyle } from "../lib/material-style";
@@ -506,11 +506,12 @@ export function TrendChart({
         <g clipPath="url(#trend-plot-clip)">{plottedSeries.map((item, seriesIndex) => {
           const ordered = [...item.points].sort((a, b) => a.x - b.x);
           const path = ordered.map((point, index) => `${index ? "L" : "M"}${sx(point.x)},${sy(point.y)}`).join(" ");
+          const visibleMarkers = showTrendMarkers(xUnit, ordered.length);
           return <g key={item.label} data-export-series-index={seriesIndex}>
             {ordered.filter(point => trendIntervalVisible(point, showIntervals)).map((point) => <line key={`range-${point.x}`} x1={sx(point.x)} x2={sx(point.x)} y1={sy(point.intervalLow)} y2={sy(point.intervalHigh)} stroke={item.color} strokeWidth="1.5" opacity=".3"><title>{`${point.intervalLabel}: ${numberFormat.format(point.intervalLow)}–${numberFormat.format(point.intervalHigh)} ${yUnit}; n=${point.n}`}</title></line>)}
-            {ordered.filter((point) => !point.selectedLabel).flatMap((point) => point.members.map((member) => <path key={`member-${point.x}-${member.observationId}`} d={markerPath(item.marker,sx(point.x),sy(member.value),3)} fill={item.color} opacity=".7"><title>{`${member.sampleLabel} (${member.sampleUid}; batch ${member.batchNo ?? "not recorded"}): ${numberFormat.format(member.value)} ${yUnit}; n=${point.n}`}</title></path>))}
+            {visibleMarkers && ordered.filter((point) => !point.selectedLabel).flatMap((point) => point.members.map((member) => <path key={`member-${point.x}-${member.observationId}`} d={markerPath(item.marker,sx(point.x),sy(member.value),3)} fill={item.color} opacity=".7"><title>{`${member.sampleLabel} (${member.sampleUid}; batch ${member.batchNo ?? "not recorded"}): ${numberFormat.format(member.value)} ${yUnit}; n=${point.n}`}</title></path>))}
             <path d={path} fill="none" stroke={item.color} strokeWidth="3" strokeDasharray={item.linePattern} strokeLinejoin="round" strokeLinecap="round" />
-            {ordered.map((point) => <path className={`trend-point${point.selectedLabel ? " selected" : ""}`} key={`point-${point.x}`} d={markerPath(item.marker,sx(point.x),sy(point.y),point.selectedLabel?2.75:3.5)} fill={point.selectedLabel ? item.color : "white"} stroke={item.color} strokeWidth={point.selectedLabel ? "1.4" : "1.9"} tabIndex={0} role="img" aria-label={`${item.label}, ${numberFormat.format(point.x)} ${xUnit}, ${numberFormat.format(point.y)} ${yUnit}, ${point.selectedLabel ?? `n ${point.n}`}`}><title>{`${item.label} — ${numberFormat.format(point.x)} ${xUnit}: ${numberFormat.format(point.y)} ${yUnit}${point.selectedLabel ? ` · ${point.selectedLabel}` : ` (${point.intervalLabel} ${numberFormat.format(point.intervalLow)}–${numberFormat.format(point.intervalHigh)}, n=${point.n})`}`}</title></path>)}
+            {ordered.map((point) => <path className={visibleMarkers ? `trend-point${point.selectedLabel ? " selected" : ""}` : "trend-point-hit"} key={`point-${point.x}`} d={markerPath(visibleMarkers ? item.marker : "circle",sx(point.x),sy(point.y),visibleMarkers ? point.selectedLabel ? 2.75 : 3.5 : 6)} fill={visibleMarkers ? point.selectedLabel ? item.color : "white" : "transparent"} stroke={item.color} strokeOpacity={visibleMarkers ? 1 : 0} strokeWidth={visibleMarkers ? point.selectedLabel ? "1.4" : "1.9" : 1.5} tabIndex={0} role="img" aria-label={`${item.label}, ${numberFormat.format(point.x)} ${xUnit}, ${numberFormat.format(point.y)} ${yUnit}, ${point.selectedLabel ?? `n ${point.n}`}`}><title>{`${item.label} — ${numberFormat.format(point.x)} ${xUnit}: ${numberFormat.format(point.y)} ${yUnit}${point.selectedLabel ? ` · ${point.selectedLabel}` : ` (${point.intervalLabel} ${numberFormat.format(point.intervalLow)}–${numberFormat.format(point.intervalHigh)}, n=${point.n})`}`}</title></path>)}
           </g>;
         })}</g>
       </svg>

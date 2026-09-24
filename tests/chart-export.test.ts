@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { describeGraphElectrode, describeSeriesSelection, describeTrendExport, pointsThrough, uniqueLegendEntries } from "../app/lib/chart-export";
+import { describeGraphElectrode, describeSeriesSelection, describeTrendExport, pointsThrough, showTrendMarkers, uniqueLegendEntries } from "../app/lib/chart-export";
+
+test("dense daily curves keep their data points but omit decorative markers", () => {
+  assert.equal(showTrendMarkers("days", 100), false);
+  assert.equal(showTrendMarkers("days", 28), true);
+  assert.equal(showTrendMarkers("h", 100), true);
+});
 
 test("graph legends contain one entry per material series", () => {
   const series = [
