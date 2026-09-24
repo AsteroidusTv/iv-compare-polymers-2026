@@ -51,11 +51,14 @@ export function pointsThrough<T extends { x: number }>(points: T[], maximumX: nu
 
 export function describeSeriesSelection(points: TrendExportPoint[]): string | undefined {
   const individualLabels = [...new Set(points.map((point) => point.selectedLabel).filter((label): label is string => Boolean(label)))];
-  const hasAggregatePoints = points.some((point) => !point.selectedLabel);
+  const aggregateCounts = points.filter((point) => !point.selectedLabel && point.n > 0).map((point) => point.n);
+  const minimum = aggregateCounts.reduce((smallest, count) => Math.min(smallest, count), Infinity);
+  const maximum = aggregateCounts.reduce((largest, count) => Math.max(largest, count), -Infinity);
+  const aggregateSize = aggregateCounts.length ? `N=${minimum}${minimum === maximum ? "" : `–${maximum}`}` : undefined;
 
-  if (!individualLabels.length) return hasAggregatePoints ? "Aggregate values" : undefined;
+  if (!individualLabels.length) return aggregateSize;
   const specimen = individualLabels.length === 1 ? "Individual specimen" : `${individualLabels.length} individual specimens`;
-  return hasAggregatePoints ? `${specimen} and aggregate values` : specimen;
+  return aggregateSize ? `${specimen} · aggregate ${aggregateSize}` : specimen;
 }
 
 export function legendSelectionsByKey<T extends { label: string; exportLegendKey?: string; points: TrendExportPoint[] }>(series: T[]): Map<string, string | undefined> {

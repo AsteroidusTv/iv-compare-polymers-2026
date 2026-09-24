@@ -6,6 +6,7 @@ import { legendSelectionsByKey, pointsThrough, showTrendMarkers, trendDisplayVal
 import { figureCsv, figureManifest, jvMethodCaption, type FigureExportContext, type FigureManifest } from "../lib/figure-export";
 import { downloadFigureFile } from "../lib/browser-figure-download";
 import { markerPath, segmentLinePattern, type MaterialStyle } from "../lib/material-style";
+import { applyReportSvgStyle } from "../lib/report-svg";
 
 export interface TrendPoint {
   x: number;
@@ -122,6 +123,7 @@ function serialiseChart(
   width: number,
   height: number,
   manifest?: FigureManifest,
+  preset: "default" | "report" = "default",
 ): { content: string; width: number; height: number } {
   const legendSeries = uniqueLegendEntries(series);
   const legendRows = Math.max(1, Math.ceil(legendSeries.length / EXPORT_COLUMNS));
@@ -183,6 +185,7 @@ function serialiseChart(
   clone.removeAttribute("tabindex");
   Array.from(clone.childNodes).forEach((child) => chart.appendChild(child));
   root.appendChild(chart);
+  if (preset === "report") applyReportSvgStyle(root);
 
   return {
     content: new XMLSerializer().serializeToString(root),
@@ -195,10 +198,11 @@ function downloadBlob(blob: Blob, fileName: string) {
   downloadFigureFile(blob,fileName,blob.type);
 }
 
-function exportSvg(source: SVGSVGElement, title: string, subtitle: string, series: ExportSeries[], fileStem: string, width: number, height: number, manifest?: FigureManifest) {
-  const exported = serialiseChart(source, title, subtitle, series, width, height, manifest);
-  downloadBlob(new Blob([exported.content], { type: "image/svg+xml;charset=utf-8" }), `${fileStem}.svg`);
-  if (manifest) downloadManifest(manifest, fileStem);
+function exportSvg(source: SVGSVGElement, title: string, subtitle: string, series: ExportSeries[], fileStem: string, width: number, height: number, manifest?: FigureManifest, preset: "default" | "report" = "default") {
+  const exported = serialiseChart(source, title, subtitle, series, width, height, manifest, preset);
+  const stem = preset === "report" ? `${fileStem}.report` : fileStem;
+  downloadBlob(new Blob([exported.content], { type: "image/svg+xml;charset=utf-8" }), `${stem}.svg`);
+  if (manifest) downloadManifest(manifest, stem);
 }
 
 async function exportPng(source: SVGSVGElement, title: string, subtitle: string, series: ExportSeries[], fileStem: string, width: number, height: number, manifest?: FigureManifest) {
@@ -477,6 +481,9 @@ export function TrendChart({
         <button type="button" className="chart-export-button" onClick={() => {
           if (svgRef.current) exportSvg(svgRef.current, exportTitle, exportSubtitle, exportSeries, exportStem, width, height, manifest);
         }}>Export SVG</button>
+        <button type="button" className="chart-export-button" onClick={() => {
+          if (svgRef.current) exportSvg(svgRef.current, exportTitle, exportSubtitle, exportSeries, exportStem, width, height, manifest, "report");
+        }}>Report SVG</button>
         <FigureDownloads manifest={manifest} stem={exportStem} />
       </div>
       <figure className="data-figure">
@@ -685,6 +692,9 @@ export function CurveChart({
         <button type="button" className="chart-export-button" onClick={() => {
           if (svgRef.current) exportSvg(svgRef.current, exportTitle, exportSubtitle, series, exportStem, width, height, manifest);
         }}>Export SVG</button>
+        <button type="button" className="chart-export-button" onClick={() => {
+          if (svgRef.current) exportSvg(svgRef.current, exportTitle, exportSubtitle, series, exportStem, width, height, manifest, "report");
+        }}>Report SVG</button>
         <FigureDownloads manifest={manifest} stem={exportStem} />
       </div>
       <figure className="data-figure">

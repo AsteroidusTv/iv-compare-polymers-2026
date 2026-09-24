@@ -160,16 +160,16 @@ export function EncapsulationComparison({ dataset, selections }: { dataset: IVDa
     return next;
   });
   const manifest = dataset ? pairedFigureManifest(dataset, availableGroups, { selectedMaterials, hiddenGroupKeys:[...hiddenGroupKeys], excludedGroupKeys:[...excludedGroupKeys], showMeasurementInterval, showConnections, colors:selections, yMin:min, yMax:max, deltaSummary }) : null;
-  const exportGraphic = async (format: "svg" | "png") => {
+  const exportGraphic = async (format: "svg" | "png", preset: "default" | "report" = "default") => {
     if (!svgRef.current || !manifest) return;
     setExportError(null);
-    try { await downloadScientificGraphic(svgRef.current,width,height,manifest,"encapsulation-before-after",format); }
+    try { await downloadScientificGraphic(svgRef.current,width,height,manifest,"encapsulation-before-after",format,preset); }
     catch (error) { setExportError(error instanceof Error ? error.message : "Export failed"); }
   };
   const summaryHelp = `The same physical cells are paired before encapsulation and after encapsulation, before ageing. Open points are before; filled points are after; optional thin lines connect the same cell. Boxes span Q1–Q3, with the median and 1.5 × IQR whiskers. Formulation, batch and distinct recorded processes remain separate. QA-flagged or ambiguous pairs are excluded. Dates come from linked raw JV files when available. ${excluded} selected-material cells have no unique valid PCE pair.`;
   return <div className="encapsulation-workspace">
     <section className="chart-card encapsulation-summary" aria-label="Before and after encapsulation">
-      <div className="chart-title"><div className="trend-panel-title"><strong>Encapsulation · PCE (η) before / after</strong><InfoTip text={summaryHelp} align="left" /></div><button type="button" className="soft-button" disabled={!groups.length} onClick={() => void exportGraphic("svg")}>Export SVG</button></div>
+      <div className="chart-title"><div className="trend-panel-title"><strong>Encapsulation · PCE (η) before / after</strong><InfoTip text={summaryHelp} align="left" /></div><button type="button" className="soft-button" disabled={!groups.length} onClick={() => void exportGraphic("svg")}>Export SVG</button><button type="button" className="soft-button" disabled={!groups.length} onClick={() => void exportGraphic("svg", "report")}>Report SVG</button></div>
       {manifest && <div className="control-row">
         <button type="button" disabled={!groups.length} onClick={()=>void exportGraphic("png")}>Export PNG</button>
         <button type="button" onClick={()=>downloadFigureFile(pairedFigureCsv(manifest,"figure"),"encapsulation.figure.csv","text/csv")}>Data shown in figure CSV</button>
@@ -231,8 +231,8 @@ export function EncapsulationComparison({ dataset, selections }: { dataset: IVDa
                 })}
                 <text x={center} y={348} textAnchor="middle" fontSize={12} fontWeight="bold">{group.material}</text>
                 {showProcess && <text x={center} y={369} textAnchor="middle" fontSize={11}>{groupProcessLabel(group, dataset)}</text>}
-                <text x={center} y={showProcess ? 390 : 371} textAnchor="middle" fontSize={11}>Batch {group.batch} · n={group.pairs.length}{group.electrode === "Cu" ? "" : ` · ${group.electrode}`}</text>
-                {deltaSummary !== "none" && <text x={center} y={showProcess ? 411 : 392} textAnchor="middle" fontSize={11} fill="#5f6875">{deltaSummary === "mean" ? "Mean" : "Median"} ΔPCErel {relativeChange === null ? "—" : `${relativeChange >= 0 ? "+" : ""}${relativeChange.toFixed(1)}%`} · n={changes.relative.n}</text>}
+                <text x={center} y={showProcess ? 390 : 371} textAnchor="middle" fontSize={11}>Batch {group.batch} · N={group.pairs.length}{group.electrode === "Cu" ? "" : ` · ${group.electrode}`}</text>
+                {deltaSummary !== "none" && <text x={center} y={showProcess ? 411 : 392} textAnchor="middle" fontSize={11} fill="#5f6875">{deltaSummary === "mean" ? "Mean" : "Median"} ΔPCErel {relativeChange === null ? "—" : `${relativeChange >= 0 ? "+" : ""}${relativeChange.toFixed(1)}%`}{changes.relative.n === group.pairs.length ? "" : ` · N=${changes.relative.n}`}</text>}
                 {showMeasurementInterval && <text x={center} y={showProcess ? 432 : 413} textAnchor="middle" fontSize={11} fill="#5f6875">Before→after {dayLabel}</text>}
               </g>;
             })}

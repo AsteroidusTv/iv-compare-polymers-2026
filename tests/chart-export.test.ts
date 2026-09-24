@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { describeGraphElectrode, describeSeriesSelection, legendSelectionsByKey, pointsThrough, showTrendMarkers, trendExportScaleWarning, uniqueLegendEntries } from "../app/lib/chart-export";
+import { reportInkColor } from "../app/lib/report-svg";
 
 test("dense daily curves keep their data points but omit decorative markers", () => {
   assert.equal(showTrendMarkers("days", 100), false);
@@ -47,17 +48,24 @@ test("shared material legend counts distinct individual specimens", () => {
     { label: "POE-2 / TF4", exportLegendKey: "tf4", points: [{ n: 1, selectedLabel: "Cell 4 · Ref 2" }] },
     { label: "EVA", exportLegendKey: "eva", points: [{ n: 3 }] },
   ];
-  assert.deepEqual([...legendSelectionsByKey(series)], [["tf4", "2 individual specimens"], ["eva", "Aggregate values"]]);
+  assert.deepEqual([...legendSelectionsByKey(series)], [["tf4", "2 individual specimens"], ["eva", "N=3"]]);
 });
 
-test("aggregate legends state only the display type", () => {
-  assert.equal(describeSeriesSelection([{ n: 2 }, { n: 4 }]), "Aggregate values");
+test("aggregate legends report the contributing N or its time-varying range", () => {
+  assert.equal(describeSeriesSelection([{ n: 3 }, { n: 3 }]), "N=3");
+  assert.equal(describeSeriesSelection([{ n: 2 }, { n: 4 }]), "N=2–4");
 });
 
 test("mixed exports describe each series without a redundant global subtitle", () => {
-  assert.equal(describeSeriesSelection([{ n: 1, selectedLabel: "Cell 1 · Ref A" }, { n: 3 }]), "Individual specimen and aggregate values");
+  assert.equal(describeSeriesSelection([{ n: 1, selectedLabel: "Cell 1 · Ref A" }, { n: 3 }]), "Individual specimen · aggregate N=3");
   assert.equal(trendExportScaleWarning(false, true), "");
   assert.equal(trendExportScaleWarning(false, false), "");
   assert.equal(trendExportScaleWarning(true, false), "Some values extend beyond the y-axis");
   assert.equal(trendExportScaleWarning(true, true), "Some values or intervals extend beyond the y-axis");
+});
+
+test("report preset mutes known material colours without altering unknown colours", () => {
+  assert.equal(reportInkColor("#0072B2"), "#365f80");
+  assert.equal(reportInkColor("#009E73"), "#376f5b");
+  assert.equal(reportInkColor("white"), "white");
 });

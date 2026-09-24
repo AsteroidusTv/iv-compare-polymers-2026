@@ -1,4 +1,6 @@
 /** Browser I/O only; scientific data and decisions are supplied by callers. */
+import { applyReportSvgStyle } from "./report-svg";
+
 const prepared: {url:string;row:HTMLElement}[]=[];
 /** Keep a real user-clickable fallback: some embedded browsers suppress synthetic downloads. */
 export function downloadFigureFile(contents: BlobPart, name: string, type: string) {
@@ -22,13 +24,15 @@ export function downloadFigureFile(contents: BlobPart, name: string, type: strin
   prepared.push({url,row});while(prepared.length>6){const oldest=prepared.shift()!;URL.revokeObjectURL(oldest.url);oldest.row.remove();}
   anchor.click();
 }
-export async function downloadScientificGraphic(svg: SVGSVGElement, width: number, height: number, manifest: unknown, stem: string, format: "svg" | "png") {
+export async function downloadScientificGraphic(svg: SVGSVGElement, width: number, height: number, manifest: unknown, stem: string, format: "svg" | "png", preset: "default" | "report" = "default") {
   const clone = svg.cloneNode(true) as SVGSVGElement;
   clone.setAttribute("xmlns", "http://www.w3.org/2000/svg"); clone.setAttribute("width",String(width)); clone.setAttribute("height",String(height));
   clone.style.background = "white"; clone.style.fontFamily = "Arial, sans-serif";
   const metadata = document.createElementNS("http://www.w3.org/2000/svg", "metadata"); metadata.textContent = JSON.stringify(manifest); clone.appendChild(metadata);
+  if (preset === "report") applyReportSvgStyle(clone);
+  const outputStem = preset === "report" ? `${stem}.report` : stem;
   const content = new XMLSerializer().serializeToString(clone);
-  if (format === "svg") downloadFigureFile(content, `${stem}.svg`, "image/svg+xml;charset=utf-8");
+  if (format === "svg") downloadFigureFile(content, `${outputStem}.svg`, "image/svg+xml;charset=utf-8");
   else {
     const url=URL.createObjectURL(new Blob([content],{type:"image/svg+xml"}));
     try {
@@ -38,8 +42,8 @@ export async function downloadScientificGraphic(svg: SVGSVGElement, width: numbe
       const context=canvas.getContext("2d"); if(!context) throw new Error("Canvas unavailable");
       context.fillStyle="white";context.fillRect(0,0,canvas.width,canvas.height);context.drawImage(image,0,0,canvas.width,canvas.height);
       const blob=await new Promise<Blob|null>(resolve=>canvas.toBlob(resolve,"image/png")); if(!blob) throw new Error("PNG export failed");
-      downloadFigureFile(blob,`${stem}.png`,"image/png");
+      downloadFigureFile(blob,`${outputStem}.png`,"image/png");
     } finally {URL.revokeObjectURL(url);}
   }
-  downloadFigureFile(JSON.stringify(manifest,null,2),`${stem}.figure.json`,"application/json");
+  downloadFigureFile(JSON.stringify(manifest,null,2),`${outputStem}.figure.json`,"application/json");
 }
