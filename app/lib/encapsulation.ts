@@ -22,6 +22,20 @@ export interface EncapsulationGroup {
   pairs: EncapsulationPair[];
 }
 
+/** Distinguish documented subgroups without presenting raw recipe codes as verified processes. */
+export function neutralGroupLabels<T extends Pick<EncapsulationGroup, "key" | "material" | "batch" | "electrode">>(groups: T[]) {
+  const peers = new Map<string, T[]>();
+  for (const group of groups) {
+    const identity = JSON.stringify([group.material, group.batch, group.electrode]);
+    peers.set(identity, [...(peers.get(identity) ?? []), group]);
+  }
+  return new Map(groups.map((group) => {
+    const identity = JSON.stringify([group.material, group.batch, group.electrode]);
+    const matching = peers.get(identity)!;
+    return [group.key, matching.length > 1 ? `Groupe ${matching.findIndex((peer) => peer.key === group.key) + 1}` : null] as const;
+  }));
+}
+
 export function meanPairedRelativeChange(pairs: EncapsulationPair[]) {
   const changes = pairs.filter((pair) => pair.before !== 0).map((pair) => (pair.after - pair.before) / pair.before * 100);
   return changes.length ? changes.reduce((sum, value) => sum + value, 0) / changes.length : null;

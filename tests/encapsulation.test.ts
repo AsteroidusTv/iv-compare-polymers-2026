@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import fs from "node:fs";
 import zlib from "node:zlib";
-import { boxStatistics, encapsulationCurvePairs, encapsulationGroups, meanPairedRelativeChange, pairedMeasurementDayRange } from "../app/lib/encapsulation";
+import { boxStatistics, encapsulationCurvePairs, encapsulationGroups, meanPairedRelativeChange, neutralGroupLabels, pairedMeasurementDayRange } from "../app/lib/encapsulation";
 import type { IVDataset, Observation, Sample } from "../app/lib/iv-data";
 
 test("pairs use the same cell, preserve zero after and separate batches/formulations", () => {
@@ -31,6 +31,10 @@ test("encapsulation groups keep recorded lamination recipes separate", () => {
   const result = encapsulationGroups(samples, observations, ["TPO"]);
   assert.equal(result.groups.length, 2);
   assert.deepEqual(result.groups.map((group) => group.recipe).sort(), ["CSEM2 SL", "CVF"]);
+  const labels = neutralGroupLabels(result.groups);
+  assert.deepEqual(result.groups.map((group) => labels.get(group.key)), ["Groupe 1", "Groupe 2"]);
+  assert.ok([...labels.values()].every((label) => !label?.includes("CVF") && !label?.includes("CSEM2")));
+  assert.equal(neutralGroupLabels(result.groups.slice(0, 1)).get(result.groups[0].key), null);
 });
 
 test("box whiskers exclude outliers and quartiles use linear interpolation", () => {
@@ -58,6 +62,9 @@ test("supplied package has 46 eligible encapsulation pairs after the A4 intake",
   const result = encapsulationGroups(dataset.samples, dataset.observations, dataset.samples.map((sample) => sample.material_family));
   assert.equal(result.groups.reduce((count, group) => count + group.pairs.length, 0), 46);
   assert.ok(result.groups.every((group) => group.pairs.length > 0));
+  const lenzingA3 = result.groups.filter((group) => group.material === "TPO-2_Lenzing" && group.batch === "A3");
+  assert.deepEqual(lenzingA3.map((group) => group.pairs.length).sort(), [4, 4]);
+  assert.deepEqual([...neutralGroupLabels(lenzingA3).values()].sort(), ["Groupe 1", "Groupe 2"]);
   const curvePairs = encapsulationCurvePairs(dataset);
   assert.equal(curvePairs.length, 27);
   assert.ok(curvePairs.every((pair) => pair.beforeFile.reference_match_basis && pair.beforeMeasurement.file_uid === pair.beforeFile.file_uid));
