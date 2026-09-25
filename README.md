@@ -25,10 +25,11 @@ The application supports exploratory comparison after damp heat (DH), thermal cy
 
 ## Data and provenance
 
-- `data/raw/IV/`: immutable `Summary_v2.xlsx` inventory (also copied as `Summary.xlsx` for the pipeline) and original solar-simulator `.xls` files through 10 September 2026.
+- `data/raw/IV/`: versioned inventories through `Summary_v3.xlsx` (also copied as the active `Summary.xlsx`) and original solar-simulator `.xls` files through 23 September 2026. Earlier inventories remain archived.
 - `data/raw/Outdoor/`: immutable logger CSV files.
+- `data/raw/FTIR/` and `data/raw/SEM/`: archived original analytical sources; not yet interpreted or included in IV/ageing graphs.
 - `data/processed/IV_dataset_normalise_Outdoor.xlsx`: relational inventory, matching decisions, measurement metadata, and daily Outdoor aggregates.
-- `data/processed/IV_curve_points.tsv`: 1,043,400 ordered IV points.
+- `data/processed/IV_curve_points.tsv`: 1,137,150 ordered IV points.
 - `data/processed/Outdoor_raw_measurements.tsv`: 203,122 traceable Outdoor measurements.
 - `data/processed/normalization-protocol.json`: versioned transformation rules and scientific assumptions.
 - `data/processed/IV_Compare_DOWSIL.ivpack`: compact browser package.
@@ -37,6 +38,7 @@ The application supports exploratory comparison after damp heat (DH), thermal cy
 The browser package embeds SHA-256 provenance for the complete raw-data tree and each processed input. File-to-sample matching reasons and margins, source rows, raw daily counts, aggregation protocols, and QA flags remain available in the package or workbook.
 
 Matching totals distinguish unresolved files from audit-only sources. Non-encapsulated and silicon reference cells, plus files already stored in laboratory `Trash` folders, remain preserved but are not counted as polymer-matching failures.
+The September intake added 11 A4 cells and 49 inventory observations. Of its 59 new IV files, 38 have provisional batch/material/specimen filename links, 9 aged files require identity review, and 12 Red-box pre-encapsulation files remain unlinked. These provisional links are not a laboratory adjudication. Outdoor CSVs contain no new numerical observations in this intake.
 
 Rebuild and verify the package:
 
@@ -46,7 +48,7 @@ pnpm data:verify
 pnpm data:verify:deep
 ```
 
-`data:verify` reconciles the recorded source links and row counts, then proves that both committed `.ivpack` files are byte-for-byte reproducible. `data:verify:deep` additionally reads every raw IV workbook and Outdoor CSV and compares all 1,043,400 IV points and 203,122 Outdoor measurements with the processed values.
+`data:verify` reconciles the recorded source links and row counts, then proves that both committed `.ivpack` files are byte-for-byte reproducible. `data:verify:deep` additionally reads every raw IV workbook and Outdoor CSV and compares all 1,137,150 IV points and 203,122 Outdoor measurements with the processed values.
 
 ## Local development
 

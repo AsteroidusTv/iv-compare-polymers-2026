@@ -53,10 +53,10 @@ test("measurement interval reports the observed before-to-after day range", () =
   assert.equal(pairedMeasurementDayRange([{ ...pair, beforeMeasurementDate: null }]), null);
 });
 
-test("supplied package has 35 eligible encapsulation pairs", () => {
+test("supplied package has 46 eligible encapsulation pairs after the A4 intake", () => {
   const dataset: IVDataset = JSON.parse(zlib.gunzipSync(fs.readFileSync("public/data/iv-compare-dowsil.ivpack")).toString());
   const result = encapsulationGroups(dataset.samples, dataset.observations, dataset.samples.map((sample) => sample.material_family));
-  assert.equal(result.groups.reduce((count, group) => count + group.pairs.length, 0), 35);
+  assert.equal(result.groups.reduce((count, group) => count + group.pairs.length, 0), 46);
   assert.ok(result.groups.every((group) => group.pairs.length > 0));
   const curvePairs = encapsulationCurvePairs(dataset);
   assert.equal(curvePairs.length, 27);

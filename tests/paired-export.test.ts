@@ -26,10 +26,10 @@ test("caption follows the selected mean, median or individual-only annotation",(
  const asymmetric=groups.find(group=>{const result=pairedChanges(group.pairs);return result.relative.mean!==result.relative.median;});
  assert.ok(asymmetric);
 });
-test("paired manifest preserves 35 pairs, raw provenance, dates and individual deltas",()=>{
+test("paired manifest preserves 46 pairs, raw provenance, dates and individual deltas",()=>{
   const manifest=pairedFigureManifest(dataset,groups,options);
   const rows=manifest.candidates.filter(row=>row.analyticalEligible);
-  assert.equal(rows.length,35);
+  assert.equal(rows.length,46);
   for(const row of rows) {
     assert.equal(row.pair!.deltaPcePp,row.pair!.after-row.pair!.before);
     assert.ok(row.rawUnagedObservations.length===1);

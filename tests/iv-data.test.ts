@@ -46,10 +46,10 @@ test("the shipped package satisfies the complete dataset invariants", () => {
   const payload = JSON.parse(gunzipSync(fs.readFileSync(new URL("../public/data/iv-compare-dowsil.ivpack", import.meta.url))).toString("utf8"));
   const dataset = validateDataset(payload);
   assert.equal(dataset.schemaVersion, "1.2");
-  assert.equal(dataset.report.points, 1_043_400);
-  assert.equal(dataset.report.matchedFiles, 364);
-  assert.equal(dataset.report.reviewFiles, 3);
-  assert.equal(dataset.report.auditFiles, 42);
+  assert.equal(dataset.report.points, 1_137_150);
+  assert.equal(dataset.report.matchedFiles, 402);
+  assert.equal(dataset.report.reviewFiles, 12);
+  assert.equal(dataset.report.auditFiles, 54);
   assert.equal(dataset.provenance?.pipelineVersion, "2.2.0");
   assert.equal(dataset.files.filter((file) => file.reference_sample_uid).length, 27);
   assert.equal(dataset.samples.find((sample) => sample.sample_uid === "SMP-003")?.encapsulation_date, "2026-03-19");

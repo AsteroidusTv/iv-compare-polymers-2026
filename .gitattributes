@@ -1,5 +1,7 @@
 data/raw/IV/**/*.xls filter=lfs diff=lfs merge=lfs -text
 data/raw/IV/**/*.xlsx filter=lfs diff=lfs merge=lfs -text
+data/raw/FTIR/** filter=lfs diff=lfs merge=lfs -text
+data/raw/SEM/** filter=lfs diff=lfs merge=lfs -text
 data/processed/*.xlsx filter=lfs diff=lfs merge=lfs -text
 data/processed/*.tsv filter=lfs diff=lfs merge=lfs -text
 data/processed/*.ivpack filter=lfs diff=lfs merge=lfs -text

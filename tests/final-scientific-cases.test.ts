@@ -15,7 +15,7 @@ test("final real-data re-audit: EVA TC disappearance is visible and constant coh
  const traces=normalizationTraces(dataset,{sampleUids:ids,protocol:"TC",metric:"efficiency_pct",mode:"retention",includeQa:false,outdoorWindow:7,qaIssues:labQualityIssues(dataset.observations,"efficiency_pct")});
  const rows=traces.filter(t=>t.value!==null).map(t=>({sampleUid:t.observation.sample_uid,time:t.observation.exposure_duration_numeric!,value:t.value!}));
  const available=cohortTimeline(rows,"mean"),common=constantCohort(rows,{start:20,end:100});
- assert.deepEqual(available.map(p=>p.n),[2,5,2]);
+ assert.deepEqual(available.map(p=>p.n),[2,5,2,2]);
  assert.ok(Math.abs(available[1].summary.value-39.9467213115)<1e-8);
  assert.equal(available[2].apparentRecoveryRisk,true);
  assert.deepEqual(available[2].left,["SMP-188","SMP-194","SMP-196"]);
