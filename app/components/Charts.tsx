@@ -7,6 +7,7 @@ import { figureCsv, figureManifest, jvMethodCaption, type FigureExportContext, t
 import { downloadFigureFile } from "../lib/browser-figure-download";
 import { markerPath, segmentLinePattern, type MaterialStyle } from "../lib/material-style";
 import { applyReportSvgStyle } from "../lib/report-svg";
+import { figureTimeUnit } from "../lib/figure-language";
 
 export interface TrendPoint {
   x: number;
@@ -401,12 +402,12 @@ export function TrendChart({
     ...item,
     exportSelection: legendSelections.get(item.exportLegendKey ?? item.label),
   }));
-  const exportTitle = reportTitle ?? `Performance over time — ${yUnit}`;
+  const exportTitle = reportTitle ?? `Évolution au cours du temps — ${yUnit}`;
   const scaleNote = `${manualYValid ? "Manual" : "Auto"} Y: ${numberFormat.format(yMin)}–${numberFormat.format(yMax)} ${yUnit}${clippedY ? " · values or intervals clipped" : ""}${showIntervals ? "" : " · uncertainty intervals hidden"}`;
   const exportSubtitle = trendExportScaleWarning(clippedY, showIntervals);
   const yAxisLabel = reportYAxisLabel ?? yUnit;
   const exportStem = exportFileStem(graphEnd === null ? "performance-over-time" : `performance-over-time-through-${graphEnd}-${xUnit}`, exportSeries);
-  const manifest = figureManifest({ kind: "trend", title: exportTitle, caption: [exportTitle, exportSubtitle, exportContext.methodCaption, "Lines connect measured durations; no time interpolation"].filter(Boolean).join(". ") + ".", context: exportContext,
+  const manifest = figureManifest({ kind: "trend", title: exportTitle, caption: [exportTitle, exportSubtitle, exportContext.methodCaption, "Les lignes relient les durées mesurées ; aucune interpolation temporelle"].filter(Boolean).join(". ") + ".", context: exportContext,
     xUnit, yUnit, analyticLimit: { maximumX: graphEnd, interpolation: "none" }, viewport: { xMin, xMax, yMin, yMax },
     intervalsVisible: showIntervals, series: plottedSeries, display: { zoom: viewport.zoom, yScale: manualYValid ? "manual" : "auto", clippedY, smallSampleMembersShown: true } });
 
@@ -505,9 +506,9 @@ export function TrendChart({
         {yTicks.map((tick) => <g key={`y-${tick}`}><line className="grid-line" x1={margin.left} x2={width - margin.right} y1={sy(tick)} y2={sy(tick)} /><text className="axis-label" x={margin.left - 12} y={sy(tick) + 4} textAnchor="end">{numberFormat.format(tick)}</text></g>)}
         {xTicks.map((tick) => <g key={`x-${tick}`}><line className="tick-line" x1={sx(tick)} x2={sx(tick)} y1={height - margin.bottom} y2={height - margin.bottom + 6} /><text className="axis-label" x={sx(tick)} y={height - 20} textAnchor="middle">{numberFormat.format(tick)}</text></g>)}
         <line className="axis-line" x1={margin.left} x2={width - margin.right} y1={height - margin.bottom} y2={height - margin.bottom} />
-        <text className="axis-title" x={width - margin.right} y={height - 5} textAnchor="end">Time ({xUnit})</text>
+        <text className="axis-title" x={width - margin.right} y={height - 5} textAnchor="end">Temps ({figureTimeUnit(xUnit)})</text>
         <text className="axis-title" x={margin.left} y={14}>{yAxisLabel}</text>
-        {isRetention && yMin <= 100 && yMax >= 100 ? <g className="reference-baseline"><line x1={margin.left} x2={width - margin.right} y1={sy(100)} y2={sy(100)} /><text x={width - margin.right - 4} y={sy(100) - 6} textAnchor="end">Reference · 100%</text></g> : null}
+        {isRetention && yMin <= 100 && yMax >= 100 ? <g className="reference-baseline"><line x1={margin.left} x2={width - margin.right} y1={sy(100)} y2={sy(100)} /><text x={width - margin.right - 4} y={sy(100) - 6} textAnchor="end">Référence · 100 %</text></g> : null}
         <g clipPath="url(#trend-plot-clip)">{plottedSeries.map((item, seriesIndex) => {
           const ordered = [...item.points].sort((a, b) => a.x - b.x);
           const path = ordered.map((point, index) => `${index ? "L" : "M"}${sx(point.x)},${sy(point.y)}`).join(" ");
@@ -635,8 +636,8 @@ export function CurveChart({
   const sy = (value: number) => height - margin.bottom - ((value - yMin) / (yMax - yMin || 1)) * (height - margin.top - margin.bottom);
   const xTicks = ticks(xMin, xMax);
   const yTicks = ticks(yMin, yMax);
-  const exportTitle = `${exportContext.validation?.quantitativeValidated === false ? "UNVALIDATED INSPECTION — " : ""}IV curves — ${yAxisLabel}`;
-  const exportSubtitle = `${currentConvention === "instrument" ? "Instrument current convention" : "Photovoltaic current convention"} · measured points connected in acquisition order · no smoothing`;
+  const exportTitle = `${exportContext.validation?.quantitativeValidated === false ? "INSPECTION NON VALIDÉE — " : ""}Courbes JV — ${yAxisLabel}`;
+  const exportSubtitle = `${currentConvention === "instrument" ? "Convention instrumentale" : "Convention photovoltaïque"} · points mesurés reliés dans l’ordre d’acquisition · sans lissage`;
   const exportStem = exportFileStem("iv-curves", series);
   const manifest = figureManifest({ kind: "jv", title: exportTitle, caption: `${exportTitle}. ${exportSubtitle}. ${exportContext.methodCaption??""} ${jvMethodCaption(exportContext,series)}`, context: exportContext,
     xUnit: "V", yUnit: yAxisLabel, analyticLimit: { maximumX: null, interpolation: "none" }, viewport: { xMin, xMax, yMin, yMax },
@@ -705,7 +706,7 @@ export function CurveChart({
         {yMin < 0 && yMax > 0 ? <line className="zero-axis" x1={margin.left} x2={width - margin.right} y1={sy(0)} y2={sy(0)} /> : null}
         {xMin < 0 && xMax > 0 ? <line className="zero-axis vertical" x1={sx(0)} x2={sx(0)} y1={margin.top} y2={height - margin.bottom} /> : null}
         <line className="axis-line" x1={margin.left} x2={width - margin.right} y1={height - margin.bottom} y2={height - margin.bottom} />
-        <text className="axis-title" x={width - margin.right} y={height - 5} textAnchor="end">Voltage (V)</text>
+        <text className="axis-title" x={width - margin.right} y={height - 5} textAnchor="end">Tension (V)</text>
         <text className="axis-title" x={margin.left} y={14}>{yAxisLabel}</text>
         <g clipPath="url(#curve-plot-clip)">
           {series.flatMap((item, seriesIndex) => item.segments.map((segment) => {

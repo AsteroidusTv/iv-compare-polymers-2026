@@ -7,6 +7,7 @@ import { buildIdentity } from "../lib/build-identity";
 import { rowsCsv } from "../lib/tabular-export";
 import { downloadFigureFile, downloadScientificGraphic } from "../lib/browser-figure-download";
 import { InfoTip } from "./InfoTip";
+import { figureTimeUnit } from "../lib/figure-language";
 
 const labels={efficiency_pct:"PCE / PCE₀",jsc_mA_cm2:"Jsc / Jsc₀",voc_V:"Voc / Voc₀",ff_pct:"FF / FF₀"};
 
@@ -27,8 +28,8 @@ export function SynchronizedMetrics({dataset,materials}:{dataset:IVDataset;mater
   const min=manualY&&validManual?yMinimum:autoMin,max=manualY&&validManual?yMaximum:autoMax;
   const end=cutoff??analysis.times.at(-1)??1;
   const width=1180,height=770+Math.ceil(visibleIds.length/4)*20;
-  const title="Synchronized PCE / Jsc / Voc / FF";
-  const caption=`${protocol}; same ${analysis.cohort.length} selected inventory specimens and shared exact times in all four panels, through ${end} ${analysis.unit}. Individual trajectories; no pooling. Each metric is divided by its same-specimen unique Unaged value ×100. Metric-specific QA rules are shared with the main analysis; missing values are explicit and lines break at missing points. Same cohort identities do not imply equal valid n for every metric. Hidden curves are display-only; excluded specimens do not contribute. No interpolation.`;
+  const title="Évolution synchronisée de PCE, Jsc, Voc et FF";
+  const caption=`${protocol} ; ${analysis.cohort.length} cellules sélectionnées et mêmes temps exacts dans les quatre panneaux, jusqu'à ${end} ${figureTimeUnit(analysis.unit)}. Trajectoires individuelles, sans regroupement. Chaque grandeur est divisée par sa valeur Unaged unique pour la même cellule, puis multipliée par 100. Les règles de contrôle qualité sont propres à chaque grandeur ; les valeurs manquantes interrompent les courbes. Une cohorte identique n'implique pas le même n valide pour chaque grandeur. Les courbes masquées le sont uniquement à l'affichage ; les cellules exclues ne contribuent pas. Aucune interpolation.`;
   const analyticalRows=analysis.panels.flatMap(panel=>panel.cells.filter(cell=>visibleIds.includes(cell.sampleUid)).map(cell=>({metric:panel.metric,...cell,protocol,inside_viewport:cell.value!==null&&cell.value>=min&&cell.value<=max})));
   const manifest={schemaVersion:"iv-compare-synchronized-figure/1",generatedAt:new Date().toISOString(),kind:"synchronized-metrics",title,caption,sourceCode:buildIdentity,dataset:{name:dataset.name,packageSha256:datasetPackageHash(dataset),provenance:dataset.provenance},analysis,selectedSamples:samples,
     actualContributors:analysis.panels.map(panel=>({metric:panel.metric,byTime:analysis.times.map(time=>({time,sampleUids:panel.cells.filter(cell=>cell.time===time&&cell.value!==null).map(cell=>cell.sampleUid)}))})),
@@ -48,10 +49,10 @@ export function SynchronizedMetrics({dataset,materials}:{dataset:IVDataset;mater
         <defs><clipPath id={`sync-${panel.metric}`}><rect x={left} y={top} width={pw} height={ph}/></clipPath></defs>
         {Array.from({length:5},(_,i)=>min+(max-min)*i/4).map(v=><g key={v}><line x1={left} x2={left+pw} y1={y(v)} y2={y(v)} stroke="#ddd"/><text x={left-7} y={y(v)+4} textAnchor="end" fontSize={11}>{v.toFixed(0)}</text></g>)}
         {Array.from({length:5},(_,i)=>end*i/4).map((v,i)=><text key={i} x={x(v)} y={top+ph+20} textAnchor="middle" fontSize={11}>{v.toFixed(0)}</text>)}
-        <text x={left+pw} y={top+ph+38} textAnchor="end" fontSize={12}>{analysis.unit}</text>
+        <text x={left+pw} y={top+ph+38} textAnchor="end" fontSize={12}>Temps ({figureTimeUnit(analysis.unit)})</text>
         <g clipPath={`url(#sync-${panel.metric})`}><line x1={left} x2={left+pw} y1={y(100)} y2={y(100)} stroke="#888" strokeDasharray="4 4"/>
         {visibleIds.map((id)=>{const cells=panel.cells.filter(cell=>cell.sampleUid===id),color=materialStyle(samples.find(sample=>sample.sample_uid===id)!.material_family).color;return <g key={id}>{cells.map((cell,i)=>{const prev=cells[i-1];return cell.value===null?null:<g key={cell.time}>{prev?.value!==null&&prev?.value!==undefined&&<line x1={x(prev.time)} x2={x(cell.time)} y1={y(prev.value)} y2={y(cell.value)} stroke={color} strokeWidth={1.6} strokeDasharray={identityLinePattern(id)}/>}<circle cx={x(cell.time)} cy={y(cell.value)} r={3} fill={color}><title>{id} · {cell.time} {analysis.unit}: {cell.value.toFixed(2)}%; absolute {cell.trace?.absoluteValue}, baseline {cell.trace?.baseline?.value}</title></circle></g>;})}</g>;})}</g>
-        <text x={left} y={top+ph+57} fontSize={11} fill="#666">Missing / excluded metric slots: {panel.cells.filter(cell=>cell.value===null).length}</text>
+        <text x={left} y={top+ph+57} fontSize={11} fill="#666">Mesures manquantes ou exclues : {panel.cells.filter(cell=>cell.value===null).length}</text>
       </g>;})}
       {visibleIds.map((id,i)=>{const sample=samples.find(row=>row.sample_uid===id)!,left=65+i%4*285,top=760+Math.floor(i/4)*20,color=materialStyle(sample.material_family).color;return <g key={id}><line x1={left} x2={left+25} y1={top} y2={top} stroke={color} strokeWidth={2} strokeDasharray={identityLinePattern(id)}/><text x={left+32} y={top+4} fontSize={10}>{id} · {sample.material_raw||sample.material_family}</text></g>;})}
     </svg></div>

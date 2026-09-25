@@ -22,7 +22,7 @@ test("graph legends contain one entry per material series", () => {
 
 test("graph exports mention only silver electrodes", () => {
   assert.equal(describeGraphElectrode(["Cu", "Cu", null]), undefined);
-  assert.equal(describeGraphElectrode(["Cu", " Ag "]), "Ag electrode");
+  assert.equal(describeGraphElectrode(["Cu", " Ag "]), "Électrode Ag");
 });
 
 test("graph-end limits keep only observations at or before the boundary", () => {
@@ -38,8 +38,8 @@ test("individual specimen legends omit laboratory identifiers", () => {
     { n: 1, selectedLabel: "Cell 1 · Ref A" },
     { n: 1, selectedLabel: "Cell 1 · Ref A" },
   ];
-  assert.equal(describeSeriesSelection(points), "Individual specimen");
-  assert.equal(describeSeriesSelection([{ n: 1, selectedLabel: "Cell 1" }, { n: 1, selectedLabel: "Cell 2" }]), "2 individual specimens");
+  assert.equal(describeSeriesSelection(points), "Échantillon individuel");
+  assert.equal(describeSeriesSelection([{ n: 1, selectedLabel: "Cell 1" }, { n: 1, selectedLabel: "Cell 2" }]), "2 échantillons individuels");
 });
 
 test("shared material legend counts distinct individual specimens", () => {
@@ -48,20 +48,20 @@ test("shared material legend counts distinct individual specimens", () => {
     { label: "POE-2 / TF4", exportLegendKey: "tf4", points: [{ n: 1, selectedLabel: "Cell 4 · Ref 2" }] },
     { label: "EVA", exportLegendKey: "eva", points: [{ n: 3 }] },
   ];
-  assert.deepEqual([...legendSelectionsByKey(series)], [["tf4", "2 individual specimens"], ["eva", "N=3"]]);
+  assert.deepEqual([...legendSelectionsByKey(series)], [["tf4", "2 échantillons individuels"], ["eva", "n = 3"]]);
 });
 
 test("aggregate legends report the contributing N or its time-varying range", () => {
-  assert.equal(describeSeriesSelection([{ n: 3 }, { n: 3 }]), "N=3");
-  assert.equal(describeSeriesSelection([{ n: 2 }, { n: 4 }]), "N=2–4");
+  assert.equal(describeSeriesSelection([{ n: 3 }, { n: 3 }]), "n = 3");
+  assert.equal(describeSeriesSelection([{ n: 2 }, { n: 4 }]), "n = 2–4");
 });
 
 test("mixed exports describe each series without a redundant global subtitle", () => {
-  assert.equal(describeSeriesSelection([{ n: 1, selectedLabel: "Cell 1 · Ref A" }, { n: 3 }]), "Individual specimen · aggregate N=3");
+  assert.equal(describeSeriesSelection([{ n: 1, selectedLabel: "Cell 1 · Ref A" }, { n: 3 }]), "Échantillon individuel · agrégat n = 3");
   assert.equal(trendExportScaleWarning(false, true), "");
   assert.equal(trendExportScaleWarning(false, false), "");
-  assert.equal(trendExportScaleWarning(true, false), "Some values extend beyond the y-axis");
-  assert.equal(trendExportScaleWarning(true, true), "Some values or intervals extend beyond the y-axis");
+  assert.equal(trendExportScaleWarning(true, false), "Valeurs hors de l’axe vertical");
+  assert.equal(trendExportScaleWarning(true, true), "Valeurs ou intervalles hors de l’axe vertical");
 });
 
 test("report preset mutes known material colours without altering unknown colours", () => {

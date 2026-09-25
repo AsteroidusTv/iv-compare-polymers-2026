@@ -42,7 +42,7 @@ export function uniqueLegendEntries<T extends { label: string; exportLegendKey?:
 }
 
 export function describeGraphElectrode(electrodes: Array<string | null | undefined>): string | undefined {
-  return electrodes.some((electrode) => electrode?.trim().toLowerCase() === "ag") ? "Ag electrode" : undefined;
+  return electrodes.some((electrode) => electrode?.trim().toLowerCase() === "ag") ? "Électrode Ag" : undefined;
 }
 
 export function pointsThrough<T extends { x: number }>(points: T[], maximumX: number | null): T[] {
@@ -54,11 +54,11 @@ export function describeSeriesSelection(points: TrendExportPoint[]): string | un
   const aggregateCounts = points.filter((point) => !point.selectedLabel && point.n > 0).map((point) => point.n);
   const minimum = aggregateCounts.reduce((smallest, count) => Math.min(smallest, count), Infinity);
   const maximum = aggregateCounts.reduce((largest, count) => Math.max(largest, count), -Infinity);
-  const aggregateSize = aggregateCounts.length ? `N=${minimum}${minimum === maximum ? "" : `–${maximum}`}` : undefined;
+  const aggregateSize = aggregateCounts.length ? `n = ${minimum}${minimum === maximum ? "" : `–${maximum}`}` : undefined;
 
   if (!individualLabels.length) return aggregateSize;
-  const specimen = individualLabels.length === 1 ? "Individual specimen" : `${individualLabels.length} individual specimens`;
-  return aggregateSize ? `${specimen} · aggregate ${aggregateSize}` : specimen;
+  const specimen = individualLabels.length === 1 ? "Échantillon individuel" : `${individualLabels.length} échantillons individuels`;
+  return aggregateSize ? `${specimen} · agrégat ${aggregateSize}` : specimen;
 }
 
 export function legendSelectionsByKey<T extends { label: string; exportLegendKey?: string; points: TrendExportPoint[] }>(series: T[]): Map<string, string | undefined> {
@@ -72,5 +72,5 @@ export function legendSelectionsByKey<T extends { label: string; exportLegendKey
 
 export function trendExportScaleWarning(clippedY: boolean, showIntervals: boolean): string {
   if (!clippedY) return "";
-  return showIntervals ? "Some values or intervals extend beyond the y-axis" : "Some values extend beyond the y-axis";
+  return showIntervals ? "Valeurs ou intervalles hors de l’axe vertical" : "Valeurs hors de l’axe vertical";
 }

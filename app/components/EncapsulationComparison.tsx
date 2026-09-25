@@ -16,6 +16,7 @@ import { InfoTip } from "./InfoTip";
 import { StagedAgeing } from "./StagedAgeing";
 import { SynchronizedMetrics } from "./SynchronizedMetrics";
 import { fullJVSelectionCsv } from "../lib/jv-full-export";
+import { figureStageLabel } from "../lib/figure-language";
 
 const dateFormat = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
 
@@ -45,7 +46,7 @@ function elapsedDays(from: string | null | undefined, to: string | null | undefi
 function groupProcessLabel(group: EncapsulationGroup, dataset: IVDataset | null) {
   const recordedLaminator = group.recipeUid ? dataset?.recipes.find((recipe) => recipe.recipe_uid === group.recipeUid)?.laminator : null;
   const laminator = recordedLaminator && recordedLaminator.toLowerCase() !== "unspecified" ? recordedLaminator : null;
-  return [group.recipe, laminator].filter(Boolean).join(" · ") || "Process not recorded";
+  return [group.recipe, laminator].filter(Boolean).join(" · ") || "Procédé non renseigné";
 }
 
 function processOrder(recipe: string | null | undefined) {
@@ -59,8 +60,8 @@ function metricValue(measurement: Measurement, key: "efficiency_pct" | "jsc_mA_c
 
 function makeCurveSeries(pair: EncapsulationCurvePair, dataset: IVDataset, color: string): CurveSeries[] {
   return [
-    { measurement: pair.beforeMeasurement, label: `Before · ${formatDate(pair.beforeFile.measurement_date)}`, linePattern: "8 5" },
-    { measurement: pair.afterMeasurement, label: `After · ${formatDate(pair.afterMeasurement.measurement_date)}`, linePattern: undefined },
+    { measurement: pair.beforeMeasurement, label: `Avant · ${formatDate(pair.beforeFile.measurement_date)}`, linePattern: "8 5" },
+    { measurement: pair.afterMeasurement, label: `Après · ${formatDate(pair.afterMeasurement.measurement_date)}`, linePattern: undefined },
   ].map(({ measurement, label, linePattern }) => {
     const analysis = getJVDiagnostics(dataset).get(measurement.measurement_uid)!.analysis;
     const primary = analysis.segments[analysis.primaryIndex];
@@ -118,7 +119,7 @@ function EncapsulationJVComparison({ dataset, pairs, selections }: { dataset: IV
       <div><b>{formatDate(pair.beforeFile.measurement_date)} → {formatDate(pair.sample.encapsulation_date)} → {formatDate(pair.afterMeasurement.measurement_date)}</b><span>Before measurement · encapsulation · after measurement{postDays === null ? "" : ` · ${postDays} d after encapsulation`}</span></div>
     </div>
     <div className="chart-title encapsulation-jv-legend">{series.map((item) => <span key={item.id}><svg className="legend-stroke" viewBox="0 0 24 8" aria-hidden="true"><line x1="1" x2="23" y1="4" y2="4" stroke={item.color} strokeWidth="3" strokeDasharray={item.linePattern} /></svg>{item.label}</span>)}</div>
-    <CurveChart series={series} yAxisLabel="Generated J (mA/cm²)" currentConvention="pv" showPoints={false} showLandmarks scaleMode="primary" exportContext={{ dataset: { name: dataset.name, packageSha256: datasetPackageHash(dataset), provenance: dataset.provenance }, sourceCode: buildIdentity, selectedSamples: [pair.sample], analysisType: "paired-jv-inspection", qa: { inspectUnresolved }, validation: { quantitativeValidated: [pair.beforeMeasurement, pair.afterMeasurement].every(m => diagnostics.get(m.measurement_uid)?.quantitativeEligible) }, seriesMetadata: Object.fromEntries([pair.beforeMeasurement, pair.afterMeasurement].map(m => [m.measurement_uid, { measurement: m, file: dataset.files.find(file => file.file_uid === m.file_uid), diagnostics: diagnostics.get(m.measurement_uid) }])) }} />
+    <CurveChart series={series} yAxisLabel="J généré (mA/cm²)" currentConvention="pv" showPoints={false} showLandmarks scaleMode="primary" exportContext={{ dataset: { name: dataset.name, packageSha256: datasetPackageHash(dataset), provenance: dataset.provenance }, sourceCode: buildIdentity, selectedSamples: [pair.sample], analysisType: "paired-jv-inspection", qa: { inspectUnresolved }, validation: { quantitativeValidated: [pair.beforeMeasurement, pair.afterMeasurement].every(m => diagnostics.get(m.measurement_uid)?.quantitativeEligible) }, seriesMetadata: Object.fromEntries([pair.beforeMeasurement, pair.afterMeasurement].map(m => [m.measurement_uid, { measurement: m, file: dataset.files.find(file => file.file_uid === m.file_uid), diagnostics: diagnostics.get(m.measurement_uid) }])) }} />
     <div className="table-scroll"><table><thead><tr><th>Metric</th><th>Before sweep</th><th>After sweep</th><th>Δ after − before</th></tr></thead><tbody>{metrics.map(([label, key, unit, digits]) => {
       const before = metricValue(pair.beforeMeasurement, key);
       const after = metricValue(pair.afterMeasurement, key);
@@ -170,7 +171,7 @@ export function EncapsulationComparison({ dataset, selections }: { dataset: IVDa
   const summaryHelp = `The same physical cells are paired before encapsulation and after encapsulation, before ageing. Open points are before; filled points are after; optional thin lines connect the same cell. Boxes span Q1–Q3, with the median and 1.5 × IQR whiskers. Formulation, batch and distinct recorded processes remain separate. QA-flagged or ambiguous pairs are excluded. Dates come from linked raw JV files when available. ${excluded} selected-material cells have no unique valid PCE pair.`;
   return <div className="encapsulation-workspace">
     <section className="chart-card encapsulation-summary" aria-label="Before and after encapsulation">
-      <div className="chart-title"><div className="trend-panel-title"><strong>Encapsulation · PCE (η) before / after</strong><InfoTip text={summaryHelp} align="left" /></div><button type="button" className="soft-button" disabled={!groups.length} onClick={() => void exportGraphic("svg")}>Export SVG</button><button type="button" className="soft-button" disabled={!groups.length} onClick={() => void exportGraphic("svg", "report")}>Report SVG</button></div>
+      <div className="chart-title"><div className="trend-panel-title"><strong>PCE avant / après encapsulation</strong><InfoTip text={summaryHelp} align="left" /></div><button type="button" className="soft-button" disabled={!groups.length} onClick={() => void exportGraphic("svg")}>Export SVG</button><button type="button" className="soft-button" disabled={!groups.length} onClick={() => void exportGraphic("svg", "report")}>Report SVG</button></div>
       {manifest && <div className="control-row">
         <button type="button" disabled={!groups.length} onClick={()=>void exportGraphic("png")}>Export PNG</button>
         <button type="button" onClick={()=>downloadFigureFile(pairedFigureCsv(manifest,"figure"),"encapsulation.figure.csv","text/csv")}>Data shown in figure CSV</button>
@@ -198,10 +199,10 @@ export function EncapsulationComparison({ dataset, selections }: { dataset: IVDa
       {availableGroups.length > 0 && groups.length === 0 && <div className="missing-selection"><strong>No batch displayed</strong><span>Select at least one batch above to restore the chart.</span></div>}
       {groups.length > 0 && <>
         <div style={{ overflowX: "auto" }}>
-          <svg ref={svgRef} xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Paired PCE before and after encapsulation, grouped by formulation, batch and lamination recipe" style={{ background: "white", fontFamily: "Arial, sans-serif", color: "#222" }}>
+          <svg ref={svgRef} xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label="PCE avant et après encapsulation, par formulation, lot et procédé" style={{ background: "white", fontFamily: "Arial, sans-serif", color: "#222" }}>
             <rect width={width} height={height} fill="white" />
-            <text x={width / 2} y={28} textAnchor="middle" fontSize={18} fontWeight="bold">PCE before / after encapsulation</text>
-            {commonBatch && <text x={width / 2} y={47} textAnchor="middle" fontSize={11}>Batch {commonBatch}</text>}
+            <text x={width / 2} y={28} textAnchor="middle" fontSize={18} fontWeight="bold">PCE avant / après encapsulation</text>
+            {commonBatch && <text x={width / 2} y={47} textAnchor="middle" fontSize={11}>Lot {commonBatch}</text>}
             <text x={20} y={180} transform="rotate(-90 20 180)" textAnchor="middle" fontSize={14}>PCE (%)</text>
             {Array.from({ length: 6 }, (_, i) => min + (max - min) * i / 5).map((value) => <g key={value}><line x1={65} x2={width - 20} y1={y(value)} y2={y(value)} stroke="#ddd" /><text x={55} y={y(value) + 4} textAnchor="end" fontSize={12}>{value.toFixed(1)}</text></g>)}
             {groups.map((group, index) => {
@@ -211,7 +212,7 @@ export function EncapsulationComparison({ dataset, selections }: { dataset: IVDa
               const changes = pairedChanges(group.pairs);
               const relativeChange = deltaSummary === "none" ? null : changes.relative[deltaSummary];
               const dayRange = pairedMeasurementDayRange(group.pairs);
-              const dayLabel = dayRange === null ? "—" : dayRange.min === dayRange.max ? `${dayRange.min} d` : `${dayRange.min}–${dayRange.max} d`;
+              const dayLabel = dayRange === null ? "—" : dayRange.min === dayRange.max ? `${dayRange.min} j` : `${dayRange.min}–${dayRange.max} j`;
               const beforeOffsets = pointOffsets(group.pairs.map((pair) => y(pair.before)));
               const afterOffsets = pointOffsets(group.pairs.map((pair) => y(pair.after)));
               return <g key={group.key}>
@@ -227,15 +228,15 @@ export function EncapsulationComparison({ dataset, selections }: { dataset: IVDa
                       <rect x={x - 20} y={y(box.q3)} width={40} height={Math.max(1, y(box.q1) - y(box.q3))} />
                       <line x1={x - 20} x2={x + 20} y1={y(box.median)} y2={y(box.median)} strokeWidth={2} />
                     </g>}
-                    {group.pairs.map((pair, i) => <circle key={pair.sampleUid} cx={x + offsets[i]} cy={y(pair[stage])} r={3.5} fill={stageIndex ? color : "white"} stroke={color}><title>{pair.reference}: {stage} {pair[stage]}%</title></circle>)}
-                    <text x={x} y={323} textAnchor="middle" fontSize={12}>{stageIndex ? "After" : "Before"}</text>
+                    {group.pairs.map((pair, i) => <circle key={pair.sampleUid} cx={x + offsets[i]} cy={y(pair[stage])} r={3.5} fill={stageIndex ? color : "white"} stroke={color}><title>{pair.reference} : {figureStageLabel(stage)} {pair[stage]} %</title></circle>)}
+                    <text x={x} y={323} textAnchor="middle" fontSize={12}>{figureStageLabel(stage)}</text>
                   </g>;
                 })}
                 <text x={center} y={348} textAnchor="middle" fontSize={12} fontWeight="bold">{group.material.replace("_", " / ")}</text>
                 {showProcess && <text x={center} y={369} textAnchor="middle" fontSize={11}>{groupProcessLabel(group, dataset)}</text>}
-                <text x={center} y={showProcess ? 390 : 371} textAnchor="middle" fontSize={11}>{commonBatch ? "" : `Batch ${group.batch} · `}<tspan fontStyle="italic">n</tspan> = {group.pairs.length}{group.electrode === "Cu" ? "" : ` · ${group.electrode}`}</text>
-                {deltaSummary !== "none" && <text x={center} y={showProcess ? 411 : 392} textAnchor="middle" fontSize={11} fill="#5f6875"><tspan>{deltaSummary === "mean" ? "Mean" : "Median"} ΔPCE</tspan><tspan baselineShift="sub" fontSize={8}>rel</tspan><tspan> = {relativeChange === null ? "—" : `${relativeChange < 0 ? "−" : relativeChange > 0 ? "+" : ""}${Math.abs(relativeChange).toFixed(1)} %`}{changes.relative.n === group.pairs.length ? "" : ` · n = ${changes.relative.n}`}</tspan></text>}
-                {showMeasurementInterval && <text x={center} y={showProcess ? 432 : 413} textAnchor="middle" fontSize={11} fill="#5f6875">Before→after {dayLabel}</text>}
+                <text x={center} y={showProcess ? 390 : 371} textAnchor="middle" fontSize={11}>{commonBatch ? "" : `Lot ${group.batch} · `}<tspan fontStyle="italic">n</tspan> = {group.pairs.length}{group.electrode === "Cu" ? "" : ` · ${group.electrode}`}</text>
+                {deltaSummary !== "none" && <text x={center} y={showProcess ? 411 : 392} textAnchor="middle" fontSize={11} fill="#5f6875"><tspan>{deltaSummary === "mean" ? "Moyenne" : "Médiane"} ΔPCE</tspan><tspan baselineShift="sub" fontSize={8}>rel</tspan><tspan> = {relativeChange === null ? "—" : `${relativeChange < 0 ? "−" : relativeChange > 0 ? "+" : ""}${Math.abs(relativeChange).toFixed(1)} %`}{changes.relative.n === group.pairs.length ? "" : ` · n = ${changes.relative.n}`}</tspan></text>}
+                {showMeasurementInterval && <text x={center} y={showProcess ? 432 : 413} textAnchor="middle" fontSize={11} fill="#5f6875">Avant→après {dayLabel}</text>}
               </g>;
             })}
           </svg>

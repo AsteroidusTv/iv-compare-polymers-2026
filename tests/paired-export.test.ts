@@ -12,16 +12,16 @@ const options={selectedMaterials,hiddenGroupKeys:[],showMeasurementInterval:true
 test("connection visibility changes caption without changing paired contributors",()=>{
  const disconnected=pairedFigureManifest(dataset,groups,options);
  const connected=pairedFigureManifest(dataset,groups,{...options,showConnections:true});
- assert.match(disconnected.caption,/No connecting lines/);
- assert.match(connected.caption,/Lines connect the same cell/);
+ assert.match(disconnected.caption,/Aucune ligne entre les cellules/);
+ assert.match(connected.caption,/Les lignes relient une même cellule/);
  assert.deepEqual(disconnected.actualContributors,connected.actualContributors);
  assert.deepEqual(disconnected.groups,connected.groups);
 });
 test("caption follows the selected mean, median or individual-only annotation",()=>{
  for(const deltaSummary of ["mean","median","none"] as const){
   const manifest=pairedFigureManifest(dataset,groups,{...options,deltaSummary});
-  if(deltaSummary==="none")assert.match(manifest.caption,/No group delta summary is drawn/);
-  else assert.ok(manifest.caption.includes(`is the ${deltaSummary} of individual`));
+  if(deltaSummary==="none")assert.match(manifest.caption,/Aucune variation résumée par groupe/);
+  else assert.ok(manifest.caption.includes(`variation relative ${deltaSummary==="mean"?"moyenne":"médiane"}`));
  }
  const asymmetric=groups.find(group=>{const result=pairedChanges(group.pairs);return result.relative.mean!==result.relative.median;});
  assert.ok(asymmetric);

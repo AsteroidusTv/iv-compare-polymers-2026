@@ -28,6 +28,7 @@ import { fullJVSelectionCsv, fullJVMeasurementIds, jvSelectionLedger } from "./l
 import { downloadFigureFile } from "./lib/browser-figure-download";
 import { analysisGroups, cohortTimeline, type AnalysisGrouping } from "./lib/cohort";
 import { describeGraphElectrode } from "./lib/chart-export";
+import { figureAgeingContext, figureMetricLabel } from "./lib/figure-language";
 import { resolveSelectedSampleIds, toggleSelectedSampleId } from "./lib/sample-selection";
 import {
   measurementQualityReasons,
@@ -122,15 +123,6 @@ function timeUnit(stress: string): string {
   if (stress === "TC" || stress === "DH+TC") return "cycles";
   if (stress === "Outdoor") return "days";
   return "h";
-}
-
-function ageingReportLabel(stress: string): string {
-  if (stress === "DH") return "damp-heat ageing";
-  if (stress === "TC") return "thermal-cycling ageing";
-  if (stress === "DH+TC") return "combined damp-heat and thermal-cycling ageing";
-  if (stress === "Outdoor") return "outdoor exposure";
-  if (stress === "Unaged") return "the initial state";
-  return `${stress} ageing`;
 }
 
 function trendRowKey(seriesId: SeriesId, time: number): string {
@@ -699,7 +691,7 @@ export default function Home() {
     analyticalTrendSeries: view==="curves"?undefined:displayedTrendSeries,
     analyticalCurveSeries: view==="curves"?curveSeries:undefined,
     jvSelection: view==="curves"&&dataset?jvSelectionLedger(dataset,fullJVMeasurementIds(dataset,seriesConfigs,curveComparison,resolvedAgeingSample?.sampleUid??null),curveSelections.map(selection=>selection.measurement.measurement_uid),curveSelections.map(selection=>selection.actualTime),includeQa,inspectUnsafeJV):undefined,
-    methodCaption: view==="curves"?`${curveComparison==="ageing"?"Same specimen at selected ageing times":"Specimen-first examples at a shared protocol/time"}; no pooling of sweeps. ${inspectUnsafeJV?"Unresolved inspection; not quantitative validation.":"Quantitatively eligible sweeps only."}`:`${seriesConfigs.map(config=>`${config.stress} / ${METRICS[config.metric].label}`).join("; ")}. ${mode==="retention"?`Same-specimen normalization ×100; unique Unaged reference for DH/TC, B${outdoorWindow} for Outdoor (minimum 3 valid days).`:"Absolute measured values."} ${trendDisplay==="samples"?"Individual trajectories, no pooling":`${aggregation}; grouping=${grouping}; cohort=${cohortMode}`}. QA-flagged data ${includeQa?"included explicitly for review":"excluded"}.`,
+    methodCaption: view==="curves"?`${curveComparison==="ageing"?"Même cellule à plusieurs temps de vieillissement":"Cellules choisies au même protocole et au même temps"} ; les balayages ne sont pas regroupés. ${inspectUnsafeJV?"Inspection non résolue : ne constitue pas une validation quantitative.":"Seuls les balayages quantitativement admissibles sont inclus."}`:`${seriesConfigs.map(config=>`${config.stress} / ${figureMetricLabel(config.metric)}`).join("; ")}. ${mode==="retention"?`Normalisation par cellule × 100 ; référence Unaged unique pour DH/TC, B${outdoorWindow} pour l'extérieur (minimum 3 jours valides).`:"Valeurs absolues mesurées."} ${trendDisplay==="samples"?"Trajectoires individuelles, sans regroupement":`Agrégation : ${aggregation} ; regroupement : ${grouping} ; cohorte : ${cohortMode}`}. Données signalées par le contrôle qualité ${includeQa?"incluses explicitement pour examen":"exclues"}.`,
     qa: { includeFlagged: includeQa, inspectUnsafeJV },
     normalization: { mode, outdoorBaselineDays: outdoorWindow },
     aggregation: { method: aggregation, grouping },
@@ -738,7 +730,7 @@ export default function Home() {
         <div className="workspace-head">
           <div>
             <p className="eyebrow">Comparison workspace</p>
-            <h3>{view === "curves" && curveComparison === "ageing" ? "IV evolution of one cell" : view === "encapsulation" ? "Before / after encapsulation" : sharedCurveStress ? (sharedCurveStress === "Unaged" ? "Initial-state comparison" : `Evolution after ${sharedCurveStress}`) : "Condition comparison"}</h3>
+            <h3>{view === "curves" && curveComparison === "ageing" ? "Évolution JV d’une cellule" : view === "encapsulation" ? "Avant / après encapsulation" : sharedCurveStress ? (sharedCurveStress === "Unaged" ? "Comparaison à l’état initial" : `Évolution après ${sharedCurveStress}`) : "Comparaison des conditions"}</h3>
           </div>
           <div className="head-actions">
             <a className="soft-button" href="/data/iv-compare-dowsil.ivpack" download>Sample package</a>
@@ -797,9 +789,9 @@ export default function Home() {
         {view === "trend" && relevantLabIssues.size > 0 && <details style={{ margin: "12px 24px" }}><summary>Lab QA · {relevantLabIssues.size} flagged observations {includeQa ? "included" : "excluded from curves, aggregates and references"}</summary><ul>{[...relevantLabIssues].map(([id, reason]) => <li key={id}>{reason}</li>)}</ul></details>}
         {view === "trend" && trendDisplay === "aggregate" && aggregation === "mean" && <p style={{ margin: "12px 24px" }}>95% confidence intervals can be very wide with only two cells. They are not measured values or QA flags. Use individual samples or Median + IQR to inspect the spread.</p>}
         <nav className="view-tabs" aria-label="Chart type">
-          <button className={view === "trend" ? "active" : ""} onClick={() => setView("trend")}><span>01</span> Performance over time</button>
-          <button className={view === "curves" ? "active" : ""} onClick={() => setView("curves")}><span>02</span> IV curves</button>
-          <button className={view === "encapsulation" ? "active" : ""} onClick={() => setView("encapsulation")}><span>03</span> Before / after encapsulation</button>
+          <button className={view === "trend" ? "active" : ""} onClick={() => setView("trend")}><span>01</span> Évolution dans le temps</button>
+          <button className={view === "curves" ? "active" : ""} onClick={() => setView("curves")}><span>02</span> Courbes JV</button>
+          <button className={view === "encapsulation" ? "active" : ""} onClick={() => setView("encapsulation")}><span>03</span> Avant / après encapsulation</button>
         </nav>
 
         {view === "encapsulation" ? <EncapsulationComparison dataset={dataset} selections={seriesConfigs.map((config) => ({ material: config.material, color: materialStyle(config.material).color }))} /> : view === "trend" ? (
@@ -818,15 +810,14 @@ export default function Home() {
                   if (!first) return null;
                   const visiblePanel = panel.filter((series) => !hiddenSeries.has(series.id));
                   const parent = trendSeries.find((series) => series.id === first.parentSeriesId);
-                  const panelTitle = overlayCompatible ? (sharedMetric ? METRICS[sharedMetric].label : "Normalised retention") : `${parent?.label ?? first.label} · ${METRICS[first.config.metric].label}`;
+                  const panelTitle = overlayCompatible ? (sharedMetric ? figureMetricLabel(sharedMetric) : "Rétention normalisée") : `${parent?.label ?? first.label} · ${figureMetricLabel(first.config.metric)}`;
                   const helpMetric = panel.length === 1 || sharedMetric ? (sharedMetric ?? first.config.metric) : null;
-                  const reportMetric = METRICS[first.config.metric].label;
-                  const reportAgeing = ageingReportLabel(first.config.stress);
+                  const reportMetric = figureMetricLabel(first.config.metric);
                   const reportTitle = first.config.stress === "Unaged"
-                    ? `${reportMetric} at the initial state`
-                    : `${reportMetric}${mode === "retention" ? " retention" : ""} during ${reportAgeing}`;
-                  const reportReference = first.config.stress === "Outdoor" ? "reference baseline" : "initial value";
-                  const reportYAxisLabel = mode === "retention" ? `${reportMetric} retention (% of ${reportReference})` : `${reportMetric} (${first.yUnit})`;
+                    ? `${reportMetric} à l’état initial`
+                    : `${mode === "retention" ? "Rétention de " : ""}${reportMetric} ${figureAgeingContext(first.config.stress)}`;
+                  const reportReference = first.config.stress === "Outdoor" ? "la référence" : "la valeur initiale";
+                  const reportYAxisLabel = mode === "retention" ? `Rétention de ${reportMetric} (% de ${reportReference})` : `${reportMetric} (${first.yUnit})`;
                   const panelKey = overlayCompatible ? `shared-${first.xUnit}` : `series-${first.parentSeriesId ?? first.id}-${first.xUnit}`;
                   return <section className="trend-panel" key={panelKey}>
                     <div className="trend-panel-head"><div><span className="trend-panel-title"><strong>{panelTitle}</strong>{helpMetric ? <InfoTip text={METRIC_HELP[helpMetric]} align="left" /> : null}</span><span className="trend-panel-context">{trendDisplay === "samples" ? `${panel.length} individual sample trajectories · ${first.xUnit}` : panel.length > 1 ? `${panel.length} compatible series · ${first.xUnit}` : first.contextLabel}</span></div></div>
@@ -943,7 +934,7 @@ export default function Home() {
                 <span>{currentConvention === "instrument" ? "Instrument convention · negative photocurrent" : "PV convention · positive generated current"}</span>
               </div>
               {curveAudit.raw ? <div className={`curve-audit ${curveAudit.raw === curveAudit.primary ? "clean" : "segmented"}`} role="status"><span className="curve-audit-title"><strong>{displayedPointCount}/{curveAudit.raw} points displayed</strong><InfoTip text={HELP.pointAudit} align="left" /></span><span>{curveAudit.raw === curveAudit.primary ? "Continuous sweep" : `${curveAudit.raw - curveAudit.primary} additional points retained · ${curveAudit.segments} segments detected`}</span></div> : null}
-              {!curveSelections.length ? <div className="empty-chart" role="status"><strong>{inspectUnsafeJV?"No JV measurements match this selection":"No quantitatively eligible JV curves"}</strong><span>{inspectUnsafeJV?"Check the specimen, exact times and QA filters.":"Unresolved units, acquired range or experimental validation remain quarantined. Use explicit inspection only to review the source curves; this does not validate them."}</span></div> : <CurveChart series={visibleCurveSeries} yAxisLabel={currentConvention === "instrument" ? "Instrument J (mA/cm²)" : "Generated J (mA/cm²)"} currentConvention={currentConvention} showPoints={showCurvePoints} showLandmarks={showLandmarks} scaleMode={curveScale} exportContext={figureContext} />}
+              {!curveSelections.length ? <div className="empty-chart" role="status"><strong>{inspectUnsafeJV?"No JV measurements match this selection":"No quantitatively eligible JV curves"}</strong><span>{inspectUnsafeJV?"Check the specimen, exact times and QA filters.":"Unresolved units, acquired range or experimental validation remain quarantined. Use explicit inspection only to review the source curves; this does not validate them."}</span></div> : <CurveChart series={visibleCurveSeries} yAxisLabel={currentConvention === "instrument" ? "J instrument (mA/cm²)" : "J généré (mA/cm²)"} currentConvention={currentConvention} showPoints={showCurvePoints} showLandmarks={showLandmarks} scaleMode={curveScale} exportContext={figureContext} />}
             </section>
             <div className="measurement-grid">
               {curveSelections.map((selection) => <article className="measurement-card" key={selection.seriesId} style={{ borderTopColor: selection.color }}>

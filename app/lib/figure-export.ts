@@ -26,13 +26,13 @@ export function jvMethodCaption(context:FigureExportContext,series:CurveSeries[]
   }))];
   const selected=context.selectedSampleMetadata??context.selectedSamples;
   const samples=(Array.isArray(selected)?selected:[]).filter((sample):sample is import("./iv-data").Sample=>typeof sample==="object"&&sample!==null&&ids.includes(sample.sample_uid));
-  const descriptions=samples.map(sample=>`${sample.sample_uid}: ${sample.material_raw??sample.material_family}, batch ${sample.batch_no_raw??"unknown"}`);
+  const descriptions=samples.map(sample=>`${sample.sample_uid} : ${sample.material_raw??sample.material_family}, lot ${sample.batch_no_raw??"inconnu"}`);
   const conditions=series.flatMap(item=>{
     const source=context.seriesMetadata?.[item.id] as {file?:import("./iv-data").IVFile}|undefined;
     const file=source?.file;
-    return file?[`${file.inferred_test_type??"protocol unrecorded"}, exposure ${file.inferred_exposure_duration??"not recorded"}${file.inferred_test_type==="TC"?" cycles":file.inferred_test_type==="DH"?" h":""}, measured ${file.measurement_date??"date unknown"}`]:[];
+    return file?[`${file.inferred_test_type??"protocole non renseigné"}, exposition ${file.inferred_exposure_duration??"non renseignée"}${file.inferred_test_type==="TC"?" cycles":file.inferred_test_type==="DH"?" h":""}, mesure du ${file.measurement_date??"date inconnue"}`]:[];
   });
-  return `${ids.length} inventory specimen${ids.length===1?"":"s"}; ${descriptions.join("; ")||ids.join(", ")}. ${series.map(item=>item.label).join("; ")}. ${[...new Set(conditions)].join("; ")}. Absolute JV, no baseline normalization or pooling; no confidence interval. Secondary segments are dashed; suspected repeated residues are dotted. ${context.validation?.quantitativeValidated===false?"Unresolved units/ranges or experimental validation: inspection only, not quantitative evidence.":"Eligibility and QA decisions recorded in the manifest."}`;
+  return `${ids.length} cellule${ids.length===1?"":"s"} du registre ; ${descriptions.join(" ; ")||ids.join(", ")}. ${series.map(item=>item.label).join(" ; ")}. ${[...new Set(conditions)].join(" ; ")}. Courbes JV absolues, sans normalisation ni regroupement ; aucun intervalle de confiance. Les segments secondaires sont en tirets ; les résidus répétés suspectés sont en pointillés. ${context.validation?.quantitativeValidated===false?"Unités, plages ou validation expérimentale non résolues : inspection uniquement, sans valeur de preuve quantitative.":"Admissibilité et décisions de contrôle qualité consignées dans le manifeste."}`;
 }
 export interface FigureManifest {
   schemaVersion: "iv-compare-figure/1";

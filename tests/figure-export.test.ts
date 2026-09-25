@@ -42,5 +42,5 @@ test("JV manifest records omitted source ranges and distinguishes them from unse
  const manifest=figureManifest({...base,kind:"jv",series,context});
  assert.deepEqual(manifest.pointExclusions,[{seriesId:"M",segmentId:"segment-1",sourcePointIndices:[0,2],reason:"outside_selected_operating_range"},{seriesId:"M",segmentId:"segment-2",sourcePointIndices:[3],reason:"unselected_segment"}]);
  const caption=jvMethodCaption(context,series);
- assert.match(caption,/batch A1/);assert.match(caption,/305 h/);assert.match(caption,/inspection only/);
+ assert.match(caption,/lot A1/);assert.match(caption,/305 h/);assert.match(caption,/inspection uniquement/);
 });
