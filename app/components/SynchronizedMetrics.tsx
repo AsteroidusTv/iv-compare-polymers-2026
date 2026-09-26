@@ -7,7 +7,7 @@ import { buildIdentity } from "../lib/build-identity";
 import { rowsCsv } from "../lib/tabular-export";
 import { downloadFigureFile, downloadScientificGraphic } from "../lib/browser-figure-download";
 import { InfoTip } from "./InfoTip";
-import { figureTimeUnit } from "../lib/figure-language";
+import { figureTimeUnit, figureXAxisLabel } from "../lib/figure-language";
 import { ALL_RIBBONS, ribbonSelectionLabel } from "../lib/ribbon";
 
 const labels={efficiency_pct:"PCE / PCE₀",jsc_mA_cm2:"Jsc / Jsc₀",voc_V:"Voc / Voc₀",ff_pct:"FF / FF₀"};
@@ -50,7 +50,7 @@ export function SynchronizedMetrics({dataset,materials,ribbonSampleIds,ribbonSel
         <defs><clipPath id={`sync-${panel.metric}`}><rect x={left} y={top} width={pw} height={ph}/></clipPath></defs>
         {Array.from({length:5},(_,i)=>min+(max-min)*i/4).map(v=><g key={v}><line x1={left} x2={left+pw} y1={y(v)} y2={y(v)} stroke="#ddd"/><text x={left-7} y={y(v)+4} textAnchor="end" fontSize={11}>{v.toFixed(0)}</text></g>)}
         {Array.from({length:5},(_,i)=>end*i/4).map((v,i)=><text key={i} x={x(v)} y={top+ph+20} textAnchor="middle" fontSize={11}>{v.toFixed(0)}</text>)}
-        <text x={left+pw} y={top+ph+38} textAnchor="end" fontSize={12}>Temps ({figureTimeUnit(analysis.unit)})</text>
+        <text x={left+pw} y={top+ph+38} textAnchor="end" fontSize={12}>{figureXAxisLabel(analysis.unit)}</text>
         <g clipPath={`url(#sync-${panel.metric})`}><line x1={left} x2={left+pw} y1={y(100)} y2={y(100)} stroke="#888" strokeDasharray="4 4"/>
         {visibleIds.map((id)=>{const cells=panel.cells.filter(cell=>cell.sampleUid===id),color=materialStyle(samples.find(sample=>sample.sample_uid===id)!.material_family).color;return <g key={id}>{cells.map((cell,i)=>{const prev=cells[i-1];return cell.value===null?null:<g key={cell.time}>{prev?.value!==null&&prev?.value!==undefined&&<line x1={x(prev.time)} x2={x(cell.time)} y1={y(prev.value)} y2={y(cell.value)} stroke={color} strokeWidth={1.6} strokeDasharray={identityLinePattern(id)}/>}<circle cx={x(cell.time)} cy={y(cell.value)} r={3} fill={color}><title>{id} · {cell.time} {analysis.unit}: {cell.value.toFixed(2)}%; absolute {cell.trace?.absoluteValue}, baseline {cell.trace?.baseline?.value}</title></circle></g>;})}</g>;})}</g>
         <text x={left} y={top+ph+57} fontSize={11} fill="#666">Mesures manquantes ou exclues : {panel.cells.filter(cell=>cell.value===null).length}</text>

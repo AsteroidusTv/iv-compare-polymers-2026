@@ -30,7 +30,7 @@ import { analysisGroups, cohortTimeline, type AnalysisGrouping } from "./lib/coh
 import { describeGraphElectrode } from "./lib/chart-export";
 import { figureAgeingContext, figureMetricLabel } from "./lib/figure-language";
 import { resolveSelectedSampleIds, toggleSelectedSampleId } from "./lib/sample-selection";
-import { ALL_RIBBONS, UNKNOWN_RIBBON, matchesRibbon, recordedRibbon, ribbonChoice, ribbonLabel, ribbonOptions, ribbonSelectionLabel } from "./lib/ribbon";
+import { ALL_RIBBONS, STANDARD_RIBBON, matchesRibbon, recordedRibbon, ribbonChoice, ribbonLabel, ribbonOptions, ribbonSelectionLabel } from "./lib/ribbon";
 import {
   measurementQualityReasons,
   numeric,
@@ -212,7 +212,7 @@ export default function Home() {
 
   const materials = useMemo(() => unique(dataset?.samples.map((sample) => sample.material_family) ?? []), [dataset]);
   const availableRibbons = useMemo(() => ribbonOptions(dataset?.samples ?? []), [dataset]);
-  const ribbonSelection = selectedRibbon === UNKNOWN_RIBBON || availableRibbons.some((value) => ribbonChoice(value) === selectedRibbon) ? selectedRibbon : ALL_RIBBONS;
+  const ribbonSelection = selectedRibbon === STANDARD_RIBBON || availableRibbons.some((value) => ribbonChoice(value) === selectedRibbon) ? selectedRibbon : ALL_RIBBONS;
   const ribbonSampleIds = useMemo(() => new Set((dataset?.samples ?? []).filter((sample) => matchesRibbon(sample, ribbonSelection)).map((sample) => sample.sample_uid)), [dataset, ribbonSelection]);
   const comparisonMaterials = useMemo(() => seriesConfigs.map((config) => config.material).filter(Boolean), [seriesConfigs]);
   const sampleMap = useMemo(() => new Map(dataset?.samples.map((sample) => [sample.sample_uid, sample]) ?? []), [dataset]);
@@ -700,7 +700,7 @@ export default function Home() {
     analyticalTrendSeries: view==="curves"?undefined:displayedTrendSeries,
     analyticalCurveSeries: view==="curves"?curveSeries:undefined,
     jvSelection: view==="curves"&&dataset?jvSelectionLedger(dataset,fullJVMeasurementIds(dataset,seriesConfigs,curveComparison,resolvedAgeingSample?.sampleUid??null,ribbonSampleIds),curveSelections.map(selection=>selection.measurement.measurement_uid),curveSelections.map(selection=>selection.actualTime),includeQa,inspectUnsafeJV):undefined,
-    methodCaption: `${ribbonSelectionLabel(ribbonSelection)}. ${splitByRibbon && view === "trend" && trendDisplay === "aggregate" ? "Groupes séparés par libellé de ruban enregistré. " : ""}${view==="curves"?`${curveComparison==="ageing"?"Même cellule à plusieurs temps de vieillissement":"Cellules choisies au même protocole et au même temps"} ; les balayages ne sont pas regroupés. ${inspectUnsafeJV?"Inspection non résolue : ne constitue pas une validation quantitative.":"Seuls les balayages quantitativement admissibles sont inclus."}`:`${seriesConfigs.map(config=>`${config.stress} / ${figureMetricLabel(config.metric)}`).join("; ")}. ${mode==="retention"?`Normalisation par cellule × 100 ; référence Unaged unique pour DH/TC, B${outdoorWindow} pour l'extérieur (minimum 3 jours valides).`:"Valeurs absolues mesurées."} ${trendDisplay==="samples"?"Trajectoires individuelles, sans regroupement":`Agrégation : ${aggregation} ; regroupement : ${grouping} ; cohorte : ${cohortMode}`}. Données signalées par le contrôle qualité ${includeQa?"incluses explicitement pour examen":"exclues"}.`}`,
+    methodCaption: `${ribbonSelectionLabel(ribbonSelection)}. ${splitByRibbon && view === "trend" && trendDisplay === "aggregate" ? "Groupes séparés par type de ruban. " : ""}${view==="curves"?`${curveComparison==="ageing"?"Même cellule à plusieurs temps de vieillissement":"Cellules choisies au même protocole et au même temps"} ; les balayages ne sont pas regroupés. ${inspectUnsafeJV?"Inspection non résolue : ne constitue pas une validation quantitative.":"Seuls les balayages quantitativement admissibles sont inclus."}`:`${seriesConfigs.map(config=>`${config.stress} / ${figureMetricLabel(config.metric)}`).join("; ")}. ${mode==="retention"?`Normalisation par cellule × 100 ; référence Unaged unique pour DH/TC, B${outdoorWindow} pour l'extérieur (minimum 3 jours valides).`:"Valeurs absolues mesurées."} ${trendDisplay==="samples"?"Trajectoires individuelles, sans regroupement":`Agrégation : ${aggregation} ; regroupement : ${grouping} ; cohorte : ${cohortMode}`}. Données signalées par le contrôle qualité ${includeQa?"incluses explicitement pour examen":"exclues"}.`}`,
     qa: { includeFlagged: includeQa, inspectUnsafeJV },
     normalization: { mode, outdoorBaselineDays: outdoorWindow },
     aggregation: { method: aggregation, grouping, splitByRibbon },
@@ -772,13 +772,13 @@ export default function Home() {
         </div>
 
         <div className="control-row" aria-label="Sélection des rubans">
-          <label>Ruban<select aria-label="Filtrer les cellules par ruban" value={ribbonSelection} onChange={(event) => setSelectedRibbon(event.target.value)}>
+          <label>Type de ruban<select aria-label="Filtrer les cellules par type de ruban" value={ribbonSelection} onChange={(event) => setSelectedRibbon(event.target.value)}>
             <option value={ALL_RIBBONS}>Tous les rubans</option>
             {availableRibbons.map((value) => <option key={value} value={ribbonChoice(value)}>{value}</option>)}
-            <option value={UNKNOWN_RIBBON}>Non renseigné</option>
+            <option value={STANDARD_RIBBON}>Ruban standard</option>
           </select></label>
-          <label className="check-control"><input type="checkbox" checked={splitByRibbon} onChange={(event) => setSplitByRibbon(event.target.checked)} /> Séparer les groupes par ruban</label>
-          <InfoTip text="Le filtre s'applique à tous les graphes. La séparation agit sur les agrégats et boîtes ; les courbes JV et les trajectoires individuelles restent par cellule. Les libellés de la colonne Ribbon sont conservés tels quels : ils mêlent références de ruban et descriptions de pose. « Non renseigné » n'est pas assimilé à un type de ruban." />
+          <label className="check-control"><input type="checkbox" checked={splitByRibbon} onChange={(event) => setSplitByRibbon(event.target.checked)} /> Séparer les groupes par type de ruban</label>
+          <InfoTip text="Le filtre s'applique à tous les graphes. La séparation agit sur les agrégats et boîtes ; les courbes JV et les trajectoires individuelles restent par cellule. « Non renseigné », « stand » et les notes « too short », « facing down », « all the length » sont classés comme ruban standard faute de référence explicite. Ces notes de préparation restent dans les données brutes et ne prouvent pas une pose identique." />
         </div>
 
         {view !== "encapsulation" && <div className="control-row">

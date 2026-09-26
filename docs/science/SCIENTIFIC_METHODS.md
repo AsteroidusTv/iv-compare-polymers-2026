@@ -92,6 +92,18 @@ independence is inferred. The shared Y viewport can be adjusted without changing
 analytical rows; graph end is an analytical cutoff. Full-selection exports retain
 the traces beyond this cutoff.
 
+## Ribbon classification
+
+The optional ribbon filter and ribbon-based grouping classify the three
+explicit references (3M-3007, 3M-3011, 3M-3012) separately. Empty entries,
+`stand`, `too short`, `facing down`, and `all the length` are classified as the
+standard ribbon type rather than additional ribbon types. The latter three
+are preparation notes, not evidence of identical placement or processing.
+Original `ribbon_raw` values remain in the sample metadata and exports so
+analyses of preparation differences can revisit them. This classification is
+specific to the current dataset; new unrecognized labels remain separate
+until adjudicated.
+
 ## Small samples and display limits
 
 Median is the default. Quantiles use linear interpolation at `(n−1) × p`

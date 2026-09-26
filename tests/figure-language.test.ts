@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { figureAgeingContext, figureMetricLabel, figureStageLabel, figureTimeUnit } from "../app/lib/figure-language";
+import { figureAgeingContext, figureMetricLabel, figureStageLabel, figureTimeUnit, figureXAxisLabel } from "../app/lib/figure-language";
 
 test("figure wording uses French prose but keeps English protocol names", () => {
   assert.equal(figureMetricLabel("efficiency_pct"), "PCE");
@@ -12,6 +12,9 @@ test("figure wording uses French prose but keeps English protocol names", () => 
   assert.equal(figureAgeingContext("Outdoor"), "en exposition extérieure");
   assert.equal(figureTimeUnit("days"), "jours");
   assert.equal(figureTimeUnit("h"), "h");
+  assert.equal(figureXAxisLabel("cycles"), "Nombre de cycles");
+  assert.equal(figureXAxisLabel("h"), "Temps (h)");
+  assert.equal(figureXAxisLabel("days"), "Temps (jours)");
   assert.equal(figureStageLabel("before"), "Avant");
   assert.equal(figureStageLabel("aged"), "Vieilli");
 });

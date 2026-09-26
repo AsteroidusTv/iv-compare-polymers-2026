@@ -15,7 +15,7 @@ export function analysisGroups(samples: Sample[], mode: AnalysisGrouping = "cons
     // Missing provenance is not evidence of compatibility: conservative mode
     // keeps incompletely documented specimens separate unless descriptive
     // pooling is explicitly requested within a known formulation and batch.
-    const uncertain = mode === "conservative" && values.some((value) => value === null)
+    const uncertain = mode === "conservative" && [fields.material, ...levels.map((level) => fields[level])].some((value) => value === null)
       && (!groupUnknownMetadata || fields.formulation === null || fields.batch === null);
     const key = JSON.stringify([...values, ...(uncertain ? [sample.sample_uid] : [])]);
     const label = [fields.material, ...levels.map((level) => `${level}: ${fields[level] ?? "unknown"}`), ...(splitByRibbon ? [ribbonLabel(ribbon)] : []), ...(uncertain ? [sample.sample_uid] : [])].join(" · ");

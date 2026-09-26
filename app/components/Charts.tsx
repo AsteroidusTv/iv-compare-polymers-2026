@@ -7,7 +7,7 @@ import { figureCsv, figureManifest, jvMethodCaption, type FigureExportContext, t
 import { downloadFigureFile } from "../lib/browser-figure-download";
 import { markerPath, segmentLinePattern, type MaterialStyle } from "../lib/material-style";
 import { applyReportSvgStyle } from "../lib/report-svg";
-import { figureTimeUnit } from "../lib/figure-language";
+import { figureXAxisLabel } from "../lib/figure-language";
 
 export interface TrendPoint {
   x: number;
@@ -511,7 +511,7 @@ export function TrendChart({
         {yTicks.map((tick) => <g key={`y-${tick}`}><line className="grid-line" x1={margin.left} x2={width - margin.right} y1={sy(tick)} y2={sy(tick)} /><text className="axis-label" x={margin.left - 12} y={sy(tick) + 4} textAnchor="end">{numberFormat.format(tick)}</text></g>)}
         {xTicks.map((tick) => <g key={`x-${tick}`}><line className="tick-line" x1={sx(tick)} x2={sx(tick)} y1={height - margin.bottom} y2={height - margin.bottom + 6} /><text className="axis-label" x={sx(tick)} y={height - 20} textAnchor="middle">{numberFormat.format(tick)}</text></g>)}
         <line className="axis-line" x1={margin.left} x2={width - margin.right} y1={height - margin.bottom} y2={height - margin.bottom} />
-        <text className="axis-title" x={width - margin.right} y={height - 5} textAnchor="end">Temps ({figureTimeUnit(xUnit)})</text>
+        <text className="axis-title" x={width - margin.right} y={height - 5} textAnchor="end">{figureXAxisLabel(xUnit)}</text>
         <text className="axis-title" x={margin.left} y={14}>{yAxisLabel}</text>
         {isRetention && yMin <= 100 && yMax >= 100 ? <g className="reference-baseline"><line x1={margin.left} x2={width - margin.right} y1={sy(100)} y2={sy(100)} /><text x={width - margin.right - 4} y={sy(100) - 6} textAnchor="end">Référence · 100 %</text></g> : null}
         <g clipPath="url(#trend-plot-clip)">{plottedSeries.map((item, seriesIndex) => {

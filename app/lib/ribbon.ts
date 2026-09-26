@@ -1,8 +1,9 @@
 import type { Sample } from "./iv-data";
 
 export const ALL_RIBBONS = "all";
-export const UNKNOWN_RIBBON = "unknown";
+export const STANDARD_RIBBON = "standard";
 const RECORDED_PREFIX = "recorded:";
+const STANDARD_PREPARATION_NOTES = new Set(["stand", "too short", "facing down", "all the length"]);
 
 export function ribbonChoice(value: string): string {
   return `${RECORDED_PREFIX}${value}`;
@@ -10,12 +11,15 @@ export function ribbonChoice(value: string): string {
 
 export function ribbonSelectionLabel(selected: string): string {
   if (selected === ALL_RIBBONS) return "Tous les rubans";
-  if (selected === UNKNOWN_RIBBON) return "Ruban non renseigné";
+  if (selected === STANDARD_RIBBON) return "Ruban standard";
   return selected.startsWith(RECORDED_PREFIX) ? `Ruban ${selected.slice(RECORDED_PREFIX.length)}` : "Sélection de ruban inconnue";
 }
 
+// The source column mixes ribbon references with preparation notes. Keep the
+// original value in sample.ribbon_raw; only this analytical type is grouped.
 export function recordedRibbon(sample: Pick<Sample, "ribbon_raw">): string | null {
-  return sample.ribbon_raw?.trim() || null;
+  const raw = sample.ribbon_raw?.trim() || null;
+  return raw && !STANDARD_PREPARATION_NOTES.has(raw.toLowerCase()) ? raw : null;
 }
 
 export function ribbonOptions(samples: Pick<Sample, "ribbon_raw">[]): string[] {
@@ -26,9 +30,9 @@ export function ribbonOptions(samples: Pick<Sample, "ribbon_raw">[]): string[] {
 export function matchesRibbon(sample: Pick<Sample, "ribbon_raw">, selected: string): boolean {
   if (selected === ALL_RIBBONS) return true;
   const value = recordedRibbon(sample);
-  return selected === UNKNOWN_RIBBON ? value === null : selected.startsWith(RECORDED_PREFIX) && value === selected.slice(RECORDED_PREFIX.length);
+  return selected === STANDARD_RIBBON ? value === null : selected.startsWith(RECORDED_PREFIX) && value === selected.slice(RECORDED_PREFIX.length);
 }
 
 export function ribbonLabel(value: string | null): string {
-  return value === null ? "Ruban non renseigné" : `Ruban ${value}`;
+  return value === null ? "Ruban standard" : `Ruban ${value}`;
 }

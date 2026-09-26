@@ -50,7 +50,7 @@ test("encapsulation groups keep recorded lamination recipes separate", () => {
 });
 
 test("paired PCE groups split by ribbon only when requested", () => {
-  const samples: Sample[] = ["3M-3011", "3M-3012", null].map((ribbon_raw, index) => ({
+  const samples: Sample[] = ["3M-3011", "3M-3012", null, "stand", "facing down"].map((ribbon_raw, index) => ({
     sample_uid: `r${index}`, material_family: "TPO", material_raw: "TPO-2", batch_no_raw: "A3", recipe_uid: "R", electrode: "Cu", ribbon_raw, initial_efficiency_pct: 17,
   }));
   const observations: Observation[] = samples.map((sample, index) => ({ observation_uid: `o${index}`, sample_uid: sample.sample_uid, test_type: "Unaged", efficiency_pct: 16 }));
@@ -58,6 +58,7 @@ test("paired PCE groups split by ribbon only when requested", () => {
   const result = encapsulationGroups(samples, observations, ["TPO"], [], true);
   assert.equal(result.groups.length, 3);
   assert.deepEqual(result.groups.map((group) => group.ribbon).sort(), ["3M-3011", "3M-3012", null].sort());
+  assert.equal(result.groups.find((group) => group.ribbon === null)?.pairs.length, 3);
 });
 
 test("box whiskers exclude outliers and quartiles use linear interpolation", () => {

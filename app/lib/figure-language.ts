@@ -26,6 +26,11 @@ export function figureTimeUnit(unit: string): string {
   return unit === "days" ? "jours" : unit;
 }
 
+/** A cycle counts protocol repetitions; it is not a duration. */
+export function figureXAxisLabel(unit: string): string {
+  return unit === "cycles" ? "Nombre de cycles" : `Temps (${figureTimeUnit(unit)})`;
+}
+
 export function figureStageLabel(stage: "before" | "post" | "after" | "aged"): string {
   if (stage === "before") return "Avant";
   if (stage === "aged") return "Vieilli";

@@ -41,17 +41,19 @@ test("conservative grouping separates formulations, batches, recipes and undocum
   assert.throws(() => cohortTimeline([eva[0], eva[0]]), /duplicate/);
 });
 
-test("ribbon separation is opt-in and does not merge an undocumented ribbon with a recorded one", () => {
+test("ribbon separation is opt-in and treats standard notes as one type", () => {
   const base = { material_family: "TPO", material_raw: "TPO-2", batch_no_raw: "A3", recipe_uid: "R", electrode: "Cu" };
   const samples = [
     { ...base, sample_uid: "a", ribbon_raw: "3M-3011" },
     { ...base, sample_uid: "b", ribbon_raw: "3M-3012" },
     { ...base, sample_uid: "c", ribbon_raw: null },
+    { ...base, sample_uid: "d", ribbon_raw: "stand" },
+    { ...base, sample_uid: "e", ribbon_raw: "too short" },
   ];
   assert.equal(analysisGroups(samples).length, 1);
   const separated = analysisGroups(samples, "conservative", false, true);
   assert.equal(separated.length, 3);
-  assert.deepEqual(separated.map((group) => group.samples[0].sample_uid).sort(), ["a", "b", "c"]);
+  assert.deepEqual(separated.map((group) => group.samples.map((sample) => sample.sample_uid).sort()).sort((left, right) => left[0].localeCompare(right[0])), [["a"], ["b"], ["c", "d", "e"]]);
   assert.equal(analysisGroups(samples, "material", false, true).length, 3);
 });
 

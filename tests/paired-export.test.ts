@@ -46,7 +46,7 @@ test("paired full-selected export respects the ribbon cohort and records the spl
   assert.ok(manifest.candidates.length>0);
   assert.ok(manifest.candidates.every(row=>ids.has(row.sampleUid)));
   assert.ok(manifest.groups.every(group=>group.ribbon==="3M-3011"));
-  assert.match(manifest.caption,/séparées par libellé de ruban/);
+  assert.match(manifest.caption,/séparées par type de ruban/);
   assert.match(manifest.caption,/Filtre : Ruban 3M-3011/);
   assert.ok(!pairedFigureCsv(manifest,"full-selected").includes('"SMP2-055"'));
 });
