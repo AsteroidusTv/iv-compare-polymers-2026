@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { describeGraphElectrode, describeSeriesSelection, legendSelectionsByKey, pointsThrough, showTrendMarkers, trendExportScaleWarning, uniqueLegendEntries } from "../app/lib/chart-export";
+import { describeGraphElectrode, describeSeriesSelection, describeTrendElectrodes, legendElectrodesByKey, legendSelectionsByKey, pointsThrough, showTrendMarkers, trendExportScaleWarning, uniqueLegendEntries } from "../app/lib/chart-export";
 import { reportInkColor } from "../app/lib/report-svg";
 
 test("dense daily curves keep their data points but omit decorative markers", () => {
@@ -20,9 +20,19 @@ test("graph legends contain one entry per material series", () => {
   assert.deepEqual(uniqueLegendEntries(series), [series[0], series[2]]);
 });
 
-test("graph exports mention only silver electrodes", () => {
-  assert.equal(describeGraphElectrode(["Cu", "Cu", null]), undefined);
-  assert.equal(describeGraphElectrode(["Cu", " Ag "]), "Électrode Ag");
+test("graph exports name every contributing electrode when an aggregate mixes them", () => {
+  assert.equal(describeGraphElectrode(["Cu", "Cu"]), undefined);
+  assert.equal(describeGraphElectrode(["Ag"]), "Électrode Ag");
+  assert.equal(describeGraphElectrode(["Cu", " Ag "]), "Électrodes Ag / Cu");
+  assert.equal(describeGraphElectrode(["Cu", "Ag", "Carbon"]), "Électrodes Ag / Carbon / Cu");
+  assert.equal(describeGraphElectrode(["Cu", null]), "Électrodes Cu / non renseignée");
+  const electrodes = new Map([["copper", "Cu"], ["silver", "Ag"]]);
+  const points = [{ x: 100, members: [{ sampleUid: "copper" }] }, { x: 200, members: [{ sampleUid: "silver" }] }];
+  assert.equal(describeTrendElectrodes(points, electrodes), "Électrodes Ag / Cu");
+  assert.equal(describeTrendElectrodes(pointsThrough(points, 100), electrodes), undefined);
+  const individualSeries = points.map((point) => ({ label: `silicone-${point.x}`, exportLegendKey: "silicone", points: [point] }));
+  assert.equal(legendElectrodesByKey(individualSeries, electrodes).get("silicone"), "Électrodes Ag / Cu");
+  assert.equal(legendElectrodesByKey(individualSeries.map((item) => ({ ...item, points: pointsThrough(item.points, 100) })), electrodes).get("silicone"), undefined);
 });
 
 test("graph-end limits keep only observations at or before the boundary", () => {

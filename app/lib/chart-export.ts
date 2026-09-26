@@ -42,7 +42,28 @@ export function uniqueLegendEntries<T extends { label: string; exportLegendKey?:
 }
 
 export function describeGraphElectrode(electrodes: Array<string | null | undefined>): string | undefined {
-  return electrodes.some((electrode) => electrode?.trim().toLowerCase() === "ag") ? "Électrode Ag" : undefined;
+  if (!electrodes.length) return undefined;
+  const recorded = [...new Set(electrodes.flatMap((electrode) => {
+    const value = electrode?.trim();
+    if (!value) return [];
+    return [value.toLowerCase() === "ag" ? "Ag" : value.toLowerCase() === "cu" ? "Cu" : value];
+  }))].sort((left, right) => left.localeCompare(right, "fr"));
+  if (recorded.length === 1 && recorded[0] === "Cu" && electrodes.every((electrode) => electrode?.trim())) return undefined;
+  const labels = [...recorded, ...(electrodes.some((electrode) => !electrode?.trim()) ? ["non renseignée"] : [])];
+  return `${labels.length === 1 ? "Électrode" : "Électrodes"} ${labels.join(" / ")}`;
+}
+
+export function describeTrendElectrodes(points: Array<{ members: Array<{ sampleUid: string }> }>, electrodeBySample: ReadonlyMap<string, string | null | undefined>): string | undefined {
+  return describeGraphElectrode(points.flatMap((point) => point.members.map((member) => electrodeBySample.get(member.sampleUid))));
+}
+
+export function legendElectrodesByKey<T extends { label: string; exportLegendKey?: string; points: Array<{ members: Array<{ sampleUid: string }> }> }>(series: T[], electrodeBySample: ReadonlyMap<string, string | null | undefined>): Map<string, string | undefined> {
+  const pointsByKey = new Map<string, T["points"]>();
+  for (const item of series) {
+    const key = item.exportLegendKey ?? item.label;
+    pointsByKey.set(key, [...(pointsByKey.get(key) ?? []), ...item.points]);
+  }
+  return new Map([...pointsByKey].map(([key, points]) => [key, describeTrendElectrodes(points, electrodeBySample)]));
 }
 
 export function pointsThrough<T extends { x: number }>(points: T[], maximumX: number | null): T[] {

@@ -15,9 +15,9 @@ export function figureMetricLabel(metric: MetricKey): string {
 }
 
 export function figureAgeingContext(stress: string): string {
-  if (stress === "DH") return "sous chaleur humide (DH)";
-  if (stress === "TC") return "sous cycles thermiques (TC)";
-  if (stress === "DH+TC") return "sous chaleur humide et cycles thermiques (DH+TC)";
+  if (stress === "DH") return "pendant l’essai de damp heat (DH)";
+  if (stress === "TC") return "pendant l’essai de thermal cycling (TC)";
+  if (stress === "DH+TC") return "pendant les essais de damp heat et de thermal cycling (DH+TC)";
   if (stress === "Outdoor") return "en exposition extérieure";
   return `sous vieillissement ${stress}`;
 }

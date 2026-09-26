@@ -2,7 +2,7 @@
 
 import { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
 
-import { legendSelectionsByKey, pointsThrough, showTrendMarkers, trendDisplayValues, trendExportScaleWarning, trendIntervalVisible, uniqueLegendEntries } from "../lib/chart-export";
+import { legendElectrodesByKey, legendSelectionsByKey, pointsThrough, showTrendMarkers, trendDisplayValues, trendExportScaleWarning, trendIntervalVisible, uniqueLegendEntries } from "../lib/chart-export";
 import { figureCsv, figureManifest, jvMethodCaption, type FigureExportContext, type FigureManifest } from "../lib/figure-export";
 import { downloadFigureFile } from "../lib/browser-figure-download";
 import { markerPath, segmentLinePattern, type MaterialStyle } from "../lib/material-style";
@@ -398,8 +398,13 @@ export function TrendChart({
   const yTicks = viewport.zoom === 1 && !manualYValid ? tickSequence(fullYMin, fullYMax, autoYStep) : ticks(yMin, yMax);
   const clippedY = allValues.some((value) => value < yMin || value > yMax);
   const legendSelections = legendSelectionsByKey(plottedSeries);
+  const selectedSamples = Array.isArray(exportContext.selectedSampleMetadata)
+    ? exportContext.selectedSampleMetadata as import("../lib/iv-data").Sample[] : [];
+  const electrodeBySample = new Map(selectedSamples.map((sample) => [sample.sample_uid, sample.electrode]));
+  const legendElectrodes = legendElectrodesByKey(plottedSeries, electrodeBySample);
   const exportSeries = plottedSeries.map((item) => ({
     ...item,
+    exportDetail: electrodeBySample.size ? legendElectrodes.get(item.exportLegendKey ?? item.label) : item.exportDetail,
     exportSelection: legendSelections.get(item.exportLegendKey ?? item.label),
   }));
   const exportTitle = reportTitle ?? `Évolution au cours du temps — ${yUnit}`;
@@ -409,7 +414,7 @@ export function TrendChart({
   const exportStem = exportFileStem(graphEnd === null ? "performance-over-time" : `performance-over-time-through-${graphEnd}-${xUnit}`, exportSeries);
   const manifest = figureManifest({ kind: "trend", title: exportTitle, caption: [exportTitle, exportSubtitle, exportContext.methodCaption, "Les lignes relient les durées mesurées ; aucune interpolation temporelle"].filter(Boolean).join(". ") + ".", context: exportContext,
     xUnit, yUnit, analyticLimit: { maximumX: graphEnd, interpolation: "none" }, viewport: { xMin, xMax, yMin, yMax },
-    intervalsVisible: showIntervals, series: plottedSeries, display: { zoom: viewport.zoom, yScale: manualYValid ? "manual" : "auto", clippedY, smallSampleMembersShown: true } });
+    intervalsVisible: showIntervals, series: exportSeries, display: { zoom: viewport.zoom, yScale: manualYValid ? "manual" : "auto", clippedY, smallSampleMembersShown: true } });
 
   const changeZoom = (nextZoom: number, anchorX = 0.5, anchorY = 0.5) => {
     setViewport((current) => {

@@ -501,7 +501,7 @@ export default function Home() {
     return {
       ...series,
       points,
-      contextLabel: [series.contextLabel, subsetNote].filter(Boolean).join(" · "),
+      contextLabel: [series.config.stress, METRICS[series.config.metric].label, describeGraphElectrode(points.flatMap((point) => point.members.map((member) => sampleMap.get(member.sampleUid)?.electrode))), subsetNote].filter(Boolean).join(" · "),
       sampleSetChanges: signatures.size > 1,
     };
   });
@@ -841,7 +841,7 @@ export default function Home() {
                   const panelKey = overlayCompatible ? `shared-${first.xUnit}` : `series-${first.parentSeriesId ?? first.id}-${first.xUnit}`;
                   return <section className="trend-panel" key={panelKey}>
                     <div className="trend-panel-head"><div><span className="trend-panel-title"><strong>{panelTitle}</strong>{helpMetric ? <InfoTip text={METRIC_HELP[helpMetric]} align="left" /> : null}</span><span className="trend-panel-context">{trendDisplay === "samples" ? `${panel.length} individual sample trajectories · ${first.xUnit}` : panel.length > 1 ? `${panel.length} compatible series · ${first.xUnit}` : first.contextLabel}</span></div></div>
-                    <TrendChart series={visiblePanel.map((series) => ({ ...series, exportDetail: describeGraphElectrode(series.points.flatMap((point) => point.members.map((member) => sampleMap.get(member.sampleUid)?.electrode))) }))} xUnit={first.xUnit} yUnit={first.yUnit} reportTitle={reportTitle} reportYAxisLabel={reportYAxisLabel} exportContext={{...figureContext,analyticalTrendSeries:panel}} />
+                    <TrendChart series={visiblePanel} xUnit={first.xUnit} yUnit={first.yUnit} reportTitle={reportTitle} reportYAxisLabel={reportYAxisLabel} exportContext={{...figureContext,analyticalTrendSeries:panel}} />
                   </section>;
                 })}
               </div>
