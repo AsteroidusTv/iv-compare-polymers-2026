@@ -30,6 +30,7 @@ import { analysisGroups, cohortTimeline, type AnalysisGrouping } from "./lib/coh
 import { describeGraphElectrode } from "./lib/chart-export";
 import { figureAgeingContext, figureMetricLabel } from "./lib/figure-language";
 import { resolveSelectedSampleIds, toggleSelectedSampleId } from "./lib/sample-selection";
+import { ALL_RIBBONS, UNKNOWN_RIBBON, matchesRibbon, recordedRibbon, ribbonChoice, ribbonLabel, ribbonOptions, ribbonSelectionLabel } from "./lib/ribbon";
 import {
   measurementQualityReasons,
   numeric,
@@ -138,6 +139,8 @@ export default function Home() {
   const [mode, setMode] = useState<ValueMode>("retention");
   const [aggregation, setAggregation] = useState<Aggregation>("median");
   const [grouping, setGrouping] = useState<AnalysisGrouping>("conservative");
+  const [selectedRibbon, setSelectedRibbon] = useState(ALL_RIBBONS);
+  const [splitByRibbon, setSplitByRibbon] = useState(false);
   const [cohortMode, setCohortMode] = useState<"available" | "constant">("available");
   const [cohortStart, setCohortStart] = useState(0);
   const [cohortEnd, setCohortEnd] = useState(100);
@@ -208,10 +211,13 @@ export default function Home() {
   };
 
   const materials = useMemo(() => unique(dataset?.samples.map((sample) => sample.material_family) ?? []), [dataset]);
+  const availableRibbons = useMemo(() => ribbonOptions(dataset?.samples ?? []), [dataset]);
+  const ribbonSelection = selectedRibbon === UNKNOWN_RIBBON || availableRibbons.some((value) => ribbonChoice(value) === selectedRibbon) ? selectedRibbon : ALL_RIBBONS;
+  const ribbonSampleIds = useMemo(() => new Set((dataset?.samples ?? []).filter((sample) => matchesRibbon(sample, ribbonSelection)).map((sample) => sample.sample_uid)), [dataset, ribbonSelection]);
   const comparisonMaterials = useMemo(() => seriesConfigs.map((config) => config.material).filter(Boolean), [seriesConfigs]);
   const sampleMap = useMemo(() => new Map(dataset?.samples.map((sample) => [sample.sample_uid, sample]) ?? []), [dataset]);
   const jvDiagnostics = useMemo<ReadonlyMap<string, JVDiagnostic>>(() => dataset ? getJVDiagnostics(dataset) : new Map(), [dataset]);
-  const samplePasses = useCallback((sampleId: string | null | undefined, config: SeriesConfig) => dataset ? seriesSamplePasses(dataset, sampleId, config) : false, [dataset]);
+  const samplePasses = useCallback((sampleId: string | null | undefined, config: SeriesConfig) => Boolean(dataset && sampleId && ribbonSampleIds.has(sampleId) && seriesSamplePasses(dataset, sampleId, config)), [dataset, ribbonSampleIds]);
 
   const outdoorQualityByMetric = useMemo(() => {
     const result = new Map<MetricKey, Map<string, OutdoorQualityIssue>>();
@@ -351,8 +357,8 @@ export default function Home() {
   const resolvedCurveTime = selectableCurveTimes.includes(curveTime as number) ? curveTime : selectableCurveTimes[selectableCurveTimes.length - 1] ?? null;
 
   const ageingCandidates = useMemo(() => dataset && seriesConfigs[0]
-    ? ageingSampleCandidates(dataset, seriesConfigs[0], includeQa, inspectUnsafeJV)
-    : [], [dataset, seriesConfigs, includeQa, inspectUnsafeJV]);
+    ? ageingSampleCandidates(dataset, seriesConfigs[0], includeQa, inspectUnsafeJV).filter((candidate) => ribbonSampleIds.has(candidate.sampleUid))
+    : [], [dataset, seriesConfigs, includeQa, inspectUnsafeJV, ribbonSampleIds]);
   const resolvedAgeingSample = ageingCandidates.find((candidate) => candidate.sampleUid === curveAgeingSample) ?? ageingCandidates[0] ?? null;
   const availableAgeingTimes = resolvedAgeingSample?.times.map((item) => item.time) ?? [];
   const selectedAgeingTimes = resolveAgeingTimes(availableAgeingTimes, curveAgeingTimes);
@@ -437,7 +443,7 @@ export default function Home() {
       id: selection.seriesId,
       label: curveComparison === "ageing"
         ? [`${fr.format(selection.actualTime)} ${timeUnit(selection.config.stress)}`, resolvedAgeingSample?.label, electrodeNote].filter(Boolean).join(" · ")
-        : [`${String.fromCharCode(65 + seriesConfigs.findIndex((config) => config.id === selection.seriesId))} · ${selection.material}`, electrodeNote].filter(Boolean).join(" · "),
+        : [`${String.fromCharCode(65 + seriesConfigs.findIndex((config) => config.id === selection.seriesId))} · ${selection.material}`, ribbonSelection === ALL_RIBBONS ? null : ribbonLabel(recordedRibbon(sampleMap.get(selection.measurement.sample_uid ?? "") ?? { ribbon_raw: null })), electrodeNote].filter(Boolean).join(" · "),
       color: selection.color,
       marker: materialStyle(selection.material).marker,
       linePattern: selection.linePattern,
@@ -517,8 +523,11 @@ export default function Home() {
   });
   const selectedTrendSeries: ContextTrendSeries[] = selectedUnsplitSeries.flatMap((series) => {
     const ids = new Set(series.points.flatMap((point) => point.members.map((member) => member.sampleUid)));
-    const groups = analysisGroups((dataset?.samples ?? []).filter((sample) => ids.has(sample.sample_uid)), grouping);
+    const groups = analysisGroups((dataset?.samples ?? []).filter((sample) => ids.has(sample.sample_uid)), grouping, false, splitByRibbon);
     return groups.map((group, groupIndex) => {
+      const ribbon = recordedRibbon(group.samples[0]);
+      const sameRibbonGroups = splitByRibbon ? groups.filter((candidate) => recordedRibbon(candidate.samples[0]) === ribbon) : [];
+      const ribbonSubgroup = sameRibbonGroups.length > 1 ? `sous-groupe ${sameRibbonGroups.findIndex((candidate) => candidate.key === group.key) + 1}` : null;
       const memberIds = new Set(group.samples.map((sample) => sample.sample_uid));
       const points = series.points.flatMap((point) => {
         const members = point.members.filter((member) => memberIds.has(member.sampleUid));
@@ -526,7 +535,7 @@ export default function Home() {
         const summary = summarise(members.map((member) => member.value), aggregation);
         return [{ ...point, y: summary.value, min: summary.min, max: summary.max, intervalLow: summary.intervalLow, intervalHigh: summary.intervalHigh, intervalLabel: summary.intervalLabel, n: summary.n, members }];
       });
-      return { ...series, id: `${series.id}::group:${group.key}`, parentSeriesId: series.id, label: group.label, exportLabel: groups.length > 1 ? `${series.config.material} · group ${groupIndex + 1}` : series.config.material, contextLabel: [series.config.stress, METRICS[series.config.metric].label, describeGraphElectrode(group.samples.map(sample => sample.electrode))].filter(Boolean).join(" · "), exportLegendKey: `${series.id}:${group.key}`, linePattern: identityLinePattern(group.key), points, sampleSetChanges: new Set(points.map((point) => point.members.map((member) => member.sampleUid).sort().join("|"))).size > 1 };
+      return { ...series, id: `${series.id}::group:${group.key}`, parentSeriesId: series.id, label: group.label, exportLabel: [series.config.material, ...(splitByRibbon ? [ribbonLabel(ribbon), ribbonSubgroup] : groups.length > 1 ? [`groupe ${groupIndex + 1}`] : [])].filter(Boolean).join(" · "), contextLabel: [series.config.stress, METRICS[series.config.metric].label, describeGraphElectrode(group.samples.map(sample => sample.electrode))].filter(Boolean).join(" · "), exportLegendKey: `${series.id}:${group.key}`, linePattern: identityLinePattern(group.key), points, sampleSetChanges: new Set(points.map((point) => point.members.map((member) => member.sampleUid).sort().join("|"))).size > 1 };
     });
   });
   const cohortDiagnostics = selectedTrendSeries.map((series) => ({ series, timeline: cohortTimeline(series.points.flatMap((point) => point.members.map((member) => ({ time: point.x, sampleUid: member.sampleUid, value: member.value, batch: member.batchNo }))), aggregation) }));
@@ -690,11 +699,12 @@ export default function Home() {
     hiddenSeries: [...hiddenSeries],
     analyticalTrendSeries: view==="curves"?undefined:displayedTrendSeries,
     analyticalCurveSeries: view==="curves"?curveSeries:undefined,
-    jvSelection: view==="curves"&&dataset?jvSelectionLedger(dataset,fullJVMeasurementIds(dataset,seriesConfigs,curveComparison,resolvedAgeingSample?.sampleUid??null),curveSelections.map(selection=>selection.measurement.measurement_uid),curveSelections.map(selection=>selection.actualTime),includeQa,inspectUnsafeJV):undefined,
-    methodCaption: view==="curves"?`${curveComparison==="ageing"?"Même cellule à plusieurs temps de vieillissement":"Cellules choisies au même protocole et au même temps"} ; les balayages ne sont pas regroupés. ${inspectUnsafeJV?"Inspection non résolue : ne constitue pas une validation quantitative.":"Seuls les balayages quantitativement admissibles sont inclus."}`:`${seriesConfigs.map(config=>`${config.stress} / ${figureMetricLabel(config.metric)}`).join("; ")}. ${mode==="retention"?`Normalisation par cellule × 100 ; référence Unaged unique pour DH/TC, B${outdoorWindow} pour l'extérieur (minimum 3 jours valides).`:"Valeurs absolues mesurées."} ${trendDisplay==="samples"?"Trajectoires individuelles, sans regroupement":`Agrégation : ${aggregation} ; regroupement : ${grouping} ; cohorte : ${cohortMode}`}. Données signalées par le contrôle qualité ${includeQa?"incluses explicitement pour examen":"exclues"}.`,
+    jvSelection: view==="curves"&&dataset?jvSelectionLedger(dataset,fullJVMeasurementIds(dataset,seriesConfigs,curveComparison,resolvedAgeingSample?.sampleUid??null,ribbonSampleIds),curveSelections.map(selection=>selection.measurement.measurement_uid),curveSelections.map(selection=>selection.actualTime),includeQa,inspectUnsafeJV):undefined,
+    methodCaption: `${ribbonSelectionLabel(ribbonSelection)}. ${splitByRibbon && view === "trend" && trendDisplay === "aggregate" ? "Groupes séparés par libellé de ruban enregistré. " : ""}${view==="curves"?`${curveComparison==="ageing"?"Même cellule à plusieurs temps de vieillissement":"Cellules choisies au même protocole et au même temps"} ; les balayages ne sont pas regroupés. ${inspectUnsafeJV?"Inspection non résolue : ne constitue pas une validation quantitative.":"Seuls les balayages quantitativement admissibles sont inclus."}`:`${seriesConfigs.map(config=>`${config.stress} / ${figureMetricLabel(config.metric)}`).join("; ")}. ${mode==="retention"?`Normalisation par cellule × 100 ; référence Unaged unique pour DH/TC, B${outdoorWindow} pour l'extérieur (minimum 3 jours valides).`:"Valeurs absolues mesurées."} ${trendDisplay==="samples"?"Trajectoires individuelles, sans regroupement":`Agrégation : ${aggregation} ; regroupement : ${grouping} ; cohorte : ${cohortMode}`}. Données signalées par le contrôle qualité ${includeQa?"incluses explicitement pour examen":"exclues"}.`}`,
     qa: { includeFlagged: includeQa, inspectUnsafeJV },
     normalization: { mode, outdoorBaselineDays: outdoorWindow },
-    aggregation: { method: aggregation, grouping },
+    aggregation: { method: aggregation, grouping, splitByRibbon },
+    ribbon: { selection: ribbonSelection, splitByRibbon },
     cohort: { mode: cohortMode, start: cohortStart, end: cohortEnd, diagnostics: cohortDiagnostics },
     seriesMetadata: Object.fromEntries(curveSelections.map(selection => [selection.seriesId, {
       measurement: selection.measurement, file: selection.file,
@@ -761,6 +771,16 @@ export default function Home() {
           </div>
         </div>
 
+        <div className="control-row" aria-label="Sélection des rubans">
+          <label>Ruban<select aria-label="Filtrer les cellules par ruban" value={ribbonSelection} onChange={(event) => setSelectedRibbon(event.target.value)}>
+            <option value={ALL_RIBBONS}>Tous les rubans</option>
+            {availableRibbons.map((value) => <option key={value} value={ribbonChoice(value)}>{value}</option>)}
+            <option value={UNKNOWN_RIBBON}>Non renseigné</option>
+          </select></label>
+          <label className="check-control"><input type="checkbox" checked={splitByRibbon} onChange={(event) => setSplitByRibbon(event.target.checked)} /> Séparer les groupes par ruban</label>
+          <InfoTip text="Le filtre s'applique à tous les graphes. La séparation agit sur les agrégats et boîtes ; les courbes JV et les trajectoires individuelles restent par cellule. Les libellés de la colonne Ribbon sont conservés tels quels : ils mêlent références de ruban et descriptions de pose. « Non renseigné » n'est pas assimilé à un type de ruban." />
+        </div>
+
         {view !== "encapsulation" && <div className="control-row">
           <div className="segmented" aria-label="Value mode">
             <button className={mode === "retention" ? "active" : ""} onClick={() => setMode("retention")}>Retention</button>
@@ -794,7 +814,7 @@ export default function Home() {
           <button className={view === "encapsulation" ? "active" : ""} onClick={() => setView("encapsulation")}><span>03</span> Avant / après encapsulation</button>
         </nav>
 
-        {view === "encapsulation" ? <EncapsulationComparison dataset={dataset} selections={seriesConfigs.map((config) => ({ material: config.material, color: materialStyle(config.material).color }))} /> : view === "trend" ? (
+        {view === "encapsulation" ? <EncapsulationComparison dataset={dataset} selections={seriesConfigs.map((config) => ({ material: config.material, color: materialStyle(config.material).color }))} ribbonSampleIds={ribbonSampleIds} ribbonSelection={ribbonSelection} splitByRibbon={splitByRibbon} /> : view === "trend" ? (
           <div className="chart-layout">
             <section className="chart-card">
               <div className="chart-title">
@@ -892,7 +912,7 @@ export default function Home() {
           </div>
         ) : (
           <div className="curve-workspace">
-            <button onClick={()=>{if(dataset)downloadFigureFile(fullJVSelectionCsv(dataset,fullJVMeasurementIds(dataset,seriesConfigs,curveComparison,resolvedAgeingSample?.sampleUid??null)),"jv.full-selected.csv","text/csv");}}>Full selected JV dataset CSV</button>
+            <button onClick={()=>{if(dataset)downloadFigureFile(fullJVSelectionCsv(dataset,fullJVMeasurementIds(dataset,seriesConfigs,curveComparison,resolvedAgeingSample?.sampleUid??null,ribbonSampleIds)),"jv.full-selected.csv","text/csv");}}>Full selected JV dataset CSV</button>
             <div className="segmented" aria-label="IV comparison mode">
               <button className={curveComparison === "ageing" ? "active" : ""} onClick={() => { setCurveComparison("ageing"); setHiddenSeries(new Set()); setCurveMeasurementIds({}); }}>One cell over ageing</button>
               <button className={curveComparison === "materials" ? "active" : ""} onClick={() => { setCurveComparison("materials"); setHiddenSeries(new Set()); setCurveMeasurementIds({}); }}>Materials at one time</button>
@@ -958,7 +978,7 @@ export default function Home() {
         )}
       </section>
 
-      {dataset&&view==="trend"&&seriesConfigs.some(config=>config.stress==="Outdoor")&&<OutdoorSensitivity dataset={dataset} materials={seriesConfigs.filter(config=>config.stress==="Outdoor").map(config=>config.material)}/>}
+      {dataset&&view==="trend"&&seriesConfigs.some(config=>config.stress==="Outdoor")&&<OutdoorSensitivity dataset={dataset} materials={seriesConfigs.filter(config=>config.stress==="Outdoor").map(config=>config.material)} ribbonSampleIds={ribbonSampleIds} ribbonSelection={ribbonSelection}/>}
       <footer>
         <span>IV Compare · format .ivpack v{dataset?.schemaVersion ?? "1.0"}</span>
         <span>Extreme values remain available through the QA control.</span>

@@ -2,13 +2,14 @@ import type { IVDataset, Observation, Sample } from "./iv-data";
 import { labQualityIssues } from "./lab-quality";
 import { numeric } from "./science";
 import { analysisGroups } from "./cohort";
+import { recordedRibbon, ribbonLabel } from "./ribbon";
 
 export type AgedTime = { mode: "exact"; time: number } | { mode: "last-common" };
 export interface StageValue { value: number | null; reasons: string[]; observations: Observation[] }
 export interface StagedDisplayGroup { key:string; label:string; materialFamily:string; sampleUids:string[]; sourceGroupKeys:string[] }
 
 /** No nearest time, interpolation, or per-specimen last value is ever substituted. */
-export function stagedAgeing(dataset: IVDataset, options: { sampleUids: string[]; protocol: "DH" | "TC"; aged: AgedTime; excludedSampleUids?: string[]; groupUnknownMetadata?: boolean }) {
+export function stagedAgeing(dataset: IVDataset, options: { sampleUids: string[]; protocol: "DH" | "TC"; aged: AgedTime; excludedSampleUids?: string[]; groupUnknownMetadata?: boolean; splitByRibbon?: boolean }) {
   const samples = dataset.samples.filter(sample => options.sampleUids.includes(sample.sample_uid));
   const qa = labQualityIssues(dataset.observations, "efficiency_pct");
   const stage = (rows: Observation[]): StageValue => {
@@ -23,7 +24,7 @@ export function stagedAgeing(dataset: IVDataset, options: { sampleUids: string[]
   const atTime = (sampleUid: string, time: number) => stage(dataset.observations.filter(row => row.sample_uid === sampleUid && row.test_type === options.protocol && row.exposure_duration_numeric === time));
   const commonTimes = cohort.length ? times.filter(time => cohort.every(sample => atTime(sample.sample_uid,time).value !== null)) : [];
   const time = options.aged.mode === "exact" ? Number.isFinite(options.aged.time) && options.aged.time >= 0 ? options.aged.time : null : commonTimes.at(-1) ?? null;
-  const groups = analysisGroups(samples, "conservative", options.groupUnknownMetadata);
+  const groups = analysisGroups(samples, "conservative", options.groupUnknownMetadata, options.splitByRibbon);
   const rows = samples.map(sample => {
     const before: StageValue = { value: numeric(sample.initial_efficiency_pct) && sample.initial_efficiency_pct >= 0 && sample.initial_efficiency_pct <= 50 ? sample.initial_efficiency_pct : null, reasons: [], observations: [] };
     if (before.value === null) before.reasons.push(numeric(sample.initial_efficiency_pct) ? "qa_initial_pce" : "missing_initial_pce");
@@ -49,6 +50,7 @@ export function stagedDisplayGroups(
   hiddenGroupKeys: string[],
   excludedSampleUids: string[],
   aggregateAcrossBatches: boolean,
+  splitByRibbon = false,
 ): StagedDisplayGroup[] {
   const sampleByUid = new Map(samples.map(sample => [sample.sample_uid, sample]));
   const hidden = new Set(hiddenGroupKeys), excluded = new Set(excludedSampleUids);
@@ -59,9 +61,10 @@ export function stagedDisplayGroups(
     if (!memberUids.length) continue;
     const materialFamily = sampleByUid.get(memberUids[0])?.material_family;
     if (!materialFamily) continue;
-    const key = aggregateAcrossBatches ? `material:${materialFamily}` : group.key;
+    const ribbon = recordedRibbon(sampleByUid.get(memberUids[0])!);
+    const key = aggregateAcrossBatches ? splitByRibbon ? JSON.stringify(["material", materialFamily, ribbon]) : `material:${materialFamily}` : group.key;
     const display = output.get(key) ?? {
-      label:aggregateAcrossBatches ? materialFamily : group.label,
+      label:aggregateAcrossBatches ? `${materialFamily}${splitByRibbon ? ` · ${ribbonLabel(ribbon)}` : ""}` : group.label,
       materialFamily,
       sampleUids:new Set<string>(),
       sourceGroupKeys:new Set<string>(),

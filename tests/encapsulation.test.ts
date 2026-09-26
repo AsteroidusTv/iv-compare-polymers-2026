@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import fs from "node:fs";
 import zlib from "node:zlib";
-import { boxStatistics, encapsulationCurvePairs, encapsulationGroups, meanPairedRelativeChange, neutralGroupLabels, pairedMeasurementDayRange } from "../app/lib/encapsulation";
+import { boxStatistics, encapsulationCurvePairs, encapsulationDisplayLabels, encapsulationGroups, meanPairedRelativeChange, pairedMeasurementDayRange } from "../app/lib/encapsulation";
 import type { IVDataset, Observation, Sample } from "../app/lib/iv-data";
 
 test("pairs use the same cell, preserve zero after and separate batches/formulations", () => {
@@ -31,10 +31,31 @@ test("encapsulation groups keep recorded lamination recipes separate", () => {
   const result = encapsulationGroups(samples, observations, ["TPO"]);
   assert.equal(result.groups.length, 2);
   assert.deepEqual(result.groups.map((group) => group.recipe).sort(), ["CSEM2 SL", "CVF"]);
-  const labels = neutralGroupLabels(result.groups);
-  assert.deepEqual(result.groups.map((group) => labels.get(group.key)), ["Groupe 1", "Groupe 2"]);
+  const recipes = [
+    { recipe_uid: "big", laminator: "Unspecified" },
+    { recipe_uid: "small", laminator: "Small laminator" },
+    { recipe_uid: "standard", laminator: "Standard laminator" },
+    { recipe_uid: "none", laminator: "No lamination" },
+  ];
+  const labels = encapsulationDisplayLabels(result.groups, recipes);
+  assert.deepEqual(result.groups.map((group) => labels.get(group.key)), ["Groupe 1", "Petite lamineuse"]);
   assert.ok([...labels.values()].every((label) => !label?.includes("CVF") && !label?.includes("CSEM2")));
-  assert.equal(neutralGroupLabels(result.groups.slice(0, 1)).get(result.groups[0].key), null);
+  assert.equal(encapsulationDisplayLabels(result.groups.slice(0, 1), recipes).get(result.groups[0].key), null);
+  assert.equal(encapsulationDisplayLabels([{ ...result.groups[0], recipeUid: "standard" }], recipes).get(result.groups[0].key), null);
+  assert.equal(encapsulationDisplayLabels([{ ...result.groups[0], recipeUid: "none" }], recipes).get(result.groups[0].key), "Sans lamination");
+  const bothSmall = encapsulationDisplayLabels(result.groups.map((group) => ({ ...group, recipeUid: "small" })), recipes);
+  assert.deepEqual([...bothSmall.values()], ["Petite lamineuse · groupe 1", "Petite lamineuse · groupe 2"]);
+});
+
+test("paired PCE groups split by ribbon only when requested", () => {
+  const samples: Sample[] = ["3M-3011", "3M-3012", null].map((ribbon_raw, index) => ({
+    sample_uid: `r${index}`, material_family: "TPO", material_raw: "TPO-2", batch_no_raw: "A3", recipe_uid: "R", electrode: "Cu", ribbon_raw, initial_efficiency_pct: 17,
+  }));
+  const observations: Observation[] = samples.map((sample, index) => ({ observation_uid: `o${index}`, sample_uid: sample.sample_uid, test_type: "Unaged", efficiency_pct: 16 }));
+  assert.equal(encapsulationGroups(samples, observations, ["TPO"]).groups.length, 1);
+  const result = encapsulationGroups(samples, observations, ["TPO"], [], true);
+  assert.equal(result.groups.length, 3);
+  assert.deepEqual(result.groups.map((group) => group.ribbon).sort(), ["3M-3011", "3M-3012", null].sort());
 });
 
 test("box whiskers exclude outliers and quartiles use linear interpolation", () => {
@@ -64,7 +85,9 @@ test("supplied package has 46 eligible encapsulation pairs after the A4 intake",
   assert.ok(result.groups.every((group) => group.pairs.length > 0));
   const lenzingA3 = result.groups.filter((group) => group.material === "TPO-2_Lenzing" && group.batch === "A3");
   assert.deepEqual(lenzingA3.map((group) => group.pairs.length).sort(), [4, 4]);
-  assert.deepEqual([...neutralGroupLabels(lenzingA3).values()].sort(), ["Groupe 1", "Groupe 2"]);
+  const labels = encapsulationDisplayLabels(lenzingA3, dataset.recipes);
+  assert.equal(labels.get(lenzingA3.find((group) => group.recipe === "CVF")!.key), "Groupe 1");
+  assert.equal(labels.get(lenzingA3.find((group) => group.recipe === "CSEM2 SL")!.key), "Petite lamineuse");
   const curvePairs = encapsulationCurvePairs(dataset);
   assert.equal(curvePairs.length, 27);
   assert.ok(curvePairs.every((pair) => pair.beforeFile.reference_match_basis && pair.beforeMeasurement.file_uid === pair.beforeFile.file_uid));

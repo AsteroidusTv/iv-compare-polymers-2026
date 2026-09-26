@@ -96,7 +96,8 @@ export function figureCsv(manifest: FigureManifest): string {
   const shared = { figure_kind: manifest.kind, x_unit: manifest.xUnit, y_unit: manifest.yUnit,
     analytic_maximum_x: manifest.analyticLimit.maximumX, viewport: manifest.viewport,
     intervals_visible: manifest.intervalsVisible, context: { dataset: manifest.context.dataset, sourceCode: manifest.context.sourceCode,
-      filters: manifest.context.filters, qa: manifest.context.qa, normalization: manifest.context.normalization, aggregation: manifest.context.aggregation }, display: manifest.display };
+      filters: manifest.context.filters, ribbon: manifest.context.ribbon, qa: manifest.context.qa, normalization: manifest.context.normalization, aggregation: manifest.context.aggregation }, display: manifest.display };
+  const ribbonBySample = new Map(((manifest.context.selectedSampleMetadata ?? []) as import("./iv-data").Sample[]).map(sample => [sample.sample_uid, sample.ribbon_raw ?? null]));
   const rows: Record<string, unknown>[] = [];
   if (manifest.kind === "trend") {
     for (const series of manifest.series as TrendSeries[]) for (const point of series.points) {
@@ -108,7 +109,7 @@ export function figureCsv(manifest: FigureManifest): string {
         plotted_point_inside_viewport: inViewport(point.x, point.y, manifest.viewport), point_metadata: point };
       if (!point.members.length) rows.push(common);
       for (const member of point.members) rows.push({ ...common, observation_id: member.observationId, sample_uid: member.sampleUid,
-        sample_label: member.sampleLabel, sample_reference: member.sampleReference, batch: member.batchNo,
+        sample_label: member.sampleLabel, sample_reference: member.sampleReference, batch: member.batchNo, ribbon_raw: ribbonBySample.get(member.sampleUid),
         contributing_value: member.value, member_metadata: member });
     }
   } else {
@@ -117,7 +118,7 @@ export function figureCsv(manifest: FigureManifest): string {
       const measurement = source?.measurement, diagnostic = source?.diagnostics;
       const segmentIndex = diagnostic?.analysis.segments.findIndex(item => `${measurement?.measurement_uid}-${item.id}` === segment.id) ?? -1;
       rows.push({ ...shared, series_id: series.id, series_label: series.label, color: series.color, line_pattern: series.linePattern,
-        sample_uid: measurement?.sample_uid, measurement_uid: measurement?.measurement_uid, file_uid: measurement?.file_uid,
+        sample_uid: measurement?.sample_uid, ribbon_raw: ribbonBySample.get(measurement?.sample_uid ?? ""), measurement_uid: measurement?.measurement_uid, file_uid: measurement?.file_uid,
         segment_status: diagnostic?.segments[segmentIndex]?.status ?? "unresolved", point_index: pointIndex, source_point_index: point.sourceIndex,
         segment_line_pattern: segmentLinePattern(segment.isPrimary,segment.status,series.linePattern),
         V: point.x, J: point.y, unit_interpretation: diagnostic?.conversion, surface_cm2: diagnostic?.conversion.surfaceUsed,
@@ -134,9 +135,10 @@ export function figureCsv(manifest: FigureManifest): string {
 
 /** Full configured selection before graph end, visual hiding or cohort exclusions. */
 export function fullSelectionCsv(context: FigureExportContext): string {
-  const columns = ["series_id", "sample_uid", "observation_uid", "protocol", "time", "absolute_value", "normalized_value", "baseline", "rule", "QA_reasons", "initial_exclusions", "raw_observation", "dataset", "source_code"];
+  const columns = ["series_id", "sample_uid", "ribbon_raw", "observation_uid", "protocol", "time", "absolute_value", "normalized_value", "baseline", "rule", "QA_reasons", "initial_exclusions", "raw_observation", "dataset", "source_code"];
+  const ribbonBySample = new Map(((context.selectedSampleMetadata ?? []) as import("./iv-data").Sample[]).map(sample => [sample.sample_uid, sample.ribbon_raw ?? null]));
   const rows = Object.entries(context.analysisTrace ?? {}).flatMap(([seriesId, traces])=>traces.map(trace=>[
-    seriesId, trace.observation.sample_uid, trace.observation.observation_uid, trace.observation.test_type, trace.observation.exposure_duration_numeric,
+    seriesId, trace.observation.sample_uid, ribbonBySample.get(trace.observation.sample_uid), trace.observation.observation_uid, trace.observation.test_type, trace.observation.exposure_duration_numeric,
     trace.absoluteValue, trace.value, trace.baseline, trace.rule, trace.qaReasons, trace.exclusions, trace.observation, context.dataset, context.sourceCode,
   ]));
   return [columns,...rows].map(row=>row.map(cell).join(",")).join("\r\n");

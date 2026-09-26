@@ -8,11 +8,12 @@ import { rowsCsv } from "../lib/tabular-export";
 import { downloadFigureFile, downloadScientificGraphic } from "../lib/browser-figure-download";
 import { InfoTip } from "./InfoTip";
 import { outdoorFigureExclusions } from "../lib/outdoor-sensitivity";
+import { ALL_RIBBONS, ribbonSelectionLabel } from "../lib/ribbon";
 
 const thresholds=[100,200,300] as const;
 const dash:Record<number,string>={100:"3 3",200:"",300:"9 3"};
 const number=(value:number|null)=>value===null?"—":value.toFixed(2);
-export function OutdoorSensitivity({dataset,materials}:{dataset:IVDataset;materials:string[]}) {
+export function OutdoorSensitivity({dataset,materials,ribbonSampleIds,ribbonSelection}:{dataset:IVDataset;materials:string[];ribbonSampleIds:ReadonlySet<string>;ribbonSelection:string}) {
  const [loaded,setLoaded]=useState<OutdoorSensitivityBundle|null>(null),[loadError,setLoadError]=useState<string|null>(null);
  const [sampleId,setSampleId]=useState(""),[metric,setMetric]=useState<"pr"|"pmpp">("pr"),[window,setWindow]=useState<3|7|14>(7);
  const [mode,setMode]=useState<"retention"|"absolute">("retention"),[graphEnd,setGraphEnd]=useState<number|null>(null),[hidden,setHidden]=useState<number[]>([]);
@@ -20,7 +21,7 @@ export function OutdoorSensitivity({dataset,materials}:{dataset:IVDataset;materi
  const svg=useRef<SVGSVGElement>(null),hash=datasetPackageHash(dataset);
  useEffect(()=>{const controller=new AbortController();loadOutdoorBundle(hash,controller.signal).then(result=>{setLoaded(result);setLoadError(null);}).catch(error=>{if(!controller.signal.aborted)setLoadError(String(error));});return()=>controller.abort();},[hash]);
  const bundle=loaded?.compatiblePackageHashes.includes(hash??"")?loaded:null;
- const samples=dataset.samples.filter(sample=>materials.includes(sample.material_family)&&bundle?.analysis.summaries.some(row=>row.sampleUid===sample.sample_uid));
+ const samples=dataset.samples.filter(sample=>ribbonSampleIds.has(sample.sample_uid)&&materials.includes(sample.material_family)&&bundle?.analysis.summaries.some(row=>row.sampleUid===sample.sample_uid));
  const sample=samples.find(row=>row.sample_uid===sampleId)??samples[0];
  if(!bundle)return <section className="chart-card" aria-label="Sensibilité en extérieur"><h3>Sensibilité en extérieur</h3><p role="status">{loadError??"Loading raw-derived sensitivity data…"}</p></section>;
  if(!sample)return <section className="chart-card" aria-label="Sensibilité en extérieur"><h3>Sensibilité en extérieur</h3><p>No Outdoor raw measurements for the selected materials.</p></section>;
@@ -34,14 +35,14 @@ export function OutdoorSensitivity({dataset,materials}:{dataset:IVDataset;materi
  const x=(time:number)=>left+time/Math.max(1,end)*(right-left),y=(value:number)=>bottom-(value-min)/(max-min)*(bottom-top),color=materialStyle(sample.material_family).color;
  const title=`Sensibilité en extérieur · ${sample.material_raw||sample.material_family} · ${sample.sample_uid}`;
  const unit=mode==="retention"?"Rétention (%)":metric==="pr"?"PR du capteur (%)":"Pmpp (W)";
- const caption=`Exposition extérieure, ${metric.toUpperCase()} ; cellule ${sample.sample_uid}, ${sample.material_raw}, lot ${sample.batch_no_raw??"inconnu"}. Médianes journalières recalculées à partir des mesures brutes pour une irradiance ≥100, ≥200 et ≥300 W/m² ; convention principale ≥200 W/m² / B7. ${mode==="retention"?`Chaque scénario est normalisé par ses ${window} premiers jours valides au maximum (minimum 3), puis multiplié par 100.`:"Valeurs journalières absolues."} Trajectoire individuelle, sans regroupement ; exclusions propres à la grandeur ; jusqu'au jour ${end}, sans interpolation. Les dates manquantes interrompent les courbes. Le tableau de sensibilité final utilise la dernière date valide propre à chaque scénario : il ne constitue pas une comparaison à temps commun. La définition du PR du capteur reste à confirmer.`;
+ const caption=`Exposition extérieure, ${metric.toUpperCase()} ; cellule ${sample.sample_uid}, ${sample.material_raw}, lot ${sample.batch_no_raw??"inconnu"}. ${ribbonSelection!==ALL_RIBBONS?`Filtre : ${ribbonSelectionLabel(ribbonSelection)}. `:""}Médianes journalières recalculées à partir des mesures brutes pour une irradiance ≥100, ≥200 et ≥300 W/m² ; convention principale ≥200 W/m² / B7. ${mode==="retention"?`Chaque scénario est normalisé par ses ${window} premiers jours valides au maximum (minimum 3), puis multiplié par 100.`:"Valeurs journalières absolues."} Trajectoire individuelle, sans regroupement ; exclusions propres à la grandeur ; jusqu'au jour ${end}, sans interpolation. Les dates manquantes interrompent les courbes. Le tableau de sensibilité final utilise la dernière date valide propre à chaque scénario : il ne constitue pas une comparaison à temps commun. La définition du PR du capteur reste à confirmer.`;
  const analyticalRows=displayed.filter(row=>!hidden.includes(row.threshold)).flatMap(row=>row.daily.filter(day=>day.time<=end&&!day.qa&&(mode==="absolute"?day.value:day.retention)!==null).map(day=>({sample_uid:sample.sample_uid,threshold:row.threshold,baselineWindow:window,baseline:row.baseline,baselineDates:row.baselineDates,metric,mode,...day,plottedValue:mode==="absolute"?day.value:day.retention,sourceRows:allDaily.find(raw=>raw.threshold===row.threshold&&raw.date===day.date&&raw.source===day.source)?.retainedSourceRows})));
  const actualContributors=displayed.some(row=>row.daily.some(day=>!outdoorFigureExclusions(day,row.baseline,mode,end).length))?[sample.sample_uid]:[];
  const exclusions=displayed.flatMap(row=>row.daily.flatMap(day=>{
   const reasons=outdoorFigureExclusions(day,row.baseline,mode,end);
   return reasons.length?[{sampleUid:sample.sample_uid,threshold:row.threshold,date:day.date,reasons}]:[];
  }));
- const manifest={schemaVersion:"iv-compare-outdoor-figure/1",generatedAt:new Date().toISOString(),sourceCode:buildIdentity,dataset:{name:dataset.name,packageSha256:hash},provenance:bundle.provenance,figureType:"outdoor-sensitivity",title,caption,selectedSamples:[sample],actualContributors,scenarios,analyticalRows,policy:bundle.analysis.policy,
+ const manifest={schemaVersion:"iv-compare-outdoor-figure/1",generatedAt:new Date().toISOString(),sourceCode:buildIdentity,dataset:{name:dataset.name,packageSha256:hash},provenance:bundle.provenance,figureType:"outdoor-sensitivity",title,caption,selectedSamples:[sample],ribbonSelection,actualContributors,scenarios,analyticalRows,policy:bundle.analysis.policy,
   exclusions,tableScope:"Full record: independent of graph end and visual hiding; last valid dates are scenario-specific",display:{preset:"TM publication",width,height,mode,metric,window,hiddenThresholds:hidden,graphEnd:end,viewport:{xMin:0,xMax:end,yMin:min,yMax:max}}};
  const graphic=async(format:"svg"|"png",preset:"default"|"report"="default")=>{if(!svg.current)return;try{await downloadScientificGraphic(svg.current,width,height,manifest,"outdoor-sensitivity",format,preset);setExportError(null);}catch(error){setExportError(String(error));}};
  return <section className="chart-card" aria-label="Sensibilité en extérieur">

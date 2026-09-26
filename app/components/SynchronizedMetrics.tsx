@@ -8,17 +8,18 @@ import { rowsCsv } from "../lib/tabular-export";
 import { downloadFigureFile, downloadScientificGraphic } from "../lib/browser-figure-download";
 import { InfoTip } from "./InfoTip";
 import { figureTimeUnit } from "../lib/figure-language";
+import { ALL_RIBBONS, ribbonSelectionLabel } from "../lib/ribbon";
 
 const labels={efficiency_pct:"PCE / PCE₀",jsc_mA_cm2:"Jsc / Jsc₀",voc_V:"Voc / Voc₀",ff_pct:"FF / FF₀"};
 
-export function SynchronizedMetrics({dataset,materials}:{dataset:IVDataset;materials:string[]}) {
+export function SynchronizedMetrics({dataset,materials,ribbonSampleIds,ribbonSelection}:{dataset:IVDataset;materials:string[];ribbonSampleIds:ReadonlySet<string>;ribbonSelection:string}) {
   const [protocol,setProtocol]=useState<"DH"|"TC">("DH");
   const [cutoff,setCutoff]=useState<number|null>(null);
   const [hidden,setHidden]=useState<string[]>([]),[excluded,setExcluded]=useState<string[]>([]);
   const [error,setError]=useState<string|null>(null),[manualY,setManualY]=useState(false);
   const [yMinimum,setYMinimum]=useState(0),[yMaximum,setYMaximum]=useState(120);
   const svg=useRef<SVGSVGElement>(null);
-  const samples=dataset.samples.filter(sample=>materials.includes(sample.material_family)&&(sample.assigned_test===protocol||dataset.observations.some(row=>row.sample_uid===sample.sample_uid&&row.test_type===protocol)));
+  const samples=dataset.samples.filter(sample=>ribbonSampleIds.has(sample.sample_uid)&&materials.includes(sample.material_family)&&(sample.assigned_test===protocol||dataset.observations.some(row=>row.sample_uid===sample.sample_uid&&row.test_type===protocol)));
   const analysis=synchronizedMetrics(dataset,{sampleUids:samples.map(sample=>sample.sample_uid),protocol,graphEnd:cutoff,excludedSampleUids:excluded});
   const visibleIds=analysis.cohort.filter(id=>!hidden.includes(id));
   const allValues=analysis.panels.flatMap(panel=>panel.cells.filter(cell=>visibleIds.includes(cell.sampleUid)).flatMap(cell=>cell.value===null?[]:[cell.value]));
@@ -29,9 +30,9 @@ export function SynchronizedMetrics({dataset,materials}:{dataset:IVDataset;mater
   const end=cutoff??analysis.times.at(-1)??1;
   const width=1180,height=770+Math.ceil(visibleIds.length/4)*20;
   const title="Évolution synchronisée de PCE, Jsc, Voc et FF";
-  const caption=`${protocol} ; ${analysis.cohort.length} cellules sélectionnées et mêmes temps exacts dans les quatre panneaux, jusqu'à ${end} ${figureTimeUnit(analysis.unit)}. Trajectoires individuelles, sans regroupement. Chaque grandeur est divisée par sa valeur Unaged unique pour la même cellule, puis multipliée par 100. Les règles de contrôle qualité sont propres à chaque grandeur ; les valeurs manquantes interrompent les courbes. Une cohorte identique n'implique pas le même n valide pour chaque grandeur. Les courbes masquées le sont uniquement à l'affichage ; les cellules exclues ne contribuent pas. Aucune interpolation.`;
+  const caption=`${protocol} ; ${analysis.cohort.length} cellules sélectionnées et mêmes temps exacts dans les quatre panneaux, jusqu'à ${end} ${figureTimeUnit(analysis.unit)}. ${ribbonSelection!==ALL_RIBBONS?`Filtre : ${ribbonSelectionLabel(ribbonSelection)}. `:""}Trajectoires individuelles, sans regroupement. Chaque grandeur est divisée par sa valeur Unaged unique pour la même cellule, puis multipliée par 100. Les règles de contrôle qualité sont propres à chaque grandeur ; les valeurs manquantes interrompent les courbes. Une cohorte identique n'implique pas le même n valide pour chaque grandeur. Les courbes masquées le sont uniquement à l'affichage ; les cellules exclues ne contribuent pas. Aucune interpolation.`;
   const analyticalRows=analysis.panels.flatMap(panel=>panel.cells.filter(cell=>visibleIds.includes(cell.sampleUid)).map(cell=>({metric:panel.metric,...cell,protocol,inside_viewport:cell.value!==null&&cell.value>=min&&cell.value<=max})));
-  const manifest={schemaVersion:"iv-compare-synchronized-figure/1",generatedAt:new Date().toISOString(),kind:"synchronized-metrics",title,caption,sourceCode:buildIdentity,dataset:{name:dataset.name,packageSha256:datasetPackageHash(dataset),provenance:dataset.provenance},analysis,selectedSamples:samples,
+  const manifest={schemaVersion:"iv-compare-synchronized-figure/1",generatedAt:new Date().toISOString(),kind:"synchronized-metrics",title,caption,sourceCode:buildIdentity,dataset:{name:dataset.name,packageSha256:datasetPackageHash(dataset),provenance:dataset.provenance},analysis,selectedSamples:samples,ribbonSelection,
     actualContributors:analysis.panels.map(panel=>({metric:panel.metric,byTime:analysis.times.map(time=>({time,sampleUids:panel.cells.filter(cell=>cell.time===time&&cell.value!==null).map(cell=>cell.sampleUid)}))})),
     display:{hidden,excluded,preset:"TM publication",width,height,viewport:{xMin:0,xMax:end,yMin:min,yMax:max},graphEnd:cutoff,manualY},analyticalRows};
   const graphic=async(format:"svg"|"png",preset:"default"|"report"="default")=>{if(!svg.current)return;setError(null);try{await downloadScientificGraphic(svg.current,width,height,manifest,"synchronized-metrics",format,preset);}catch(e){setError(String(e));}};

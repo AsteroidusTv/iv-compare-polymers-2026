@@ -30,9 +30,9 @@ export function jvSelectionLedger(dataset:IVDataset, measurementIds:string[], se
  });
 }
 
-export function fullJVMeasurementIds(dataset:IVDataset,configs:SeriesConfig[],mode:"ageing"|"materials",sampleUid:string|null):string[] {
+export function fullJVMeasurementIds(dataset:IVDataset,configs:SeriesConfig[],mode:"ageing"|"materials",sampleUid:string|null, allowedSampleUids?: ReadonlySet<string>):string[] {
  const active=mode==="ageing"?configs.slice(0,1):configs;
- const files=new Set(dataset.files.filter(file=>active.some(config=>seriesSamplePasses(dataset,file.sample_uid,config)
+ const files=new Set(dataset.files.filter(file=>(!allowedSampleUids || Boolean(file.sample_uid && allowedSampleUids.has(file.sample_uid))) && active.some(config=>seriesSamplePasses(dataset,file.sample_uid,config)
    && (file.inferred_test_type===config.stress || mode==="ageing"&&file.inferred_test_type==="Unaged"))
    && (mode!=="ageing"||sampleUid===null||file.sample_uid===sampleUid)).map(file=>file.file_uid));
  return dataset.measurements.filter(row=>files.has(row.file_uid)).map(row=>row.measurement_uid);
@@ -41,12 +41,13 @@ export function fullJVMeasurementIds(dataset:IVDataset,configs:SeriesConfig[],mo
 /** Full processed source-point selection: no sweep, QA, range, hiding or viewport exclusions. */
 export function fullJVSelectionCsv(dataset:IVDataset,measurementIds:string[]) {
  const selected=new Set(measurementIds),diagnostics=getJVDiagnostics(dataset),files=new Map(dataset.files.map(file=>[file.file_uid,file]));
+ const samples=new Map(dataset.samples.map(sample=>[sample.sample_uid,sample]));
  const rows:Record<string,unknown>[]=[];
  for(const measurement of dataset.measurements.filter(row=>selected.has(row.measurement_uid))) {
   const curve=dataset.curves[measurement.measurement_uid],diagnostic=diagnostics.get(measurement.measurement_uid),file=files.get(measurement.file_uid);
   const membership=new Map<number,string[]>();
   for(const segment of diagnostic?.analysis.segments??[])for(const point of segment.points){const ids=membership.get(point.sourceIndex)??[];ids.push(segment.id);membership.set(point.sourceIndex,ids);}
-  const common={sample_uid:measurement.sample_uid,measurement_uid:measurement.measurement_uid,file_uid:measurement.file_uid,source_file:file?.source_file,sheet:measurement.sheet_name,curve_series_index:measurement.curve_series_index,protocol:file?.inferred_test_type,time:file?.inferred_exposure_duration,surface_cm2:measurement.cell_area_cm2,unit_interpretation:diagnostic?.conversion,QA_status:diagnostic?.issues,validation:diagnostic?.validation,quantitative_eligible:diagnostic?.quantitativeEligible,package_sha256:datasetPackageHash(dataset),source_code:buildIdentity,export_scope:"full selected processed source points, including unresolved; not all quantitatively eligible",current_convention:"generated (legacy converted), not a new physical validation"};
+  const common={sample_uid:measurement.sample_uid,ribbon_raw:samples.get(measurement.sample_uid??"")?.ribbon_raw??null,measurement_uid:measurement.measurement_uid,file_uid:measurement.file_uid,source_file:file?.source_file,sheet:measurement.sheet_name,curve_series_index:measurement.curve_series_index,protocol:file?.inferred_test_type,time:file?.inferred_exposure_duration,surface_cm2:measurement.cell_area_cm2,unit_interpretation:diagnostic?.conversion,QA_status:diagnostic?.issues,validation:diagnostic?.validation,quantitative_eligible:diagnostic?.quantitativeEligible,package_sha256:datasetPackageHash(dataset),source_code:buildIdentity,export_scope:"full selected processed source points, including unresolved; not all quantitatively eligible",current_convention:"generated (legacy converted), not a new physical validation"};
   if(!curve){rows.push({...common,exclusion_reason:"no_curve_points"});continue;}
   curve.v.forEach((value,index)=>rows.push({...common,source_point_index:index,V:value,J:curve.j[index],segments:membership.get(index)??[],point_status:value===null||curve.j[index]===null?"non_numeric_point":"retained_full_selection"}));
  }

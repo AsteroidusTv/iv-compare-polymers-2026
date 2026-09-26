@@ -24,6 +24,16 @@ test("optional staged display pools visible groups by material and retains sourc
  assert.deepEqual(pooled,[{key:"material:TPO",label:"TPO",materialFamily:"TPO",sampleUids:["a","b","c"],sourceGroupKeys:["a1","a2"]}]);
  assert.deepEqual(stagedDisplayGroups(groups,samples,["a1"],[],true)[0].sampleUids,["b","c"]);
 });
+test("optional batch pooling still separates ribbon treatments",()=>{
+ const samples=[
+  {sample_uid:"a",material_family:"TPO",ribbon_raw:"3M-3011"},
+  {sample_uid:"b",material_family:"TPO",ribbon_raw:"3M-3012"},
+  {sample_uid:"c",material_family:"TPO",ribbon_raw:null},
+ ];
+ const groups=samples.map(sample=>({key:sample.sample_uid,label:sample.sample_uid,sampleUids:[sample.sample_uid]}));
+ assert.equal(stagedDisplayGroups(groups,samples,[],[],true).length,1);
+ assert.equal(stagedDisplayGroups(groups,samples,[],[],true,true).length,3);
+});
 const dataset={samples:[{sample_uid:"a",material_family:"EVA",initial_efficiency_pct:12},{sample_uid:"b",material_family:"EVA",initial_efficiency_pct:10}],observations:[
   {sample_uid:"a",observation_uid:"pa",test_type:"Unaged",efficiency_pct:10},
   {sample_uid:"b",observation_uid:"pb",test_type:"Unaged",efficiency_pct:8},

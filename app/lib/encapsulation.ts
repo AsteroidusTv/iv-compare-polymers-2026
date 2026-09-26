@@ -1,5 +1,6 @@
-import type { IVFile, IVDataset, Measurement, Observation, Sample } from "./iv-data";
+import type { IVFile, IVDataset, Measurement, Observation, Recipe, Sample } from "./iv-data";
 import { measurementQualityReasons, numeric, quantile } from "./science";
+import { recordedRibbon } from "./ribbon";
 
 export interface EncapsulationPair {
   sampleUid: string;
@@ -19,20 +20,35 @@ export interface EncapsulationGroup {
   electrode: string;
   recipeUid: string | null;
   recipe: string | null;
+  ribbon: string | null;
   pairs: EncapsulationPair[];
 }
 
-/** Distinguish documented subgroups without presenting raw recipe codes as verified processes. */
-export function neutralGroupLabels<T extends Pick<EncapsulationGroup, "key" | "material" | "batch" | "electrode">>(groups: T[]) {
+/** Name explicitly recorded non-standard equipment, never an ambiguous raw recipe code. */
+export function encapsulationDisplayLabels<T extends Pick<EncapsulationGroup, "key" | "material" | "batch" | "electrode" | "recipeUid"> & { ribbon?: string | null }>(groups: T[], recipes: Recipe[]) {
+  const laminatorByUid = new Map(recipes.map((recipe) => [recipe.recipe_uid, recipe.laminator?.trim()]));
+  const equipmentLabel = (group: T) => {
+    const laminator = group.recipeUid ? laminatorByUid.get(group.recipeUid) : null;
+    const normalized = laminator?.toLowerCase();
+    if (!normalized || normalized === "unspecified" || normalized === "standard laminator") return null;
+    if (normalized === "small laminator") return "Petite lamineuse";
+    if (normalized === "no lamination") return "Sans lamination";
+    return laminator;
+  };
   const peers = new Map<string, T[]>();
   for (const group of groups) {
-    const identity = JSON.stringify([group.material, group.batch, group.electrode]);
+    const identity = JSON.stringify([group.material, group.batch, group.electrode, group.ribbon ?? null]);
     peers.set(identity, [...(peers.get(identity) ?? []), group]);
   }
   return new Map(groups.map((group) => {
-    const identity = JSON.stringify([group.material, group.batch, group.electrode]);
+    const identity = JSON.stringify([group.material, group.batch, group.electrode, group.ribbon ?? null]);
     const matching = peers.get(identity)!;
-    return [group.key, matching.length > 1 ? `Groupe ${matching.findIndex((peer) => peer.key === group.key) + 1}` : null] as const;
+    const equipment = equipmentLabel(group);
+    const sameEquipment = equipment ? matching.filter((peer) => equipmentLabel(peer) === equipment) : [];
+    const label = equipment
+      ? sameEquipment.length > 1 ? `${equipment} · groupe ${sameEquipment.findIndex((peer) => peer.key === group.key) + 1}` : equipment
+      : matching.length > 1 ? `Groupe ${matching.findIndex((peer) => peer.key === group.key) + 1}` : null;
+    return [group.key, label] as const;
   }));
 }
 
@@ -69,7 +85,7 @@ export function pairedMeasurementDayRange(pairs: EncapsulationPair[]) {
 }
 
 // Require a unique, unflagged Unaged measurement; never choose an arbitrary replicate.
-export function encapsulationGroups(samples: Sample[], observations: Observation[], materials: string[], files: IVFile[] = []) {
+export function encapsulationGroups(samples: Sample[], observations: Observation[], materials: string[], files: IVFile[] = [], splitByRibbon = false) {
   const unaged = new Map<string, Observation[]>();
   for (const observation of observations) {
     if (observation.test_type !== "Unaged") continue;
@@ -93,8 +109,9 @@ export function encapsulationGroups(samples: Sample[], observations: Observation
     const electrode = sample.electrode || "Unknown";
     const recipeUid = sample.recipe_uid || null;
     const recipe = sample.recipe_raw || null;
-    const key = JSON.stringify([sample.material_family, material, batch, electrode, recipeUid, recipe]);
-    const group = groups.get(key) ?? { key, family: sample.material_family, material, batch, electrode, recipeUid, recipe, pairs: [] };
+    const ribbon = recordedRibbon(sample);
+    const key = JSON.stringify([sample.material_family, material, batch, electrode, recipeUid, recipe, ...(splitByRibbon ? [ribbon] : [])]);
+    const group = groups.get(key) ?? { key, family: sample.material_family, material, batch, electrode, recipeUid, recipe, ribbon: splitByRibbon ? ribbon : null, pairs: [] };
     const referenceDates = [...new Set(files.filter((file) => file.reference_sample_uid === sample.sample_uid).map((file) => file.measurement_date).filter((value): value is string => Boolean(value)))].sort();
     const afterDates = [...new Set(files.filter((file) => file.sample_uid === sample.sample_uid && file.inferred_test_type === "Unaged" && (!file.matched_observation_uid || file.matched_observation_uid === rows[0].observation_uid)).map((file) => file.measurement_date).filter((value): value is string => Boolean(value)))].sort();
     group.pairs.push({

@@ -35,3 +35,12 @@ test("full ageing JV selection includes all Unaged and aged sweeps of the same s
  const selectedFiles=dataset.files.filter(file=>dataset.measurements.some(row=>ids.includes(row.measurement_uid)&&row.file_uid===file.file_uid));
  assert.deepEqual([...new Set(selectedFiles.map(file=>file.inferred_test_type))].sort(),["DH","Unaged"]);
 });
+test("full JV selection does not leak specimens outside the selected ribbon",()=>{
+ const dataset:IVDataset=JSON.parse(gunzipSync(readFileSync("public/data/iv-compare-dowsil.ivpack")).toString());
+ const config={id:"s",material:"TPO-2 / Lenzing",stress:"DH",metric:"efficiency_pct" as const,electrode:"all",recipe:"all"};
+ const all=fullJVMeasurementIds(dataset,[config],"materials",null);
+ const ids=new Set(dataset.samples.filter(sample=>sample.ribbon_raw==="3M-3011").map(sample=>sample.sample_uid));
+ const filtered=fullJVMeasurementIds(dataset,[config],"materials",null,ids);
+ assert.ok(filtered.length<=all.length);
+ assert.ok(filtered.every(id=>ids.has(dataset.measurements.find(row=>row.measurement_uid===id)?.sample_uid??"")));
+});

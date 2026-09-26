@@ -5,6 +5,7 @@ import { gunzipSync } from "node:zlib";
 import type { IVDataset } from "../app/lib/iv-data";
 import { encapsulationGroups, pairedChanges } from "../app/lib/encapsulation";
 import { pairedFigureManifest, pairedFigureCsv } from "../app/lib/paired-export";
+import { ribbonChoice } from "../app/lib/ribbon";
 const dataset: IVDataset=JSON.parse(gunzipSync(readFileSync("public/data/iv-compare-dowsil.ivpack")).toString());
 const selectedMaterials=[...new Set(dataset.samples.map(sample=>sample.material_family))];
 const {groups}=encapsulationGroups(dataset.samples,dataset.observations,selectedMaterials,dataset.files);
@@ -36,6 +37,18 @@ test("paired manifest preserves 46 pairs, raw provenance, dates and individual d
     assert.ok(row.rawSample.sample_uid===row.sampleUid);
   }
   assert.ok(manifest.candidates.some(row=>!row.analyticalEligible&&row.exclusionReasons.length));
+});
+test("paired full-selected export respects the ribbon cohort and records the split",()=>{
+  const ribbonSamples=dataset.samples.filter(sample=>sample.ribbon_raw==="3M-3011");
+  const ids=new Set(ribbonSamples.map(sample=>sample.sample_uid));
+  const split=encapsulationGroups(ribbonSamples,dataset.observations,selectedMaterials,dataset.files,true);
+  const manifest=pairedFigureManifest(dataset,split.groups,{...options,allowedSampleUids:[...ids],ribbonSelection:ribbonChoice("3M-3011"),splitByRibbon:true});
+  assert.ok(manifest.candidates.length>0);
+  assert.ok(manifest.candidates.every(row=>ids.has(row.sampleUid)));
+  assert.ok(manifest.groups.every(group=>group.ribbon==="3M-3011"));
+  assert.match(manifest.caption,/séparées par libellé de ruban/);
+  assert.match(manifest.caption,/Filtre : Ruban 3M-3011/);
+  assert.ok(!pairedFigureCsv(manifest,"full-selected").includes('"SMP2-055"'));
 });
 test("hidden group keeps analytical eligibility; exclusion removes contributors with a recorded reason",()=>{
   const manifest=pairedFigureManifest(dataset,groups,{...options,hiddenGroupKeys:[groups[0].key],excludedGroupKeys:[groups[1].key]});

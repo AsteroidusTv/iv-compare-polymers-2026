@@ -2,6 +2,7 @@ import { boxStatistics, meanPairedRelativeChange, pairedChanges, pairedMeasureme
 import { datasetPackageHash, type IVDataset } from "./iv-data";
 import { buildIdentity } from "./build-identity";
 import { numeric } from "./science";
+import { ALL_RIBBONS, ribbonSelectionLabel } from "./ribbon";
 
 /** Inventory PCE provenance is independent of raw JV quantitative eligibility. */
 export function pairedFigureManifest(dataset: IVDataset, groups: EncapsulationGroup[], options: {
@@ -10,9 +11,13 @@ export function pairedFigureManifest(dataset: IVDataset, groups: EncapsulationGr
   excludedGroupKeys?: string[];
   deltaSummary?: "mean" | "median" | "none";
   showConnections?: boolean;
+  allowedSampleUids?: string[];
+  ribbonSelection?: string;
+  splitByRibbon?: boolean;
 }) {
   const included = new Map(groups.flatMap(group => group.pairs.map(pair => [pair.sampleUid, { group, pair }] as const)));
-  const candidates = dataset.samples.filter(sample => options.selectedMaterials.includes(sample.material_family)).map(sample => {
+  const allowed = options.allowedSampleUids ? new Set(options.allowedSampleUids) : null;
+  const candidates = dataset.samples.filter(sample => options.selectedMaterials.includes(sample.material_family) && (!allowed || allowed.has(sample.sample_uid))).map(sample => {
     const observations = dataset.observations.filter(row => row.sample_uid === sample.sample_uid && row.test_type === "Unaged");
     const item = included.get(sample.sample_uid);
     const reasons: string[] = [];
@@ -45,7 +50,7 @@ export function pairedFigureManifest(dataset: IVDataset, groups: EncapsulationGr
     boxesDrawn: group.pairs.length >= 3, meanPairedRelativeChange: meanPairedRelativeChange(group.pairs),
     dateCoverage: { totalPairs: group.pairs.length, pairsWithInterval: group.pairs.filter(pair => pairedMeasurementDayRange([pair]) !== null).length },
   }));
-  const caption = `PCE avant et après encapsulation pour ${visible.reduce((n, group) => n + group.pairs.length, 0)} cellules appariées, regroupées par formulation et lot ; les sous-groupes issus de métadonnées distinctes restent séparés. Points vides/pleins : avant/après. ${options.showConnections ? "Les lignes relient une même cellule." : "Aucune ligne entre les cellules ; l'appariement reste utilisé pour calculer les variations."} Boîtes : Q1–Q3 (percentiles interpolés linéairement, h=(n−1)p) ; trait central : médiane ; moustaches : dernières valeurs observées dans 1,5 × IQR. Si n < 3, seuls les points individuels sont tracés. ${options.deltaSummary === "none" ? "Aucune variation résumée par groupe n'est tracée." : `La variation relative ${options.deltaSummary === "mean" ? "moyenne" : "médiane"} est la ${options.deltaSummary === "mean" ? "moyenne" : "médiane"} des variations individuelles (après−avant)/avant × 100 ; dénominateurs nuls omis.`} Source : Initial Eff → Unaged. Les intervalles entre mesures, lorsqu'ils sont connus, ne sont pas des durées de procédé. Paires ambiguës ou signalées par le contrôle qualité exclues ; les groupes masqués le sont uniquement à l'affichage.`;
+  const caption = `PCE avant et après encapsulation pour ${visible.reduce((n, group) => n + group.pairs.length, 0)} cellules appariées, regroupées par formulation et lot${options.splitByRibbon ? " et séparées par libellé de ruban enregistré" : ""} ; les sous-groupes issus de métadonnées distinctes restent séparés. ${options.ribbonSelection && options.ribbonSelection !== ALL_RIBBONS ? `Filtre : ${ribbonSelectionLabel(options.ribbonSelection)}. ` : ""}Points vides/pleins : avant/après. ${options.showConnections ? "Les lignes relient une même cellule." : "Aucune ligne entre les cellules ; l'appariement reste utilisé pour calculer les variations."} Boîtes : Q1–Q3 (percentiles interpolés linéairement, h=(n−1)p) ; trait central : médiane ; moustaches : dernières valeurs observées dans 1,5 × IQR. Si n < 3, seuls les points individuels sont tracés. ${options.deltaSummary === "none" ? "Aucune variation résumée par groupe n'est tracée." : `La variation relative ${options.deltaSummary === "mean" ? "moyenne" : "médiane"} est la ${options.deltaSummary === "mean" ? "moyenne" : "médiane"} des variations individuelles (après−avant)/avant × 100 ; dénominateurs nuls omis.`} Source : Initial Eff → Unaged. Les intervalles entre mesures, lorsqu'ils sont connus, ne sont pas des durées de procédé. Paires ambiguës ou signalées par le contrôle qualité exclues ; les groupes masqués le sont uniquement à l'affichage.`;
   return { schemaVersion: "iv-compare-paired-figure/1", generatedAt: new Date().toISOString(), kind: "paired-pce", title: "PCE avant / après encapsulation", caption,
     dataset: { name: dataset.name, schemaVersion: dataset.schemaVersion, packageSha256: datasetPackageHash(dataset), provenance: dataset.provenance },
     sourceCode: buildIdentity, selection: options, candidates, groups: summaries,
