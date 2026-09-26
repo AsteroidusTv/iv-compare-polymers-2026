@@ -24,13 +24,13 @@ export interface EncapsulationGroup {
   pairs: EncapsulationPair[];
 }
 
-/** Name explicitly recorded non-standard equipment, never an ambiguous raw recipe code. */
+/** Label equipment using the lab's standard-laminator default, never an ambiguous raw recipe code. */
 export function encapsulationDisplayLabels<T extends Pick<EncapsulationGroup, "key" | "material" | "batch" | "electrode" | "recipeUid"> & { ribbon?: string | null }>(groups: T[], recipes: Recipe[]) {
   const laminatorByUid = new Map(recipes.map((recipe) => [recipe.recipe_uid, recipe.laminator?.trim()]));
   const equipmentLabel = (group: T) => {
     const laminator = group.recipeUid ? laminatorByUid.get(group.recipeUid) : null;
     const normalized = laminator?.toLowerCase();
-    if (!normalized || normalized === "unspecified" || normalized === "standard laminator") return null;
+    if (!normalized || normalized === "unspecified" || normalized === "standard laminator") return "Lamineuse standard";
     if (normalized === "small laminator") return "Petite lamineuse";
     if (normalized === "no lamination") return "Sans lamination";
     return laminator;
@@ -45,9 +45,10 @@ export function encapsulationDisplayLabels<T extends Pick<EncapsulationGroup, "k
     const matching = peers.get(identity)!;
     const equipment = equipmentLabel(group);
     const sameEquipment = equipment ? matching.filter((peer) => equipmentLabel(peer) === equipment) : [];
-    const label = equipment
-      ? sameEquipment.length > 1 ? `${equipment} · groupe ${sameEquipment.findIndex((peer) => peer.key === group.key) + 1}` : equipment
-      : matching.length > 1 ? `Groupe ${matching.findIndex((peer) => peer.key === group.key) + 1}` : null;
+    const label = equipment === "Lamineuse standard" && matching.length === 1 ? null
+      : sameEquipment.length > 1 && equipment !== "Lamineuse standard"
+        ? `${equipment} · groupe ${sameEquipment.findIndex((peer) => peer.key === group.key) + 1}`
+        : equipment;
     return [group.key, label] as const;
   }));
 }

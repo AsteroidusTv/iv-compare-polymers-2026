@@ -38,11 +38,13 @@ test("encapsulation groups keep recorded lamination recipes separate", () => {
     { recipe_uid: "none", laminator: "No lamination" },
   ];
   const labels = encapsulationDisplayLabels(result.groups, recipes);
-  assert.deepEqual(result.groups.map((group) => labels.get(group.key)), ["Groupe 1", "Petite lamineuse"]);
+  assert.deepEqual(result.groups.map((group) => labels.get(group.key)), ["Lamineuse standard", "Petite lamineuse"]);
   assert.ok([...labels.values()].every((label) => !label?.includes("CVF") && !label?.includes("CSEM2")));
   assert.equal(encapsulationDisplayLabels(result.groups.slice(0, 1), recipes).get(result.groups[0].key), null);
   assert.equal(encapsulationDisplayLabels([{ ...result.groups[0], recipeUid: "standard" }], recipes).get(result.groups[0].key), null);
   assert.equal(encapsulationDisplayLabels([{ ...result.groups[0], recipeUid: "none" }], recipes).get(result.groups[0].key), "Sans lamination");
+  const bothStandard = encapsulationDisplayLabels(result.groups.map((group) => ({ ...group, recipeUid: "standard" })), recipes);
+  assert.deepEqual([...bothStandard.values()], ["Lamineuse standard", "Lamineuse standard"]);
   const bothSmall = encapsulationDisplayLabels(result.groups.map((group) => ({ ...group, recipeUid: "small" })), recipes);
   assert.deepEqual([...bothSmall.values()], ["Petite lamineuse · groupe 1", "Petite lamineuse · groupe 2"]);
 });
@@ -86,7 +88,7 @@ test("supplied package has 46 eligible encapsulation pairs after the A4 intake",
   const lenzingA3 = result.groups.filter((group) => group.material === "TPO-2_Lenzing" && group.batch === "A3");
   assert.deepEqual(lenzingA3.map((group) => group.pairs.length).sort(), [4, 4]);
   const labels = encapsulationDisplayLabels(lenzingA3, dataset.recipes);
-  assert.equal(labels.get(lenzingA3.find((group) => group.recipe === "CVF")!.key), "Groupe 1");
+  assert.equal(labels.get(lenzingA3.find((group) => group.recipe === "CVF")!.key), "Lamineuse standard");
   assert.equal(labels.get(lenzingA3.find((group) => group.recipe === "CSEM2 SL")!.key), "Petite lamineuse");
   const curvePairs = encapsulationCurvePairs(dataset);
   assert.equal(curvePairs.length, 27);
