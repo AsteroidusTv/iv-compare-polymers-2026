@@ -5,6 +5,8 @@ import readline from "node:readline";
 import { fileURLToPath } from "node:url";
 
 import XLSX from "xlsx";
+import { gunzipSync } from "node:zlib";
+import { loadLightAgeing } from "./light-ageing.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const rawRoot = path.join(root, "data", "raw");
@@ -97,8 +99,8 @@ async function readProcessedOutdoor() {
 function canonicalTimestamp(value) {
   const text = String(value ?? "").trim();
   if (!text) return "";
-  const isoLike = text.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/);
-  if (isoLike) return `${isoLike[1]}-${isoLike[2]}-${isoLike[3]} ${isoLike[4]}:${isoLike[5]}:${isoLike[6] ?? "00"}`;
+  const isoLike = text.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (isoLike) return `${isoLike[1]}-${isoLike[2]}-${isoLike[3]} ${isoLike[4].padStart(2,"0")}:${isoLike[5]}:${isoLike[6] ?? "00"}`;
   const usDate = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
   if (usDate) {
     const [, month, day, year, hour, minute, second = "00"] = usDate;
@@ -256,6 +258,15 @@ async function main() {
   }
 
   const deep = process.argv.includes("--deep");
+  const light = await loadLightAgeing(root, rows(normalized, "Samples"));
+  if (light.observations.length) {
+    const processed = JSON.parse(await fs.readFile(path.join(processedRoot, "Light_ageing_Pearl.json"), "utf8"));
+    const pack = JSON.parse(gunzipSync(await fs.readFile(path.join(processedRoot, "IV_Compare_DOWSIL.ivpack"))).toString());
+    if (JSON.stringify(processed) !== JSON.stringify(light.observations)
+      || JSON.stringify(pack.observations.filter(row => row.test_type === "Light ageing")) !== JSON.stringify(light.observations)) {
+      throw Error("Pearl observations do not reproduce their raw source rows.");
+    }
+  }
   const deepIVPointsVerified = deep ? await deepVerifyIV(files, measurements) : null;
   const deepOutdoorRowsVerified = deep ? await deepVerifyOutdoor(outdoorFiles) : null;
 
@@ -267,6 +278,7 @@ async function main() {
     ivPointsVerified: pointAudit.total,
     outdoorFilesVerified: outdoorFiles.length,
     outdoorRowsVerified: outdoorAudit.total,
+    lightAgeingRowsVerified: light.observations.length,
     deepIVPointsVerified,
     deepOutdoorRowsVerified,
   }, null, 2));

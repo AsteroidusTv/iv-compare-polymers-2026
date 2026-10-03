@@ -9,6 +9,7 @@ import { gzipSync } from "node:zlib";
 import XLSX from "xlsx";
 import { referenceLinkDiagnostic } from "../app/lib/reference-links.mjs";
 import { validateDecisionRegistry } from "./rebuild-boundary.mjs";
+import { loadLightAgeing } from "./light-ageing.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const processed = path.join(root, "data", "processed");
@@ -205,6 +206,8 @@ async function buildPayload() {
     current_values_are_density: Boolean(row.current_values_are_density),
     curve_voltage_scale_to_V: number(row.curve_voltage_scale_to_V),
   }));
+  const lightAgeing = await loadLightAgeing(root, samples);
+  observations.push(...lightAgeing.observations);
   const curves = await readCurves();
   const rawTree = await rawTreeHash();
   const report = {
@@ -229,6 +232,7 @@ async function buildPayload() {
       curvePointsSha256: await sha256File(pointsPath),
       outdoorRawSha256: await sha256File(outdoorRawPath),
       decisionRegistrySha256: sha256(decisionRegistryBytes),
+      lightAgeingDecisionSha256: lightAgeing.manifestSha256,
       rawFileCount: rawTree.count,
       notes: protocol.notes,
     },

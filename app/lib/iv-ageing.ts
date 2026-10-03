@@ -23,7 +23,7 @@ export function ageingSampleCandidates(dataset: IVDataset, config: SeriesConfig,
   for (const measurement of dataset.measurements) {
     if (!measurement.sample_uid || !dataset.curves[measurement.measurement_uid]) continue;
     if (!includeQa && measurementQualityReasons(measurement).length) continue;
-    if (!inspectUnsafe && !diagnostics.get(measurement.measurement_uid)?.quantitativeEligible) continue;
+    if (!inspectUnsafe && !diagnostics.get(measurement.measurement_uid)?.screeningEligible) continue;
     const rows = measurementsByFile.get(measurement.file_uid) ?? [];
     rows.push(measurement);
     measurementsByFile.set(measurement.file_uid, rows);

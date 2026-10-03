@@ -1,0 +1,85 @@
+{
+  "generatedOn": "2026-10-03",
+  "mainPackageSha256": "1e9a0fa2f791bbf0151b2214d460ab0049549159c1565267a1854bac6ba489aa",
+  "rawCandidateSha256": "33d8e0534403c42f5c06928325f61812a89e2f1cdd911845ca509af872f1ec46",
+  "lightAgeingObservations": 1908,
+  "lightAgeingSpecimens": 5,
+  "rawArchiveFiles": 649,
+  "analyticalDifferences": 0,
+  "outdoorRows": 406346,
+  "report": {
+    "samples": 146,
+    "recipes": 22,
+    "observations": 4622,
+    "files": 468,
+    "measurements": 5741,
+    "points": 1137150,
+    "matchedFiles": 402,
+    "reviewFiles": 12
+  },
+  "validation": [
+    "116 unit tests passed",
+    "typecheck and lint passed",
+    "production build and rendered HTML test passed",
+    "deep verification: 1137150 IV points, 406346 Outdoor rows, 1908 Pearl rows",
+    "browser: forward retention and reverse absolute values, five trajectories, no console errors"
+  ],
+  "knownLegacyMetadataDifferences": {
+    "qa_flags": {
+      "count": 58,
+      "example": {
+        "id": "MEA-00011",
+        "before": null,
+        "after": "efficiency_out_of_range"
+      }
+    },
+    "deposition_id": {
+      "count": 172,
+      "example": {
+        "id": "MEA-04903",
+        "before": "3082026.0",
+        "after": "3082026"
+      }
+    },
+    "substrate_comment": {
+      "count": 42,
+      "example": {
+        "id": "MEA-04959",
+        "before": "30826.0",
+        "after": "30826"
+      }
+    },
+    "sweep_direction": {
+      "count": 1,
+      "example": {
+        "id": "MEA-05113",
+        "before": null,
+        "after": "unknown"
+      }
+    },
+    "curve_voltage_unit_source": {
+      "count": 1,
+      "example": {
+        "id": "MEA-05113",
+        "before": null,
+        "after": "V [mV]"
+      }
+    },
+    "curve_current_unit_source": {
+      "count": 1,
+      "example": {
+        "id": "MEA-05113",
+        "before": null,
+        "after": "J [mA/cm2]"
+      }
+    },
+    "current_values_are_density": {
+      "count": 1,
+      "example": {
+        "id": "MEA-05113",
+        "before": false,
+        "after": true
+      }
+    }
+  }
+}

@@ -210,6 +210,94 @@
       "reason": "Archived byte-identical copy of active IV/Summary.xlsx",
       "source": "SHA256 comparison during 2026-09-25 intake",
       "status": "verified_bytes_only"
+    },
+    {
+      "target": "Outdoor/Installed_12May26/SmallLaminator/Ionomer_SL_2_21July26.csv",
+      "oldValue": null,
+      "decision": "archive_only",
+      "reason": "Superseded by extended October logger export; prefix checked by ordered minute timestamps and numerical tolerance 1e-6. Original CSV retained.",
+      "source": "Outdoor/Installed_12May26/SmallLaminator/Ionomer_SL_2_final.csv",
+      "status": "verified_export_supersession"
+    },
+    {
+      "target": "Outdoor/Installed_12May26/SmallLaminator/TPO-1_CVF_SL_4.csv",
+      "oldValue": null,
+      "decision": "archive_only",
+      "reason": "Superseded by extended October logger export; prefix checked by ordered minute timestamps and numerical tolerance 1e-6. Original CSV retained.",
+      "source": "Outdoor/Installed_12May26/SmallLaminator/TPO-1_CVF_SL_4_final.csv",
+      "status": "verified_export_supersession"
+    },
+    {
+      "target": "Outdoor/Installed_12May26/SmallLaminator/TPO-2_Lenzing_SL_2.csv",
+      "oldValue": null,
+      "decision": "archive_only",
+      "reason": "Superseded by extended October logger export; prefix checked by ordered minute timestamps and numerical tolerance 1e-6. Original CSV retained.",
+      "source": "Outdoor/Installed_12May26/SmallLaminator/TPO-2_Lenzing_SL_2_30Sept2026.csv",
+      "status": "verified_export_supersession"
+    },
+    {
+      "target": "Outdoor/Installed_14Apr26/EVA3_21July26.csv",
+      "oldValue": null,
+      "decision": "archive_only",
+      "reason": "Superseded by extended October logger export; prefix checked by ordered minute timestamps and numerical tolerance 1e-6. Original CSV retained.",
+      "source": "Outdoor/Installed_14Apr26/EVA3_30Sept26.csv",
+      "status": "verified_export_supersession"
+    },
+    {
+      "target": "Outdoor/Installed_14Apr26/TPO2_Lenzing1_21July26.csv",
+      "oldValue": null,
+      "decision": "archive_only",
+      "reason": "Superseded by extended October logger export; prefix checked by ordered minute timestamps and numerical tolerance 1e-6. Original CSV retained.",
+      "source": "Outdoor/Installed_14Apr26/TPO2_Lenzing1_30Sept26.csv",
+      "status": "verified_export_supersession"
+    },
+    {
+      "target": "Outdoor/Installed_14Apr26/TPO2_Lenzing2_21July26.csv",
+      "oldValue": null,
+      "decision": "archive_only",
+      "reason": "Superseded by extended October logger export; prefix checked by ordered minute timestamps and numerical tolerance 1e-6. Original CSV retained.",
+      "source": "Outdoor/Installed_14Apr26/TPO2_Lenzing2_30Sept26.csv",
+      "status": "verified_export_supersession"
+    },
+    {
+      "target": "Outdoor/Installed_1Apr26/POEs/POE1_Mitsui1_21July26.csv",
+      "oldValue": null,
+      "decision": "archive_only",
+      "reason": "Superseded by extended October logger export; prefix checked by ordered minute timestamps and numerical tolerance 1e-6. Original CSV retained.",
+      "source": "Outdoor/Installed_1Apr26/POEs/POE1_Mitsui1_29Sept26.csv",
+      "status": "verified_export_supersession"
+    },
+    {
+      "target": "Outdoor/Installed_1Apr26/POEs/POE2_TF4_1_21July26.csv",
+      "oldValue": null,
+      "decision": "archive_only",
+      "reason": "Superseded by extended October logger export; prefix checked by ordered minute timestamps and numerical tolerance 1e-6. Original CSV retained.",
+      "source": "Outdoor/Installed_1Apr26/POEs/POE2_TF4_1_29Sept26.csv",
+      "status": "verified_export_supersession"
+    },
+    {
+      "target": "Outdoor/Installed_1Apr26/POEs/POE2_TF4_2_21July_26.csv",
+      "oldValue": null,
+      "decision": "archive_only",
+      "reason": "Superseded by extended October logger export; prefix checked by ordered minute timestamps and numerical tolerance 1e-6. Original CSV retained.",
+      "source": "Outdoor/Installed_1Apr26/POEs/POE2_TF4_2_29Aug_26.csv",
+      "status": "verified_export_supersession"
+    },
+    {
+      "target": "Outdoor/Installed_1Apr26/Silicones/Low2_20July26.csv",
+      "oldValue": null,
+      "decision": "archive_only",
+      "reason": "Superseded by extended October logger export; prefix checked by ordered minute timestamps and numerical tolerance 1e-6. Original CSV retained.",
+      "source": "Outdoor/Installed_1Apr26/Silicones/Low2_29Sept26.csv",
+      "status": "verified_export_supersession"
+    },
+    {
+      "target": "Outdoor/Installed_1Apr26/Silicones/Low_20July26.csv",
+      "oldValue": null,
+      "decision": "archive_only",
+      "reason": "Superseded by extended October logger export; prefix checked by ordered minute timestamps and numerical tolerance 1e-6. Original CSV retained.",
+      "source": "Outdoor/Installed_1Apr26/Silicones/Low_29Sept26.csv",
+      "status": "verified_export_supersession"
     }
   ],
   "version": "1.0.0",
@@ -700,7 +788,26 @@
     "IV/Non-encapsulés/260909 - Red box/C6-R18.xls": "86a888f8dfa88a061cc025338476e33cb5897b0631c33f3d611d2787e17ea1fd",
     "IV/Non-encapsulés/260909 - Red box/C7-R16.xls": "bf5fd492e6d182a23f3cb60e6c724752d68697964fa736c743098b54fd3fd751",
     "IV/Non-encapsulés/260909 - Red box/C8-R20.xls": "36e7f9abc910bece5a430abe59500bc5f4acd6a0a76874929ac2a1ca365b123f",
-    "IV/Non-encapsulés/260909 - Red box/C9-R19.xls": "20c21e3274e40c28dce91b7259198d1261199508515adfb4007074b044e8aa69"
+    "IV/Non-encapsulés/260909 - Red box/C9-R19.xls": "20c21e3274e40c28dce91b7259198d1261199508515adfb4007074b044e8aa69",
+    "Outdoor/Installed_11Aug26/A1_CVF1_30Sept26.csv": "1f0a0d8a3ec37d833a4a8b70a4a31e18f442f71dbcc33d1c02975d26d024f0d3",
+    "Outdoor/Installed_11Aug26/A1_CVF5_30Sept26.csv": "7fdd160f3545901e20f7aebe308efef45e6ab9318d6cafbebc41204435fe19a2",
+    "Outdoor/Installed_11Aug26/A1_EVA1_30Sept26.csv": "9ede68496817eb87dd11b44bb259400e03b20262d194fe01de5a9cac22127feb",
+    "Outdoor/Installed_11Aug26/A1_EVA3_30Sept26.csv": "a79611da3706092e5ebaf7d67fe26ed6fa2b395fc17051f5e4f81ece50a3f146",
+    "Outdoor/Installed_11Aug26/A1_Len4_30Sept26.csv": "0e3c8d46c7c9c547ea5c96d47b4d54c2e60759b3b8ad2510288a9b87c2c053f7",
+    "Outdoor/Installed_11Aug26/A1_Len5_30Sept26.csv": "2b6f52b7b1f8c95cb55b03afbf2d4e6752893cb8f4098680bbaf78a2cfdc1cf9",
+    "Outdoor/Installed_11Aug26/A1_TF4-2_30Sept26.csv": "7c0d149a42d670b3686713a3334640dd20047be0dab0d59e270333e32bd828b2",
+    "Outdoor/Installed_11Aug26/A1_TF4-3_30Sept26.csv": "30f5be1a1a8cf314004a4c414359c466719392bb96e6612dd7c37ad6d45ab0a6",
+    "Outdoor/Installed_12May26/SmallLaminator/Ionomer_SL_2_final.csv": "d54cf63bba87329cf75602206eafd0e9c092c71eedaa50196805921469edfdb6",
+    "Outdoor/Installed_12May26/SmallLaminator/TPO-1_CVF_SL_4_final.csv": "e7a2acd2d1432c8f19176fec8c85ca48cc6047c4d6bd2e893ef7b297524aa273",
+    "Outdoor/Installed_12May26/SmallLaminator/TPO-2_Lenzing_SL_2_30Sept2026.csv": "0a7707a459d036d13a850567b0501434c48bcaaae5abd6167ccea3bafcf28142",
+    "Outdoor/Installed_14Apr26/EVA3_30Sept26.csv": "13f594dda64823ae294b4fa786bd997113a52903c5d11d5b9bed612de2b75bd8",
+    "Outdoor/Installed_14Apr26/TPO2_Lenzing1_30Sept26.csv": "dfbe1ad3560937e43910305df5480713835260a674d91d54f3ac08347f0a6286",
+    "Outdoor/Installed_14Apr26/TPO2_Lenzing2_30Sept26.csv": "c1daa8c84f8ed07d3cc9a9fc9b17261bc975ad72f5de851127e374aa4184e9bb",
+    "Outdoor/Installed_1Apr26/POEs/POE1_Mitsui1_29Sept26.csv": "be5e46aa6bed1c3837057d627942aefb134c85e7b316beaec074f3926744ef84",
+    "Outdoor/Installed_1Apr26/POEs/POE2_TF4_1_29Sept26.csv": "549bf2ad755c19e3e9b4c5d59e4e01fd088cf40d11aa3344460de31e8813ab7e",
+    "Outdoor/Installed_1Apr26/POEs/POE2_TF4_2_29Aug_26.csv": "fbbd2a70375f5cee7c5da1c0e38348555a078a0feb7c4de01f486a04a5822c31",
+    "Outdoor/Installed_1Apr26/Silicones/Low2_29Sept26.csv": "8f801e2d8306f3740a9f98f88e8ff5fc791d5f7fb681cd75b79b437cd0319eec",
+    "Outdoor/Installed_1Apr26/Silicones/Low_29Sept26.csv": "7ceb9d1ffb959bfcb2a0144b4ac82e9e91ddd1e42a233899856746e1af2dbd93"
   },
   "provenance": {
     "source": "data/processed/IV_dataset_normalise_Outdoor.xlsx (historical decision migration; original matcher unavailable)",
@@ -63300,7 +63407,7 @@
   ],
   "outdoor": [
     {
-      "target": "Outdoor/Installed_12May26/SmallLaminator/Ionomer_SL_2_21July26.csv",
+      "target": "Outdoor/Installed_12May26/SmallLaminator/Ionomer_SL_2_final.csv",
       "oldValue": null,
       "decision": {
         "outdoor_file_uid": "ODF-001",
@@ -63311,11 +63418,11 @@
         "match_basis": "installation folder + material alias + patch number"
       },
       "reason": "Historical source-to-inventory and installation mapping",
-      "source": "data/processed/IV_dataset_normalise_Outdoor.xlsx (historical decision migration; original matcher unavailable)",
+      "source": "2026-10-03 intake; previous mapping retained and ordered historical prefix verified",
       "status": "legacy_unverified"
     },
     {
-      "target": "Outdoor/Installed_12May26/SmallLaminator/TPO-1_CVF_SL_4.csv",
+      "target": "Outdoor/Installed_12May26/SmallLaminator/TPO-1_CVF_SL_4_final.csv",
       "oldValue": null,
       "decision": {
         "outdoor_file_uid": "ODF-002",
@@ -63326,11 +63433,11 @@
         "match_basis": "installation folder + material alias + patch number"
       },
       "reason": "Historical source-to-inventory and installation mapping",
-      "source": "data/processed/IV_dataset_normalise_Outdoor.xlsx (historical decision migration; original matcher unavailable)",
+      "source": "2026-10-03 intake; previous mapping retained and ordered historical prefix verified",
       "status": "legacy_unverified"
     },
     {
-      "target": "Outdoor/Installed_12May26/SmallLaminator/TPO-2_Lenzing_SL_2.csv",
+      "target": "Outdoor/Installed_12May26/SmallLaminator/TPO-2_Lenzing_SL_2_30Sept2026.csv",
       "oldValue": null,
       "decision": {
         "outdoor_file_uid": "ODF-003",
@@ -63341,11 +63448,11 @@
         "match_basis": "installation folder + material alias + patch number"
       },
       "reason": "Historical source-to-inventory and installation mapping",
-      "source": "data/processed/IV_dataset_normalise_Outdoor.xlsx (historical decision migration; original matcher unavailable)",
+      "source": "2026-10-03 intake; previous mapping retained and ordered historical prefix verified",
       "status": "legacy_unverified"
     },
     {
-      "target": "Outdoor/Installed_14Apr26/EVA3_21July26.csv",
+      "target": "Outdoor/Installed_14Apr26/EVA3_30Sept26.csv",
       "oldValue": null,
       "decision": {
         "outdoor_file_uid": "ODF-004",
@@ -63356,11 +63463,11 @@
         "match_basis": "installation folder + material alias + patch number"
       },
       "reason": "Historical source-to-inventory and installation mapping",
-      "source": "data/processed/IV_dataset_normalise_Outdoor.xlsx (historical decision migration; original matcher unavailable)",
+      "source": "2026-10-03 intake; previous mapping retained and ordered historical prefix verified",
       "status": "legacy_unverified"
     },
     {
-      "target": "Outdoor/Installed_14Apr26/TPO2_Lenzing1_21July26.csv",
+      "target": "Outdoor/Installed_14Apr26/TPO2_Lenzing1_30Sept26.csv",
       "oldValue": null,
       "decision": {
         "outdoor_file_uid": "ODF-005",
@@ -63371,11 +63478,11 @@
         "match_basis": "installation folder + material alias + patch number"
       },
       "reason": "Historical source-to-inventory and installation mapping",
-      "source": "data/processed/IV_dataset_normalise_Outdoor.xlsx (historical decision migration; original matcher unavailable)",
+      "source": "2026-10-03 intake; previous mapping retained and ordered historical prefix verified",
       "status": "legacy_unverified"
     },
     {
-      "target": "Outdoor/Installed_14Apr26/TPO2_Lenzing2_21July26.csv",
+      "target": "Outdoor/Installed_14Apr26/TPO2_Lenzing2_30Sept26.csv",
       "oldValue": null,
       "decision": {
         "outdoor_file_uid": "ODF-006",
@@ -63386,11 +63493,11 @@
         "match_basis": "installation folder + material alias + patch number"
       },
       "reason": "Historical source-to-inventory and installation mapping",
-      "source": "data/processed/IV_dataset_normalise_Outdoor.xlsx (historical decision migration; original matcher unavailable)",
+      "source": "2026-10-03 intake; previous mapping retained and ordered historical prefix verified",
       "status": "legacy_unverified"
     },
     {
-      "target": "Outdoor/Installed_1Apr26/POEs/POE1_Mitsui1_21July26.csv",
+      "target": "Outdoor/Installed_1Apr26/POEs/POE1_Mitsui1_29Sept26.csv",
       "oldValue": null,
       "decision": {
         "outdoor_file_uid": "ODF-007",
@@ -63401,11 +63508,11 @@
         "match_basis": "installation folder + material alias + patch number"
       },
       "reason": "Historical source-to-inventory and installation mapping",
-      "source": "data/processed/IV_dataset_normalise_Outdoor.xlsx (historical decision migration; original matcher unavailable)",
+      "source": "2026-10-03 intake; previous mapping retained and ordered historical prefix verified",
       "status": "legacy_unverified"
     },
     {
-      "target": "Outdoor/Installed_1Apr26/POEs/POE2_TF4_1_21July26.csv",
+      "target": "Outdoor/Installed_1Apr26/POEs/POE2_TF4_1_29Sept26.csv",
       "oldValue": null,
       "decision": {
         "outdoor_file_uid": "ODF-008",
@@ -63416,11 +63523,11 @@
         "match_basis": "installation folder + material alias + patch number"
       },
       "reason": "Historical source-to-inventory and installation mapping",
-      "source": "data/processed/IV_dataset_normalise_Outdoor.xlsx (historical decision migration; original matcher unavailable)",
+      "source": "2026-10-03 intake; previous mapping retained and ordered historical prefix verified",
       "status": "legacy_unverified"
     },
     {
-      "target": "Outdoor/Installed_1Apr26/POEs/POE2_TF4_2_21July_26.csv",
+      "target": "Outdoor/Installed_1Apr26/POEs/POE2_TF4_2_29Aug_26.csv",
       "oldValue": null,
       "decision": {
         "outdoor_file_uid": "ODF-009",
@@ -63431,7 +63538,7 @@
         "match_basis": "installation folder + material alias + patch number"
       },
       "reason": "Historical source-to-inventory and installation mapping",
-      "source": "data/processed/IV_dataset_normalise_Outdoor.xlsx (historical decision migration; original matcher unavailable)",
+      "source": "2026-10-03 intake; previous mapping retained and ordered historical prefix verified",
       "status": "legacy_unverified"
     },
     {
@@ -63480,7 +63587,7 @@
       "status": "legacy_unverified"
     },
     {
-      "target": "Outdoor/Installed_1Apr26/Silicones/Low2_20July26.csv",
+      "target": "Outdoor/Installed_1Apr26/Silicones/Low2_29Sept26.csv",
       "oldValue": null,
       "decision": {
         "outdoor_file_uid": "ODF-013",
@@ -63491,11 +63598,11 @@
         "match_basis": "installation folder + material alias + patch number"
       },
       "reason": "Historical source-to-inventory and installation mapping",
-      "source": "data/processed/IV_dataset_normalise_Outdoor.xlsx (historical decision migration; original matcher unavailable)",
+      "source": "2026-10-03 intake; previous mapping retained and ordered historical prefix verified",
       "status": "legacy_unverified"
     },
     {
-      "target": "Outdoor/Installed_1Apr26/Silicones/Low_20July26.csv",
+      "target": "Outdoor/Installed_1Apr26/Silicones/Low_29Sept26.csv",
       "oldValue": null,
       "decision": {
         "outdoor_file_uid": "ODF-014",
@@ -63506,7 +63613,7 @@
         "match_basis": "installation folder + material alias + patch number"
       },
       "reason": "Historical source-to-inventory and installation mapping",
-      "source": "data/processed/IV_dataset_normalise_Outdoor.xlsx (historical decision migration; original matcher unavailable)",
+      "source": "2026-10-03 intake; previous mapping retained and ordered historical prefix verified",
       "status": "legacy_unverified"
     },
     {
@@ -63523,13 +63630,133 @@
       "reason": "Historical source-to-inventory and installation mapping",
       "source": "data/processed/IV_dataset_normalise_Outdoor.xlsx (historical decision migration; original matcher unavailable)",
       "status": "legacy_unverified"
+    },
+    {
+      "target": "Outdoor/Installed_11Aug26/A1_CVF1_30Sept26.csv",
+      "oldValue": null,
+      "decision": {
+        "sample_uid": "SMP2-003",
+        "installation_date": 46245,
+        "source_schema": "logger_standard",
+        "match_status": "matched_filename",
+        "match_basis": "Explicit A1 batch, material, specimen token and Installed_11Aug26 folder; provisional",
+        "outdoor_file_uid": "ODF-016"
+      },
+      "reason": "Unique A1 specimen token agrees with Outdoor assignment in active inventory; laboratory identity remains provisional.",
+      "source": "2026-10-03 intake: filename + installation folder + IV/Summary.xlsx",
+      "status": "provisional_filename_match"
+    },
+    {
+      "target": "Outdoor/Installed_11Aug26/A1_CVF5_30Sept26.csv",
+      "oldValue": null,
+      "decision": {
+        "sample_uid": "SMP2-013",
+        "installation_date": 46245,
+        "source_schema": "logger_standard",
+        "match_status": "matched_filename",
+        "match_basis": "Explicit A1 batch, material, specimen token and Installed_11Aug26 folder; provisional",
+        "outdoor_file_uid": "ODF-017"
+      },
+      "reason": "Unique A1 specimen token agrees with Outdoor assignment in active inventory; laboratory identity remains provisional.",
+      "source": "2026-10-03 intake: filename + installation folder + IV/Summary.xlsx",
+      "status": "provisional_filename_match"
+    },
+    {
+      "target": "Outdoor/Installed_11Aug26/A1_EVA1_30Sept26.csv",
+      "oldValue": null,
+      "decision": {
+        "sample_uid": "SMP2-036",
+        "installation_date": 46245,
+        "source_schema": "logger_standard",
+        "match_status": "matched_filename",
+        "match_basis": "Explicit A1 batch, material, specimen token and Installed_11Aug26 folder; provisional",
+        "outdoor_file_uid": "ODF-018"
+      },
+      "reason": "Unique A1 specimen token agrees with Outdoor assignment in active inventory; laboratory identity remains provisional.",
+      "source": "2026-10-03 intake: filename + installation folder + IV/Summary.xlsx",
+      "status": "provisional_filename_match"
+    },
+    {
+      "target": "Outdoor/Installed_11Aug26/A1_EVA3_30Sept26.csv",
+      "oldValue": null,
+      "decision": {
+        "sample_uid": "SMP2-040",
+        "installation_date": 46245,
+        "source_schema": "logger_standard",
+        "match_status": "matched_filename",
+        "match_basis": "Explicit A1 batch, material, specimen token and Installed_11Aug26 folder; provisional",
+        "outdoor_file_uid": "ODF-019"
+      },
+      "reason": "Unique A1 specimen token agrees with Outdoor assignment in active inventory; laboratory identity remains provisional.",
+      "source": "2026-10-03 intake: filename + installation folder + IV/Summary.xlsx",
+      "status": "provisional_filename_match"
+    },
+    {
+      "target": "Outdoor/Installed_11Aug26/A1_Len4_30Sept26.csv",
+      "oldValue": null,
+      "decision": {
+        "sample_uid": "SMP2-023",
+        "installation_date": 46245,
+        "source_schema": "logger_standard",
+        "match_status": "matched_filename",
+        "match_basis": "Explicit A1 batch, material, specimen token and Installed_11Aug26 folder; provisional",
+        "outdoor_file_uid": "ODF-020"
+      },
+      "reason": "Unique A1 specimen token agrees with Outdoor assignment in active inventory; laboratory identity remains provisional.",
+      "source": "2026-10-03 intake: filename + installation folder + IV/Summary.xlsx",
+      "status": "provisional_filename_match"
+    },
+    {
+      "target": "Outdoor/Installed_11Aug26/A1_Len5_30Sept26.csv",
+      "oldValue": null,
+      "decision": {
+        "sample_uid": "SMP2-024",
+        "installation_date": 46245,
+        "source_schema": "logger_standard",
+        "match_status": "matched_filename",
+        "match_basis": "Explicit A1 batch, material, specimen token and Installed_11Aug26 folder; provisional",
+        "outdoor_file_uid": "ODF-021"
+      },
+      "reason": "Unique A1 specimen token agrees with Outdoor assignment in active inventory; laboratory identity remains provisional.",
+      "source": "2026-10-03 intake: filename + installation folder + IV/Summary.xlsx",
+      "status": "provisional_filename_match"
+    },
+    {
+      "target": "Outdoor/Installed_11Aug26/A1_TF4-2_30Sept26.csv",
+      "oldValue": null,
+      "decision": {
+        "sample_uid": "SMP2-031",
+        "installation_date": 46245,
+        "source_schema": "logger_standard",
+        "match_status": "matched_filename",
+        "match_basis": "Explicit A1 batch, material, specimen token and Installed_11Aug26 folder; provisional",
+        "outdoor_file_uid": "ODF-022"
+      },
+      "reason": "Unique A1 specimen token agrees with Outdoor assignment in active inventory; laboratory identity remains provisional.",
+      "source": "2026-10-03 intake: filename + installation folder + IV/Summary.xlsx",
+      "status": "provisional_filename_match"
+    },
+    {
+      "target": "Outdoor/Installed_11Aug26/A1_TF4-3_30Sept26.csv",
+      "oldValue": null,
+      "decision": {
+        "sample_uid": "SMP2-032",
+        "installation_date": 46245,
+        "source_schema": "logger_standard",
+        "match_status": "matched_filename",
+        "match_basis": "Explicit A1 batch, material, specimen token and Installed_11Aug26 folder; provisional",
+        "outdoor_file_uid": "ODF-023"
+      },
+      "reason": "Unique A1 specimen token agrees with Outdoor assignment in active inventory; laboratory identity remains provisional.",
+      "source": "2026-10-03 intake: filename + installation folder + IV/Summary.xlsx",
+      "status": "provisional_filename_match"
     }
   ],
   "manualExclusions": [],
   "experimentalAdjudications": [],
   "outdoorMetricAdjudications": [
     {
-      "target": "Outdoor/Installed_14Apr26/EVA3_21July26.csv",
+      "target": "Outdoor/Installed_14Apr26/EVA3_30Sept26.csv",
       "oldValue": 0,
       "decision": {
         "sample_uid": "SMP-103",
@@ -63545,8 +63772,8 @@
       "status": "owner_adjudicated_excluded"
     },
     {
-      "target": "Outdoor/Installed_14Apr26/TPO2_Lenzing1_21July26.csv",
-      "oldValue": 0.00800000037997961,
+      "target": "Outdoor/Installed_14Apr26/TPO2_Lenzing1_30Sept26.csv",
+      "oldValue": 0.008,
       "decision": {
         "sample_uid": "SMP-112",
         "measurement_date": "2026-04-14",
@@ -63561,8 +63788,8 @@
       "status": "owner_adjudicated_excluded"
     },
     {
-      "target": "Outdoor/Installed_14Apr26/EVA3_21July26.csv",
-      "oldValue": 21.473999977111816,
+      "target": "Outdoor/Installed_14Apr26/EVA3_30Sept26.csv",
+      "oldValue": 21.473999974999998,
       "decision": {
         "sample_uid": "SMP-103",
         "measurement_date": "2026-07-10",
@@ -63577,8 +63804,8 @@
       "status": "owner_adjudicated_excluded"
     },
     {
-      "target": "Outdoor/Installed_14Apr26/TPO2_Lenzing1_21July26.csv",
-      "oldValue": 26.552499771118164,
+      "target": "Outdoor/Installed_14Apr26/TPO2_Lenzing1_30Sept26.csv",
+      "oldValue": 26.552499775,
       "decision": {
         "sample_uid": "SMP-112",
         "measurement_date": "2026-07-10",
@@ -63591,6 +63818,6083 @@
       "reason": "Owner adjudicated this Outdoor PR daily aggregate as a measurement bug. Exclude PR only; instrumental cause is unverified.",
       "source": "Owner review of the Outdoor graph and raw logger data, 2026-09-23",
       "status": "owner_adjudicated_excluded"
+    }
+  ],
+  "outdoorDailyIds": [
+    {
+      "observation_uid": "ODD-00001",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-04-01"
+    },
+    {
+      "observation_uid": "ODD-00002",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-04-02"
+    },
+    {
+      "observation_uid": "ODD-00003",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-04-03"
+    },
+    {
+      "observation_uid": "ODD-00004",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-04-04"
+    },
+    {
+      "observation_uid": "ODD-00005",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-04-05"
+    },
+    {
+      "observation_uid": "ODD-00006",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-04-06"
+    },
+    {
+      "observation_uid": "ODD-00007",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-04-07"
+    },
+    {
+      "observation_uid": "ODD-00008",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-04-08"
+    },
+    {
+      "observation_uid": "ODD-00009",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-04-09"
+    },
+    {
+      "observation_uid": "ODD-00010",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-04-10"
+    },
+    {
+      "observation_uid": "ODD-00011",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-04-11"
+    },
+    {
+      "observation_uid": "ODD-00012",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-04-12"
+    },
+    {
+      "observation_uid": "ODD-00013",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-04-13"
+    },
+    {
+      "observation_uid": "ODD-00014",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-04-14"
+    },
+    {
+      "observation_uid": "ODD-00015",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-04-15"
+    },
+    {
+      "observation_uid": "ODD-00016",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-04-16"
+    },
+    {
+      "observation_uid": "ODD-00017",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-04-17"
+    },
+    {
+      "observation_uid": "ODD-00018",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-04-24"
+    },
+    {
+      "observation_uid": "ODD-00019",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-04-25"
+    },
+    {
+      "observation_uid": "ODD-00020",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-04-26"
+    },
+    {
+      "observation_uid": "ODD-00021",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-04-27"
+    },
+    {
+      "observation_uid": "ODD-00022",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-04-28"
+    },
+    {
+      "observation_uid": "ODD-00023",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-04-29"
+    },
+    {
+      "observation_uid": "ODD-00024",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-04-30"
+    },
+    {
+      "observation_uid": "ODD-00025",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-05-01"
+    },
+    {
+      "observation_uid": "ODD-00026",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-05-02"
+    },
+    {
+      "observation_uid": "ODD-00027",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-05-03"
+    },
+    {
+      "observation_uid": "ODD-00028",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-05-04"
+    },
+    {
+      "observation_uid": "ODD-00029",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-05-05"
+    },
+    {
+      "observation_uid": "ODD-00030",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-05-06"
+    },
+    {
+      "observation_uid": "ODD-00031",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-05-07"
+    },
+    {
+      "observation_uid": "ODD-00032",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-05-08"
+    },
+    {
+      "observation_uid": "ODD-00033",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-05-09"
+    },
+    {
+      "observation_uid": "ODD-00034",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-05-10"
+    },
+    {
+      "observation_uid": "ODD-00035",
+      "sample_uid": "SMP-020",
+      "measurement_date": "2026-05-11"
+    },
+    {
+      "observation_uid": "ODD-00036",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-04-01"
+    },
+    {
+      "observation_uid": "ODD-00037",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-04-02"
+    },
+    {
+      "observation_uid": "ODD-00038",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-04-03"
+    },
+    {
+      "observation_uid": "ODD-00039",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-04-04"
+    },
+    {
+      "observation_uid": "ODD-00040",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-04-05"
+    },
+    {
+      "observation_uid": "ODD-00041",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-04-06"
+    },
+    {
+      "observation_uid": "ODD-00042",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-04-07"
+    },
+    {
+      "observation_uid": "ODD-00043",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-04-08"
+    },
+    {
+      "observation_uid": "ODD-00044",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-04-09"
+    },
+    {
+      "observation_uid": "ODD-00045",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-04-10"
+    },
+    {
+      "observation_uid": "ODD-00046",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-04-11"
+    },
+    {
+      "observation_uid": "ODD-00047",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-04-12"
+    },
+    {
+      "observation_uid": "ODD-00048",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-04-13"
+    },
+    {
+      "observation_uid": "ODD-00049",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-04-14"
+    },
+    {
+      "observation_uid": "ODD-00050",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-04-15"
+    },
+    {
+      "observation_uid": "ODD-00051",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-04-16"
+    },
+    {
+      "observation_uid": "ODD-00052",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-04-17"
+    },
+    {
+      "observation_uid": "ODD-00053",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-04-24"
+    },
+    {
+      "observation_uid": "ODD-00054",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-04-25"
+    },
+    {
+      "observation_uid": "ODD-00055",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-04-26"
+    },
+    {
+      "observation_uid": "ODD-00056",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-04-27"
+    },
+    {
+      "observation_uid": "ODD-00057",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-04-28"
+    },
+    {
+      "observation_uid": "ODD-00058",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-04-29"
+    },
+    {
+      "observation_uid": "ODD-00059",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-04-30"
+    },
+    {
+      "observation_uid": "ODD-00060",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-05-01"
+    },
+    {
+      "observation_uid": "ODD-00061",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-05-02"
+    },
+    {
+      "observation_uid": "ODD-00062",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-05-03"
+    },
+    {
+      "observation_uid": "ODD-00063",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-05-04"
+    },
+    {
+      "observation_uid": "ODD-00064",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-05-05"
+    },
+    {
+      "observation_uid": "ODD-00065",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-05-06"
+    },
+    {
+      "observation_uid": "ODD-00066",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-05-07"
+    },
+    {
+      "observation_uid": "ODD-00067",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-05-08"
+    },
+    {
+      "observation_uid": "ODD-00068",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-05-09"
+    },
+    {
+      "observation_uid": "ODD-00069",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-05-10"
+    },
+    {
+      "observation_uid": "ODD-00070",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-05-11"
+    },
+    {
+      "observation_uid": "ODD-00071",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-05-12"
+    },
+    {
+      "observation_uid": "ODD-00072",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-05-13"
+    },
+    {
+      "observation_uid": "ODD-00073",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-05-14"
+    },
+    {
+      "observation_uid": "ODD-00074",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-05-15"
+    },
+    {
+      "observation_uid": "ODD-00075",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-05-16"
+    },
+    {
+      "observation_uid": "ODD-00076",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-05-17"
+    },
+    {
+      "observation_uid": "ODD-00077",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-05-18"
+    },
+    {
+      "observation_uid": "ODD-00078",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-05-19"
+    },
+    {
+      "observation_uid": "ODD-00079",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-05-20"
+    },
+    {
+      "observation_uid": "ODD-00080",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-05-21"
+    },
+    {
+      "observation_uid": "ODD-00081",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-05-22"
+    },
+    {
+      "observation_uid": "ODD-00082",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-05-23"
+    },
+    {
+      "observation_uid": "ODD-00083",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-05-24"
+    },
+    {
+      "observation_uid": "ODD-00084",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-05-25"
+    },
+    {
+      "observation_uid": "ODD-00085",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-05-26"
+    },
+    {
+      "observation_uid": "ODD-00086",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-05-27"
+    },
+    {
+      "observation_uid": "ODD-00087",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-05-28"
+    },
+    {
+      "observation_uid": "ODD-00088",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-05-29"
+    },
+    {
+      "observation_uid": "ODD-00089",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-05-30"
+    },
+    {
+      "observation_uid": "ODD-00090",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-06-01"
+    },
+    {
+      "observation_uid": "ODD-00091",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-06-02"
+    },
+    {
+      "observation_uid": "ODD-00092",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-06-03"
+    },
+    {
+      "observation_uid": "ODD-00093",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-06-04"
+    },
+    {
+      "observation_uid": "ODD-00094",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-06-05"
+    },
+    {
+      "observation_uid": "ODD-00095",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-06-06"
+    },
+    {
+      "observation_uid": "ODD-00096",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-06-07"
+    },
+    {
+      "observation_uid": "ODD-00097",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-06-08"
+    },
+    {
+      "observation_uid": "ODD-00098",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-06-09"
+    },
+    {
+      "observation_uid": "ODD-00099",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-06-10"
+    },
+    {
+      "observation_uid": "ODD-00100",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-06-11"
+    },
+    {
+      "observation_uid": "ODD-00101",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-06-12"
+    },
+    {
+      "observation_uid": "ODD-00102",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-06-13"
+    },
+    {
+      "observation_uid": "ODD-00103",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-06-14"
+    },
+    {
+      "observation_uid": "ODD-00104",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-06-15"
+    },
+    {
+      "observation_uid": "ODD-00105",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-06-16"
+    },
+    {
+      "observation_uid": "ODD-00106",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-06-17"
+    },
+    {
+      "observation_uid": "ODD-00107",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-06-18"
+    },
+    {
+      "observation_uid": "ODD-00108",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-06-19"
+    },
+    {
+      "observation_uid": "ODD-00109",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-06-20"
+    },
+    {
+      "observation_uid": "ODD-00110",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-06-21"
+    },
+    {
+      "observation_uid": "ODD-00111",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-06-22"
+    },
+    {
+      "observation_uid": "ODD-00112",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-06-23"
+    },
+    {
+      "observation_uid": "ODD-00113",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-06-24"
+    },
+    {
+      "observation_uid": "ODD-00114",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-06-25"
+    },
+    {
+      "observation_uid": "ODD-00115",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-06-26"
+    },
+    {
+      "observation_uid": "ODD-00116",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-06-27"
+    },
+    {
+      "observation_uid": "ODD-00117",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-06-28"
+    },
+    {
+      "observation_uid": "ODD-00118",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-06-29"
+    },
+    {
+      "observation_uid": "ODD-00119",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-06-30"
+    },
+    {
+      "observation_uid": "ODD-00120",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-07-01"
+    },
+    {
+      "observation_uid": "ODD-00121",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-07-02"
+    },
+    {
+      "observation_uid": "ODD-00122",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-07-03"
+    },
+    {
+      "observation_uid": "ODD-00123",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-07-04"
+    },
+    {
+      "observation_uid": "ODD-00124",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-07-05"
+    },
+    {
+      "observation_uid": "ODD-00125",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-07-06"
+    },
+    {
+      "observation_uid": "ODD-00126",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-07-07"
+    },
+    {
+      "observation_uid": "ODD-00127",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-07-08"
+    },
+    {
+      "observation_uid": "ODD-00128",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-07-09"
+    },
+    {
+      "observation_uid": "ODD-00129",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-07-10"
+    },
+    {
+      "observation_uid": "ODD-00130",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-07-13"
+    },
+    {
+      "observation_uid": "ODD-00131",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-07-14"
+    },
+    {
+      "observation_uid": "ODD-00132",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-07-15"
+    },
+    {
+      "observation_uid": "ODD-00133",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-07-16"
+    },
+    {
+      "observation_uid": "ODD-00134",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-07-17"
+    },
+    {
+      "observation_uid": "ODD-00135",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-07-18"
+    },
+    {
+      "observation_uid": "ODD-00136",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-07-19"
+    },
+    {
+      "observation_uid": "ODD-00137",
+      "sample_uid": "SMP-021",
+      "measurement_date": "2026-07-20"
+    },
+    {
+      "observation_uid": "ODD-00138",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-04-01"
+    },
+    {
+      "observation_uid": "ODD-00139",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-04-02"
+    },
+    {
+      "observation_uid": "ODD-00140",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-04-03"
+    },
+    {
+      "observation_uid": "ODD-00141",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-04-04"
+    },
+    {
+      "observation_uid": "ODD-00142",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-04-05"
+    },
+    {
+      "observation_uid": "ODD-00143",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-04-06"
+    },
+    {
+      "observation_uid": "ODD-00144",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-04-07"
+    },
+    {
+      "observation_uid": "ODD-00145",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-04-08"
+    },
+    {
+      "observation_uid": "ODD-00146",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-04-09"
+    },
+    {
+      "observation_uid": "ODD-00147",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-04-10"
+    },
+    {
+      "observation_uid": "ODD-00148",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-04-11"
+    },
+    {
+      "observation_uid": "ODD-00149",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-04-12"
+    },
+    {
+      "observation_uid": "ODD-00150",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-04-13"
+    },
+    {
+      "observation_uid": "ODD-00151",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-04-14"
+    },
+    {
+      "observation_uid": "ODD-00152",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-04-15"
+    },
+    {
+      "observation_uid": "ODD-00153",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-04-16"
+    },
+    {
+      "observation_uid": "ODD-00154",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-04-17"
+    },
+    {
+      "observation_uid": "ODD-00155",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-04-24"
+    },
+    {
+      "observation_uid": "ODD-00156",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-04-25"
+    },
+    {
+      "observation_uid": "ODD-00157",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-04-26"
+    },
+    {
+      "observation_uid": "ODD-00158",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-04-27"
+    },
+    {
+      "observation_uid": "ODD-00159",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-04-28"
+    },
+    {
+      "observation_uid": "ODD-00160",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-04-29"
+    },
+    {
+      "observation_uid": "ODD-00161",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-04-30"
+    },
+    {
+      "observation_uid": "ODD-00162",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-05-01"
+    },
+    {
+      "observation_uid": "ODD-00163",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-05-02"
+    },
+    {
+      "observation_uid": "ODD-00164",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-05-03"
+    },
+    {
+      "observation_uid": "ODD-00165",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-05-04"
+    },
+    {
+      "observation_uid": "ODD-00166",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-05-05"
+    },
+    {
+      "observation_uid": "ODD-00167",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-05-06"
+    },
+    {
+      "observation_uid": "ODD-00168",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-05-07"
+    },
+    {
+      "observation_uid": "ODD-00169",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-05-08"
+    },
+    {
+      "observation_uid": "ODD-00170",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-05-09"
+    },
+    {
+      "observation_uid": "ODD-00171",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-05-10"
+    },
+    {
+      "observation_uid": "ODD-00172",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-05-11"
+    },
+    {
+      "observation_uid": "ODD-00173",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-05-12"
+    },
+    {
+      "observation_uid": "ODD-00174",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-05-13"
+    },
+    {
+      "observation_uid": "ODD-00175",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-05-14"
+    },
+    {
+      "observation_uid": "ODD-00176",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-05-15"
+    },
+    {
+      "observation_uid": "ODD-00177",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-05-16"
+    },
+    {
+      "observation_uid": "ODD-00178",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-05-17"
+    },
+    {
+      "observation_uid": "ODD-00179",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-05-18"
+    },
+    {
+      "observation_uid": "ODD-00180",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-05-19"
+    },
+    {
+      "observation_uid": "ODD-00181",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-05-20"
+    },
+    {
+      "observation_uid": "ODD-00182",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-05-21"
+    },
+    {
+      "observation_uid": "ODD-00183",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-05-22"
+    },
+    {
+      "observation_uid": "ODD-00184",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-05-23"
+    },
+    {
+      "observation_uid": "ODD-00185",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-05-24"
+    },
+    {
+      "observation_uid": "ODD-00186",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-05-25"
+    },
+    {
+      "observation_uid": "ODD-00187",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-05-26"
+    },
+    {
+      "observation_uid": "ODD-00188",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-05-27"
+    },
+    {
+      "observation_uid": "ODD-00189",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-05-28"
+    },
+    {
+      "observation_uid": "ODD-00190",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-05-29"
+    },
+    {
+      "observation_uid": "ODD-00191",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-05-30"
+    },
+    {
+      "observation_uid": "ODD-00192",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-06-01"
+    },
+    {
+      "observation_uid": "ODD-00193",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-06-02"
+    },
+    {
+      "observation_uid": "ODD-00194",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-06-03"
+    },
+    {
+      "observation_uid": "ODD-00195",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-06-04"
+    },
+    {
+      "observation_uid": "ODD-00196",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-06-05"
+    },
+    {
+      "observation_uid": "ODD-00197",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-06-06"
+    },
+    {
+      "observation_uid": "ODD-00198",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-06-07"
+    },
+    {
+      "observation_uid": "ODD-00199",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-06-08"
+    },
+    {
+      "observation_uid": "ODD-00200",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-06-09"
+    },
+    {
+      "observation_uid": "ODD-00201",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-06-10"
+    },
+    {
+      "observation_uid": "ODD-00202",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-06-11"
+    },
+    {
+      "observation_uid": "ODD-00203",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-06-12"
+    },
+    {
+      "observation_uid": "ODD-00204",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-06-13"
+    },
+    {
+      "observation_uid": "ODD-00205",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-06-14"
+    },
+    {
+      "observation_uid": "ODD-00206",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-06-15"
+    },
+    {
+      "observation_uid": "ODD-00207",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-06-16"
+    },
+    {
+      "observation_uid": "ODD-00208",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-06-17"
+    },
+    {
+      "observation_uid": "ODD-00209",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-06-18"
+    },
+    {
+      "observation_uid": "ODD-00210",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-06-19"
+    },
+    {
+      "observation_uid": "ODD-00211",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-06-20"
+    },
+    {
+      "observation_uid": "ODD-00212",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-06-21"
+    },
+    {
+      "observation_uid": "ODD-00213",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-06-22"
+    },
+    {
+      "observation_uid": "ODD-00214",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-06-23"
+    },
+    {
+      "observation_uid": "ODD-00215",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-06-24"
+    },
+    {
+      "observation_uid": "ODD-00216",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-06-25"
+    },
+    {
+      "observation_uid": "ODD-00217",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-06-26"
+    },
+    {
+      "observation_uid": "ODD-00218",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-06-27"
+    },
+    {
+      "observation_uid": "ODD-00219",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-06-28"
+    },
+    {
+      "observation_uid": "ODD-00220",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-06-29"
+    },
+    {
+      "observation_uid": "ODD-00221",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-06-30"
+    },
+    {
+      "observation_uid": "ODD-00222",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-07-01"
+    },
+    {
+      "observation_uid": "ODD-00223",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-07-02"
+    },
+    {
+      "observation_uid": "ODD-00224",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-07-03"
+    },
+    {
+      "observation_uid": "ODD-00225",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-07-04"
+    },
+    {
+      "observation_uid": "ODD-00226",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-07-05"
+    },
+    {
+      "observation_uid": "ODD-00227",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-07-06"
+    },
+    {
+      "observation_uid": "ODD-00228",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-07-07"
+    },
+    {
+      "observation_uid": "ODD-00229",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-07-08"
+    },
+    {
+      "observation_uid": "ODD-00230",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-07-09"
+    },
+    {
+      "observation_uid": "ODD-00231",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-07-10"
+    },
+    {
+      "observation_uid": "ODD-00232",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-07-13"
+    },
+    {
+      "observation_uid": "ODD-00233",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-07-14"
+    },
+    {
+      "observation_uid": "ODD-00234",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-07-15"
+    },
+    {
+      "observation_uid": "ODD-00235",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-07-16"
+    },
+    {
+      "observation_uid": "ODD-00236",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-07-17"
+    },
+    {
+      "observation_uid": "ODD-00237",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-07-18"
+    },
+    {
+      "observation_uid": "ODD-00238",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-07-19"
+    },
+    {
+      "observation_uid": "ODD-00239",
+      "sample_uid": "SMP-048",
+      "measurement_date": "2026-07-20"
+    },
+    {
+      "observation_uid": "ODD-00240",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-04-01"
+    },
+    {
+      "observation_uid": "ODD-00241",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-04-02"
+    },
+    {
+      "observation_uid": "ODD-00242",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-04-03"
+    },
+    {
+      "observation_uid": "ODD-00243",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-04-04"
+    },
+    {
+      "observation_uid": "ODD-00244",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-04-05"
+    },
+    {
+      "observation_uid": "ODD-00245",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-04-06"
+    },
+    {
+      "observation_uid": "ODD-00246",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-04-07"
+    },
+    {
+      "observation_uid": "ODD-00247",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-04-08"
+    },
+    {
+      "observation_uid": "ODD-00248",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-04-09"
+    },
+    {
+      "observation_uid": "ODD-00249",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-04-10"
+    },
+    {
+      "observation_uid": "ODD-00250",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-04-11"
+    },
+    {
+      "observation_uid": "ODD-00251",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-04-12"
+    },
+    {
+      "observation_uid": "ODD-00252",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-04-13"
+    },
+    {
+      "observation_uid": "ODD-00253",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-04-14"
+    },
+    {
+      "observation_uid": "ODD-00254",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-04-15"
+    },
+    {
+      "observation_uid": "ODD-00255",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-04-16"
+    },
+    {
+      "observation_uid": "ODD-00256",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-04-17"
+    },
+    {
+      "observation_uid": "ODD-00257",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-04-24"
+    },
+    {
+      "observation_uid": "ODD-00258",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-04-25"
+    },
+    {
+      "observation_uid": "ODD-00259",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-04-26"
+    },
+    {
+      "observation_uid": "ODD-00260",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-04-27"
+    },
+    {
+      "observation_uid": "ODD-00261",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-04-28"
+    },
+    {
+      "observation_uid": "ODD-00262",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-04-29"
+    },
+    {
+      "observation_uid": "ODD-00263",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-04-30"
+    },
+    {
+      "observation_uid": "ODD-00264",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-05-01"
+    },
+    {
+      "observation_uid": "ODD-00265",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-05-02"
+    },
+    {
+      "observation_uid": "ODD-00266",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-05-03"
+    },
+    {
+      "observation_uid": "ODD-00267",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-05-04"
+    },
+    {
+      "observation_uid": "ODD-00268",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-05-05"
+    },
+    {
+      "observation_uid": "ODD-00269",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-05-06"
+    },
+    {
+      "observation_uid": "ODD-00270",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-05-07"
+    },
+    {
+      "observation_uid": "ODD-00271",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-05-08"
+    },
+    {
+      "observation_uid": "ODD-00272",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-05-09"
+    },
+    {
+      "observation_uid": "ODD-00273",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-05-10"
+    },
+    {
+      "observation_uid": "ODD-00274",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-05-11"
+    },
+    {
+      "observation_uid": "ODD-00275",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-05-12"
+    },
+    {
+      "observation_uid": "ODD-00276",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-05-13"
+    },
+    {
+      "observation_uid": "ODD-00277",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-05-14"
+    },
+    {
+      "observation_uid": "ODD-00278",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-05-15"
+    },
+    {
+      "observation_uid": "ODD-00279",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-05-16"
+    },
+    {
+      "observation_uid": "ODD-00280",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-05-17"
+    },
+    {
+      "observation_uid": "ODD-00281",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-05-18"
+    },
+    {
+      "observation_uid": "ODD-00282",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-05-19"
+    },
+    {
+      "observation_uid": "ODD-00283",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-05-20"
+    },
+    {
+      "observation_uid": "ODD-00284",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-05-21"
+    },
+    {
+      "observation_uid": "ODD-00285",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-05-22"
+    },
+    {
+      "observation_uid": "ODD-00286",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-05-23"
+    },
+    {
+      "observation_uid": "ODD-00287",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-05-24"
+    },
+    {
+      "observation_uid": "ODD-00288",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-05-25"
+    },
+    {
+      "observation_uid": "ODD-00289",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-05-26"
+    },
+    {
+      "observation_uid": "ODD-00290",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-05-27"
+    },
+    {
+      "observation_uid": "ODD-00291",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-05-28"
+    },
+    {
+      "observation_uid": "ODD-00292",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-05-29"
+    },
+    {
+      "observation_uid": "ODD-00293",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-05-30"
+    },
+    {
+      "observation_uid": "ODD-00294",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-06-01"
+    },
+    {
+      "observation_uid": "ODD-00295",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-06-02"
+    },
+    {
+      "observation_uid": "ODD-00296",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-06-03"
+    },
+    {
+      "observation_uid": "ODD-00297",
+      "sample_uid": "SMP-062",
+      "measurement_date": "2026-06-04"
+    },
+    {
+      "observation_uid": "ODD-00298",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-04-01"
+    },
+    {
+      "observation_uid": "ODD-00299",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-04-02"
+    },
+    {
+      "observation_uid": "ODD-00300",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-04-03"
+    },
+    {
+      "observation_uid": "ODD-00301",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-04-04"
+    },
+    {
+      "observation_uid": "ODD-00302",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-04-05"
+    },
+    {
+      "observation_uid": "ODD-00303",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-04-06"
+    },
+    {
+      "observation_uid": "ODD-00304",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-04-07"
+    },
+    {
+      "observation_uid": "ODD-00305",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-04-08"
+    },
+    {
+      "observation_uid": "ODD-00306",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-04-09"
+    },
+    {
+      "observation_uid": "ODD-00307",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-04-10"
+    },
+    {
+      "observation_uid": "ODD-00308",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-04-11"
+    },
+    {
+      "observation_uid": "ODD-00309",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-04-12"
+    },
+    {
+      "observation_uid": "ODD-00310",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-04-13"
+    },
+    {
+      "observation_uid": "ODD-00311",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-04-14"
+    },
+    {
+      "observation_uid": "ODD-00312",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-04-15"
+    },
+    {
+      "observation_uid": "ODD-00313",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-04-16"
+    },
+    {
+      "observation_uid": "ODD-00314",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-04-17"
+    },
+    {
+      "observation_uid": "ODD-00315",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-04-24"
+    },
+    {
+      "observation_uid": "ODD-00316",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-04-25"
+    },
+    {
+      "observation_uid": "ODD-00317",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-04-26"
+    },
+    {
+      "observation_uid": "ODD-00318",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-04-27"
+    },
+    {
+      "observation_uid": "ODD-00319",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-04-28"
+    },
+    {
+      "observation_uid": "ODD-00320",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-04-29"
+    },
+    {
+      "observation_uid": "ODD-00321",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-04-30"
+    },
+    {
+      "observation_uid": "ODD-00322",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-05-01"
+    },
+    {
+      "observation_uid": "ODD-00323",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-05-02"
+    },
+    {
+      "observation_uid": "ODD-00324",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-05-03"
+    },
+    {
+      "observation_uid": "ODD-00325",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-05-04"
+    },
+    {
+      "observation_uid": "ODD-00326",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-05-05"
+    },
+    {
+      "observation_uid": "ODD-00327",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-05-06"
+    },
+    {
+      "observation_uid": "ODD-00328",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-05-07"
+    },
+    {
+      "observation_uid": "ODD-00329",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-05-08"
+    },
+    {
+      "observation_uid": "ODD-00330",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-05-09"
+    },
+    {
+      "observation_uid": "ODD-00331",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-05-10"
+    },
+    {
+      "observation_uid": "ODD-00332",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-05-11"
+    },
+    {
+      "observation_uid": "ODD-00333",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-05-12"
+    },
+    {
+      "observation_uid": "ODD-00334",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-05-13"
+    },
+    {
+      "observation_uid": "ODD-00335",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-05-14"
+    },
+    {
+      "observation_uid": "ODD-00336",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-05-15"
+    },
+    {
+      "observation_uid": "ODD-00337",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-05-16"
+    },
+    {
+      "observation_uid": "ODD-00338",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-05-17"
+    },
+    {
+      "observation_uid": "ODD-00339",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-05-18"
+    },
+    {
+      "observation_uid": "ODD-00340",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-05-19"
+    },
+    {
+      "observation_uid": "ODD-00341",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-05-20"
+    },
+    {
+      "observation_uid": "ODD-00342",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-05-21"
+    },
+    {
+      "observation_uid": "ODD-00343",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-05-22"
+    },
+    {
+      "observation_uid": "ODD-00344",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-05-23"
+    },
+    {
+      "observation_uid": "ODD-00345",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-05-24"
+    },
+    {
+      "observation_uid": "ODD-00346",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-05-25"
+    },
+    {
+      "observation_uid": "ODD-00347",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-05-26"
+    },
+    {
+      "observation_uid": "ODD-00348",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-05-27"
+    },
+    {
+      "observation_uid": "ODD-00349",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-05-28"
+    },
+    {
+      "observation_uid": "ODD-00350",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-05-29"
+    },
+    {
+      "observation_uid": "ODD-00351",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-05-30"
+    },
+    {
+      "observation_uid": "ODD-00352",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-06-01"
+    },
+    {
+      "observation_uid": "ODD-00353",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-06-02"
+    },
+    {
+      "observation_uid": "ODD-00354",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-06-03"
+    },
+    {
+      "observation_uid": "ODD-00355",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-06-04"
+    },
+    {
+      "observation_uid": "ODD-00356",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-06-05"
+    },
+    {
+      "observation_uid": "ODD-00357",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-06-06"
+    },
+    {
+      "observation_uid": "ODD-00358",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-06-07"
+    },
+    {
+      "observation_uid": "ODD-00359",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-06-08"
+    },
+    {
+      "observation_uid": "ODD-00360",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-06-09"
+    },
+    {
+      "observation_uid": "ODD-00361",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-06-10"
+    },
+    {
+      "observation_uid": "ODD-00362",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-06-11"
+    },
+    {
+      "observation_uid": "ODD-00363",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-06-12"
+    },
+    {
+      "observation_uid": "ODD-00364",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-06-13"
+    },
+    {
+      "observation_uid": "ODD-00365",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-06-14"
+    },
+    {
+      "observation_uid": "ODD-00366",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-06-15"
+    },
+    {
+      "observation_uid": "ODD-00367",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-06-16"
+    },
+    {
+      "observation_uid": "ODD-00368",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-06-17"
+    },
+    {
+      "observation_uid": "ODD-00369",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-06-18"
+    },
+    {
+      "observation_uid": "ODD-00370",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-06-19"
+    },
+    {
+      "observation_uid": "ODD-00371",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-06-20"
+    },
+    {
+      "observation_uid": "ODD-00372",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-06-21"
+    },
+    {
+      "observation_uid": "ODD-00373",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-06-22"
+    },
+    {
+      "observation_uid": "ODD-00374",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-06-23"
+    },
+    {
+      "observation_uid": "ODD-00375",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-06-24"
+    },
+    {
+      "observation_uid": "ODD-00376",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-06-25"
+    },
+    {
+      "observation_uid": "ODD-00377",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-06-26"
+    },
+    {
+      "observation_uid": "ODD-00378",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-06-27"
+    },
+    {
+      "observation_uid": "ODD-00379",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-06-28"
+    },
+    {
+      "observation_uid": "ODD-00380",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-06-29"
+    },
+    {
+      "observation_uid": "ODD-00381",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-06-30"
+    },
+    {
+      "observation_uid": "ODD-00382",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-07-01"
+    },
+    {
+      "observation_uid": "ODD-00383",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-07-02"
+    },
+    {
+      "observation_uid": "ODD-00384",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-07-03"
+    },
+    {
+      "observation_uid": "ODD-00385",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-07-04"
+    },
+    {
+      "observation_uid": "ODD-00386",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-07-05"
+    },
+    {
+      "observation_uid": "ODD-00387",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-07-06"
+    },
+    {
+      "observation_uid": "ODD-00388",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-07-07"
+    },
+    {
+      "observation_uid": "ODD-00389",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-07-08"
+    },
+    {
+      "observation_uid": "ODD-00390",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-07-09"
+    },
+    {
+      "observation_uid": "ODD-00391",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-07-10"
+    },
+    {
+      "observation_uid": "ODD-00392",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-07-13"
+    },
+    {
+      "observation_uid": "ODD-00393",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-07-14"
+    },
+    {
+      "observation_uid": "ODD-00394",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-07-15"
+    },
+    {
+      "observation_uid": "ODD-00395",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-07-16"
+    },
+    {
+      "observation_uid": "ODD-00396",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-07-17"
+    },
+    {
+      "observation_uid": "ODD-00397",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-07-18"
+    },
+    {
+      "observation_uid": "ODD-00398",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-07-19"
+    },
+    {
+      "observation_uid": "ODD-00399",
+      "sample_uid": "SMP-063",
+      "measurement_date": "2026-07-20"
+    },
+    {
+      "observation_uid": "ODD-00400",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-04-01"
+    },
+    {
+      "observation_uid": "ODD-00401",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-04-02"
+    },
+    {
+      "observation_uid": "ODD-00402",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-04-03"
+    },
+    {
+      "observation_uid": "ODD-00403",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-04-04"
+    },
+    {
+      "observation_uid": "ODD-00404",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-04-05"
+    },
+    {
+      "observation_uid": "ODD-00405",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-04-06"
+    },
+    {
+      "observation_uid": "ODD-00406",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-04-07"
+    },
+    {
+      "observation_uid": "ODD-00407",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-04-08"
+    },
+    {
+      "observation_uid": "ODD-00408",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-04-09"
+    },
+    {
+      "observation_uid": "ODD-00409",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-04-10"
+    },
+    {
+      "observation_uid": "ODD-00410",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-04-11"
+    },
+    {
+      "observation_uid": "ODD-00411",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-04-12"
+    },
+    {
+      "observation_uid": "ODD-00412",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-04-13"
+    },
+    {
+      "observation_uid": "ODD-00413",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-04-14"
+    },
+    {
+      "observation_uid": "ODD-00414",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-04-15"
+    },
+    {
+      "observation_uid": "ODD-00415",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-04-16"
+    },
+    {
+      "observation_uid": "ODD-00416",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-04-17"
+    },
+    {
+      "observation_uid": "ODD-00417",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-04-24"
+    },
+    {
+      "observation_uid": "ODD-00418",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-04-25"
+    },
+    {
+      "observation_uid": "ODD-00419",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-04-26"
+    },
+    {
+      "observation_uid": "ODD-00420",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-04-27"
+    },
+    {
+      "observation_uid": "ODD-00421",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-04-28"
+    },
+    {
+      "observation_uid": "ODD-00422",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-04-29"
+    },
+    {
+      "observation_uid": "ODD-00423",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-04-30"
+    },
+    {
+      "observation_uid": "ODD-00424",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-05-01"
+    },
+    {
+      "observation_uid": "ODD-00425",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-05-02"
+    },
+    {
+      "observation_uid": "ODD-00426",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-05-03"
+    },
+    {
+      "observation_uid": "ODD-00427",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-05-04"
+    },
+    {
+      "observation_uid": "ODD-00428",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-05-05"
+    },
+    {
+      "observation_uid": "ODD-00429",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-05-06"
+    },
+    {
+      "observation_uid": "ODD-00430",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-05-07"
+    },
+    {
+      "observation_uid": "ODD-00431",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-05-08"
+    },
+    {
+      "observation_uid": "ODD-00432",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-05-09"
+    },
+    {
+      "observation_uid": "ODD-00433",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-05-10"
+    },
+    {
+      "observation_uid": "ODD-00434",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-05-11"
+    },
+    {
+      "observation_uid": "ODD-00435",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-05-12"
+    },
+    {
+      "observation_uid": "ODD-00436",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-05-13"
+    },
+    {
+      "observation_uid": "ODD-00437",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-05-14"
+    },
+    {
+      "observation_uid": "ODD-00438",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-05-15"
+    },
+    {
+      "observation_uid": "ODD-00439",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-05-16"
+    },
+    {
+      "observation_uid": "ODD-00440",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-05-17"
+    },
+    {
+      "observation_uid": "ODD-00441",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-05-18"
+    },
+    {
+      "observation_uid": "ODD-00442",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-05-19"
+    },
+    {
+      "observation_uid": "ODD-00443",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-05-20"
+    },
+    {
+      "observation_uid": "ODD-00444",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-05-21"
+    },
+    {
+      "observation_uid": "ODD-00445",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-05-22"
+    },
+    {
+      "observation_uid": "ODD-00446",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-05-23"
+    },
+    {
+      "observation_uid": "ODD-00447",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-05-24"
+    },
+    {
+      "observation_uid": "ODD-00448",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-05-25"
+    },
+    {
+      "observation_uid": "ODD-00449",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-05-26"
+    },
+    {
+      "observation_uid": "ODD-00450",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-05-27"
+    },
+    {
+      "observation_uid": "ODD-00451",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-05-28"
+    },
+    {
+      "observation_uid": "ODD-00452",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-05-29"
+    },
+    {
+      "observation_uid": "ODD-00453",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-05-30"
+    },
+    {
+      "observation_uid": "ODD-00454",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-06-01"
+    },
+    {
+      "observation_uid": "ODD-00455",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-06-02"
+    },
+    {
+      "observation_uid": "ODD-00456",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-06-03"
+    },
+    {
+      "observation_uid": "ODD-00457",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-06-04"
+    },
+    {
+      "observation_uid": "ODD-00458",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-06-05"
+    },
+    {
+      "observation_uid": "ODD-00459",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-06-06"
+    },
+    {
+      "observation_uid": "ODD-00460",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-06-07"
+    },
+    {
+      "observation_uid": "ODD-00461",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-06-08"
+    },
+    {
+      "observation_uid": "ODD-00462",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-06-09"
+    },
+    {
+      "observation_uid": "ODD-00463",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-06-10"
+    },
+    {
+      "observation_uid": "ODD-00464",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-06-11"
+    },
+    {
+      "observation_uid": "ODD-00465",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-06-12"
+    },
+    {
+      "observation_uid": "ODD-00466",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-06-13"
+    },
+    {
+      "observation_uid": "ODD-00467",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-06-14"
+    },
+    {
+      "observation_uid": "ODD-00468",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-06-15"
+    },
+    {
+      "observation_uid": "ODD-00469",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-06-16"
+    },
+    {
+      "observation_uid": "ODD-00470",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-06-17"
+    },
+    {
+      "observation_uid": "ODD-00471",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-06-18"
+    },
+    {
+      "observation_uid": "ODD-00472",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-06-19"
+    },
+    {
+      "observation_uid": "ODD-00473",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-06-20"
+    },
+    {
+      "observation_uid": "ODD-00474",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-06-21"
+    },
+    {
+      "observation_uid": "ODD-00475",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-06-22"
+    },
+    {
+      "observation_uid": "ODD-00476",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-06-23"
+    },
+    {
+      "observation_uid": "ODD-00477",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-06-24"
+    },
+    {
+      "observation_uid": "ODD-00478",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-06-25"
+    },
+    {
+      "observation_uid": "ODD-00479",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-06-26"
+    },
+    {
+      "observation_uid": "ODD-00480",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-06-27"
+    },
+    {
+      "observation_uid": "ODD-00481",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-06-28"
+    },
+    {
+      "observation_uid": "ODD-00482",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-06-29"
+    },
+    {
+      "observation_uid": "ODD-00483",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-06-30"
+    },
+    {
+      "observation_uid": "ODD-00484",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-07-01"
+    },
+    {
+      "observation_uid": "ODD-00485",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-07-02"
+    },
+    {
+      "observation_uid": "ODD-00486",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-07-03"
+    },
+    {
+      "observation_uid": "ODD-00487",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-07-04"
+    },
+    {
+      "observation_uid": "ODD-00488",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-07-05"
+    },
+    {
+      "observation_uid": "ODD-00489",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-07-06"
+    },
+    {
+      "observation_uid": "ODD-00490",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-07-07"
+    },
+    {
+      "observation_uid": "ODD-00491",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-07-08"
+    },
+    {
+      "observation_uid": "ODD-00492",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-07-09"
+    },
+    {
+      "observation_uid": "ODD-00493",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-07-10"
+    },
+    {
+      "observation_uid": "ODD-00494",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-07-13"
+    },
+    {
+      "observation_uid": "ODD-00495",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-07-14"
+    },
+    {
+      "observation_uid": "ODD-00496",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-07-15"
+    },
+    {
+      "observation_uid": "ODD-00497",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-07-16"
+    },
+    {
+      "observation_uid": "ODD-00498",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-07-17"
+    },
+    {
+      "observation_uid": "ODD-00499",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-07-18"
+    },
+    {
+      "observation_uid": "ODD-00500",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-07-19"
+    },
+    {
+      "observation_uid": "ODD-00501",
+      "sample_uid": "SMP-066",
+      "measurement_date": "2026-07-20"
+    },
+    {
+      "observation_uid": "ODD-00502",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-04-01"
+    },
+    {
+      "observation_uid": "ODD-00503",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-04-02"
+    },
+    {
+      "observation_uid": "ODD-00504",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-04-03"
+    },
+    {
+      "observation_uid": "ODD-00505",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-04-04"
+    },
+    {
+      "observation_uid": "ODD-00506",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-04-05"
+    },
+    {
+      "observation_uid": "ODD-00507",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-04-06"
+    },
+    {
+      "observation_uid": "ODD-00508",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-04-07"
+    },
+    {
+      "observation_uid": "ODD-00509",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-04-08"
+    },
+    {
+      "observation_uid": "ODD-00510",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-04-09"
+    },
+    {
+      "observation_uid": "ODD-00511",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-04-10"
+    },
+    {
+      "observation_uid": "ODD-00512",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-04-11"
+    },
+    {
+      "observation_uid": "ODD-00513",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-04-12"
+    },
+    {
+      "observation_uid": "ODD-00514",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-04-13"
+    },
+    {
+      "observation_uid": "ODD-00515",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-04-14"
+    },
+    {
+      "observation_uid": "ODD-00516",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-04-15"
+    },
+    {
+      "observation_uid": "ODD-00517",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-04-16"
+    },
+    {
+      "observation_uid": "ODD-00518",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-04-17"
+    },
+    {
+      "observation_uid": "ODD-00519",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-04-24"
+    },
+    {
+      "observation_uid": "ODD-00520",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-04-25"
+    },
+    {
+      "observation_uid": "ODD-00521",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-04-26"
+    },
+    {
+      "observation_uid": "ODD-00522",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-04-27"
+    },
+    {
+      "observation_uid": "ODD-00523",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-04-28"
+    },
+    {
+      "observation_uid": "ODD-00524",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-04-29"
+    },
+    {
+      "observation_uid": "ODD-00525",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-04-30"
+    },
+    {
+      "observation_uid": "ODD-00526",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-05-01"
+    },
+    {
+      "observation_uid": "ODD-00527",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-05-02"
+    },
+    {
+      "observation_uid": "ODD-00528",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-05-03"
+    },
+    {
+      "observation_uid": "ODD-00529",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-05-04"
+    },
+    {
+      "observation_uid": "ODD-00530",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-05-05"
+    },
+    {
+      "observation_uid": "ODD-00531",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-05-06"
+    },
+    {
+      "observation_uid": "ODD-00532",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-05-07"
+    },
+    {
+      "observation_uid": "ODD-00533",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-05-08"
+    },
+    {
+      "observation_uid": "ODD-00534",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-05-09"
+    },
+    {
+      "observation_uid": "ODD-00535",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-05-10"
+    },
+    {
+      "observation_uid": "ODD-00536",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-05-11"
+    },
+    {
+      "observation_uid": "ODD-00537",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-05-12"
+    },
+    {
+      "observation_uid": "ODD-00538",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-05-13"
+    },
+    {
+      "observation_uid": "ODD-00539",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-05-14"
+    },
+    {
+      "observation_uid": "ODD-00540",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-05-15"
+    },
+    {
+      "observation_uid": "ODD-00541",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-05-16"
+    },
+    {
+      "observation_uid": "ODD-00542",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-05-17"
+    },
+    {
+      "observation_uid": "ODD-00543",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-05-18"
+    },
+    {
+      "observation_uid": "ODD-00544",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-05-19"
+    },
+    {
+      "observation_uid": "ODD-00545",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-05-20"
+    },
+    {
+      "observation_uid": "ODD-00546",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-05-21"
+    },
+    {
+      "observation_uid": "ODD-00547",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-05-22"
+    },
+    {
+      "observation_uid": "ODD-00548",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-05-23"
+    },
+    {
+      "observation_uid": "ODD-00549",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-05-24"
+    },
+    {
+      "observation_uid": "ODD-00550",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-05-25"
+    },
+    {
+      "observation_uid": "ODD-00551",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-05-26"
+    },
+    {
+      "observation_uid": "ODD-00552",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-05-27"
+    },
+    {
+      "observation_uid": "ODD-00553",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-05-28"
+    },
+    {
+      "observation_uid": "ODD-00554",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-05-29"
+    },
+    {
+      "observation_uid": "ODD-00555",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-05-30"
+    },
+    {
+      "observation_uid": "ODD-00556",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-06-01"
+    },
+    {
+      "observation_uid": "ODD-00557",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-06-02"
+    },
+    {
+      "observation_uid": "ODD-00558",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-06-03"
+    },
+    {
+      "observation_uid": "ODD-00559",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-06-04"
+    },
+    {
+      "observation_uid": "ODD-00560",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-06-05"
+    },
+    {
+      "observation_uid": "ODD-00561",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-06-06"
+    },
+    {
+      "observation_uid": "ODD-00562",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-06-07"
+    },
+    {
+      "observation_uid": "ODD-00563",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-06-08"
+    },
+    {
+      "observation_uid": "ODD-00564",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-06-09"
+    },
+    {
+      "observation_uid": "ODD-00565",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-06-10"
+    },
+    {
+      "observation_uid": "ODD-00566",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-06-11"
+    },
+    {
+      "observation_uid": "ODD-00567",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-06-12"
+    },
+    {
+      "observation_uid": "ODD-00568",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-06-13"
+    },
+    {
+      "observation_uid": "ODD-00569",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-06-14"
+    },
+    {
+      "observation_uid": "ODD-00570",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-06-15"
+    },
+    {
+      "observation_uid": "ODD-00571",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-06-16"
+    },
+    {
+      "observation_uid": "ODD-00572",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-06-17"
+    },
+    {
+      "observation_uid": "ODD-00573",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-06-18"
+    },
+    {
+      "observation_uid": "ODD-00574",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-06-19"
+    },
+    {
+      "observation_uid": "ODD-00575",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-06-20"
+    },
+    {
+      "observation_uid": "ODD-00576",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-06-21"
+    },
+    {
+      "observation_uid": "ODD-00577",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-06-22"
+    },
+    {
+      "observation_uid": "ODD-00578",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-06-23"
+    },
+    {
+      "observation_uid": "ODD-00579",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-06-24"
+    },
+    {
+      "observation_uid": "ODD-00580",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-06-25"
+    },
+    {
+      "observation_uid": "ODD-00581",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-06-26"
+    },
+    {
+      "observation_uid": "ODD-00582",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-06-27"
+    },
+    {
+      "observation_uid": "ODD-00583",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-06-28"
+    },
+    {
+      "observation_uid": "ODD-00584",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-06-29"
+    },
+    {
+      "observation_uid": "ODD-00585",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-06-30"
+    },
+    {
+      "observation_uid": "ODD-00586",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-07-01"
+    },
+    {
+      "observation_uid": "ODD-00587",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-07-02"
+    },
+    {
+      "observation_uid": "ODD-00588",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-07-03"
+    },
+    {
+      "observation_uid": "ODD-00589",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-07-04"
+    },
+    {
+      "observation_uid": "ODD-00590",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-07-05"
+    },
+    {
+      "observation_uid": "ODD-00591",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-07-06"
+    },
+    {
+      "observation_uid": "ODD-00592",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-07-07"
+    },
+    {
+      "observation_uid": "ODD-00593",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-07-08"
+    },
+    {
+      "observation_uid": "ODD-00594",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-07-09"
+    },
+    {
+      "observation_uid": "ODD-00595",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-07-10"
+    },
+    {
+      "observation_uid": "ODD-00596",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-07-13"
+    },
+    {
+      "observation_uid": "ODD-00597",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-07-14"
+    },
+    {
+      "observation_uid": "ODD-00598",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-07-15"
+    },
+    {
+      "observation_uid": "ODD-00599",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-07-16"
+    },
+    {
+      "observation_uid": "ODD-00600",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-07-17"
+    },
+    {
+      "observation_uid": "ODD-00601",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-07-18"
+    },
+    {
+      "observation_uid": "ODD-00602",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-07-19"
+    },
+    {
+      "observation_uid": "ODD-00603",
+      "sample_uid": "SMP-067",
+      "measurement_date": "2026-07-20"
+    },
+    {
+      "observation_uid": "ODD-00604",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-04-01"
+    },
+    {
+      "observation_uid": "ODD-00605",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-04-02"
+    },
+    {
+      "observation_uid": "ODD-00606",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-04-03"
+    },
+    {
+      "observation_uid": "ODD-00607",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-04-04"
+    },
+    {
+      "observation_uid": "ODD-00608",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-04-05"
+    },
+    {
+      "observation_uid": "ODD-00609",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-04-06"
+    },
+    {
+      "observation_uid": "ODD-00610",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-04-07"
+    },
+    {
+      "observation_uid": "ODD-00611",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-04-08"
+    },
+    {
+      "observation_uid": "ODD-00612",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-04-09"
+    },
+    {
+      "observation_uid": "ODD-00613",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-04-10"
+    },
+    {
+      "observation_uid": "ODD-00614",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-04-11"
+    },
+    {
+      "observation_uid": "ODD-00615",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-04-12"
+    },
+    {
+      "observation_uid": "ODD-00616",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-04-13"
+    },
+    {
+      "observation_uid": "ODD-00617",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-04-14"
+    },
+    {
+      "observation_uid": "ODD-00618",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-04-15"
+    },
+    {
+      "observation_uid": "ODD-00619",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-04-16"
+    },
+    {
+      "observation_uid": "ODD-00620",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-04-17"
+    },
+    {
+      "observation_uid": "ODD-00621",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-04-24"
+    },
+    {
+      "observation_uid": "ODD-00622",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-04-25"
+    },
+    {
+      "observation_uid": "ODD-00623",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-04-26"
+    },
+    {
+      "observation_uid": "ODD-00624",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-04-27"
+    },
+    {
+      "observation_uid": "ODD-00625",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-04-28"
+    },
+    {
+      "observation_uid": "ODD-00626",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-04-29"
+    },
+    {
+      "observation_uid": "ODD-00627",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-04-30"
+    },
+    {
+      "observation_uid": "ODD-00628",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-05-01"
+    },
+    {
+      "observation_uid": "ODD-00629",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-05-02"
+    },
+    {
+      "observation_uid": "ODD-00630",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-05-03"
+    },
+    {
+      "observation_uid": "ODD-00631",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-05-04"
+    },
+    {
+      "observation_uid": "ODD-00632",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-05-05"
+    },
+    {
+      "observation_uid": "ODD-00633",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-05-06"
+    },
+    {
+      "observation_uid": "ODD-00634",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-05-07"
+    },
+    {
+      "observation_uid": "ODD-00635",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-05-08"
+    },
+    {
+      "observation_uid": "ODD-00636",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-05-09"
+    },
+    {
+      "observation_uid": "ODD-00637",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-05-10"
+    },
+    {
+      "observation_uid": "ODD-00638",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-05-11"
+    },
+    {
+      "observation_uid": "ODD-00639",
+      "sample_uid": "SMP-079",
+      "measurement_date": "2026-05-12"
+    },
+    {
+      "observation_uid": "ODD-00640",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-04-01"
+    },
+    {
+      "observation_uid": "ODD-00641",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-04-02"
+    },
+    {
+      "observation_uid": "ODD-00642",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-04-03"
+    },
+    {
+      "observation_uid": "ODD-00643",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-04-04"
+    },
+    {
+      "observation_uid": "ODD-00644",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-04-05"
+    },
+    {
+      "observation_uid": "ODD-00645",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-04-06"
+    },
+    {
+      "observation_uid": "ODD-00646",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-04-07"
+    },
+    {
+      "observation_uid": "ODD-00647",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-04-08"
+    },
+    {
+      "observation_uid": "ODD-00648",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-04-09"
+    },
+    {
+      "observation_uid": "ODD-00649",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-04-10"
+    },
+    {
+      "observation_uid": "ODD-00650",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-04-11"
+    },
+    {
+      "observation_uid": "ODD-00651",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-04-12"
+    },
+    {
+      "observation_uid": "ODD-00652",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-04-13"
+    },
+    {
+      "observation_uid": "ODD-00653",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-04-14"
+    },
+    {
+      "observation_uid": "ODD-00654",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-04-15"
+    },
+    {
+      "observation_uid": "ODD-00655",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-04-16"
+    },
+    {
+      "observation_uid": "ODD-00656",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-04-17"
+    },
+    {
+      "observation_uid": "ODD-00657",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-04-24"
+    },
+    {
+      "observation_uid": "ODD-00658",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-04-25"
+    },
+    {
+      "observation_uid": "ODD-00659",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-04-26"
+    },
+    {
+      "observation_uid": "ODD-00660",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-04-27"
+    },
+    {
+      "observation_uid": "ODD-00661",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-04-28"
+    },
+    {
+      "observation_uid": "ODD-00662",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-04-29"
+    },
+    {
+      "observation_uid": "ODD-00663",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-04-30"
+    },
+    {
+      "observation_uid": "ODD-00664",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-05-01"
+    },
+    {
+      "observation_uid": "ODD-00665",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-05-02"
+    },
+    {
+      "observation_uid": "ODD-00666",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-05-03"
+    },
+    {
+      "observation_uid": "ODD-00667",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-05-04"
+    },
+    {
+      "observation_uid": "ODD-00668",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-05-05"
+    },
+    {
+      "observation_uid": "ODD-00669",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-05-06"
+    },
+    {
+      "observation_uid": "ODD-00670",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-05-07"
+    },
+    {
+      "observation_uid": "ODD-00671",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-05-08"
+    },
+    {
+      "observation_uid": "ODD-00672",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-05-09"
+    },
+    {
+      "observation_uid": "ODD-00673",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-05-10"
+    },
+    {
+      "observation_uid": "ODD-00674",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-05-11"
+    },
+    {
+      "observation_uid": "ODD-00675",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-05-12"
+    },
+    {
+      "observation_uid": "ODD-00676",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-05-13"
+    },
+    {
+      "observation_uid": "ODD-00677",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-05-14"
+    },
+    {
+      "observation_uid": "ODD-00678",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-05-15"
+    },
+    {
+      "observation_uid": "ODD-00679",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-05-16"
+    },
+    {
+      "observation_uid": "ODD-00680",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-05-17"
+    },
+    {
+      "observation_uid": "ODD-00681",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-05-18"
+    },
+    {
+      "observation_uid": "ODD-00682",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-05-19"
+    },
+    {
+      "observation_uid": "ODD-00683",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-05-20"
+    },
+    {
+      "observation_uid": "ODD-00684",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-05-21"
+    },
+    {
+      "observation_uid": "ODD-00685",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-05-22"
+    },
+    {
+      "observation_uid": "ODD-00686",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-05-23"
+    },
+    {
+      "observation_uid": "ODD-00687",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-05-24"
+    },
+    {
+      "observation_uid": "ODD-00688",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-05-25"
+    },
+    {
+      "observation_uid": "ODD-00689",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-05-26"
+    },
+    {
+      "observation_uid": "ODD-00690",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-05-27"
+    },
+    {
+      "observation_uid": "ODD-00691",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-05-28"
+    },
+    {
+      "observation_uid": "ODD-00692",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-05-29"
+    },
+    {
+      "observation_uid": "ODD-00693",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-05-30"
+    },
+    {
+      "observation_uid": "ODD-00694",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-06-01"
+    },
+    {
+      "observation_uid": "ODD-00695",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-06-02"
+    },
+    {
+      "observation_uid": "ODD-00696",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-06-03"
+    },
+    {
+      "observation_uid": "ODD-00697",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-06-04"
+    },
+    {
+      "observation_uid": "ODD-00698",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-06-05"
+    },
+    {
+      "observation_uid": "ODD-00699",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-06-06"
+    },
+    {
+      "observation_uid": "ODD-00700",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-06-07"
+    },
+    {
+      "observation_uid": "ODD-00701",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-06-08"
+    },
+    {
+      "observation_uid": "ODD-00702",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-06-09"
+    },
+    {
+      "observation_uid": "ODD-00703",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-06-10"
+    },
+    {
+      "observation_uid": "ODD-00704",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-06-11"
+    },
+    {
+      "observation_uid": "ODD-00705",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-06-12"
+    },
+    {
+      "observation_uid": "ODD-00706",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-06-13"
+    },
+    {
+      "observation_uid": "ODD-00707",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-06-14"
+    },
+    {
+      "observation_uid": "ODD-00708",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-06-15"
+    },
+    {
+      "observation_uid": "ODD-00709",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-06-16"
+    },
+    {
+      "observation_uid": "ODD-00710",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-06-17"
+    },
+    {
+      "observation_uid": "ODD-00711",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-06-18"
+    },
+    {
+      "observation_uid": "ODD-00712",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-06-19"
+    },
+    {
+      "observation_uid": "ODD-00713",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-06-20"
+    },
+    {
+      "observation_uid": "ODD-00714",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-06-21"
+    },
+    {
+      "observation_uid": "ODD-00715",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-06-22"
+    },
+    {
+      "observation_uid": "ODD-00716",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-06-23"
+    },
+    {
+      "observation_uid": "ODD-00717",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-06-24"
+    },
+    {
+      "observation_uid": "ODD-00718",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-06-25"
+    },
+    {
+      "observation_uid": "ODD-00719",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-06-26"
+    },
+    {
+      "observation_uid": "ODD-00720",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-06-27"
+    },
+    {
+      "observation_uid": "ODD-00721",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-06-28"
+    },
+    {
+      "observation_uid": "ODD-00722",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-06-29"
+    },
+    {
+      "observation_uid": "ODD-00723",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-06-30"
+    },
+    {
+      "observation_uid": "ODD-00724",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-07-01"
+    },
+    {
+      "observation_uid": "ODD-00725",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-07-02"
+    },
+    {
+      "observation_uid": "ODD-00726",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-07-03"
+    },
+    {
+      "observation_uid": "ODD-00727",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-07-04"
+    },
+    {
+      "observation_uid": "ODD-00728",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-07-05"
+    },
+    {
+      "observation_uid": "ODD-00729",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-07-06"
+    },
+    {
+      "observation_uid": "ODD-00730",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-07-07"
+    },
+    {
+      "observation_uid": "ODD-00731",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-07-08"
+    },
+    {
+      "observation_uid": "ODD-00732",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-07-09"
+    },
+    {
+      "observation_uid": "ODD-00733",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-07-10"
+    },
+    {
+      "observation_uid": "ODD-00734",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-07-13"
+    },
+    {
+      "observation_uid": "ODD-00735",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-07-14"
+    },
+    {
+      "observation_uid": "ODD-00736",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-07-15"
+    },
+    {
+      "observation_uid": "ODD-00737",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-07-16"
+    },
+    {
+      "observation_uid": "ODD-00738",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-07-17"
+    },
+    {
+      "observation_uid": "ODD-00739",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-07-18"
+    },
+    {
+      "observation_uid": "ODD-00740",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-07-19"
+    },
+    {
+      "observation_uid": "ODD-00741",
+      "sample_uid": "SMP-080",
+      "measurement_date": "2026-07-20"
+    },
+    {
+      "observation_uid": "ODD-00742",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-04-14"
+    },
+    {
+      "observation_uid": "ODD-00743",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-04-15"
+    },
+    {
+      "observation_uid": "ODD-00744",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-04-16"
+    },
+    {
+      "observation_uid": "ODD-00745",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-04-17"
+    },
+    {
+      "observation_uid": "ODD-00746",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-04-24"
+    },
+    {
+      "observation_uid": "ODD-00747",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-04-25"
+    },
+    {
+      "observation_uid": "ODD-00748",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-04-26"
+    },
+    {
+      "observation_uid": "ODD-00749",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-04-27"
+    },
+    {
+      "observation_uid": "ODD-00750",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-04-28"
+    },
+    {
+      "observation_uid": "ODD-00751",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-04-29"
+    },
+    {
+      "observation_uid": "ODD-00752",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-04-30"
+    },
+    {
+      "observation_uid": "ODD-00753",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-05-01"
+    },
+    {
+      "observation_uid": "ODD-00754",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-05-02"
+    },
+    {
+      "observation_uid": "ODD-00755",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-05-03"
+    },
+    {
+      "observation_uid": "ODD-00756",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-05-04"
+    },
+    {
+      "observation_uid": "ODD-00757",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-05-05"
+    },
+    {
+      "observation_uid": "ODD-00758",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-05-06"
+    },
+    {
+      "observation_uid": "ODD-00759",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-05-07"
+    },
+    {
+      "observation_uid": "ODD-00760",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-05-08"
+    },
+    {
+      "observation_uid": "ODD-00761",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-05-09"
+    },
+    {
+      "observation_uid": "ODD-00762",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-05-10"
+    },
+    {
+      "observation_uid": "ODD-00763",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-05-11"
+    },
+    {
+      "observation_uid": "ODD-00764",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-05-12"
+    },
+    {
+      "observation_uid": "ODD-00765",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-05-13"
+    },
+    {
+      "observation_uid": "ODD-00766",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-05-14"
+    },
+    {
+      "observation_uid": "ODD-00767",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-05-15"
+    },
+    {
+      "observation_uid": "ODD-00768",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-05-16"
+    },
+    {
+      "observation_uid": "ODD-00769",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-05-17"
+    },
+    {
+      "observation_uid": "ODD-00770",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-05-18"
+    },
+    {
+      "observation_uid": "ODD-00771",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-05-19"
+    },
+    {
+      "observation_uid": "ODD-00772",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-05-20"
+    },
+    {
+      "observation_uid": "ODD-00773",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-05-21"
+    },
+    {
+      "observation_uid": "ODD-00774",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-05-22"
+    },
+    {
+      "observation_uid": "ODD-00775",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-05-23"
+    },
+    {
+      "observation_uid": "ODD-00776",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-05-24"
+    },
+    {
+      "observation_uid": "ODD-00777",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-05-25"
+    },
+    {
+      "observation_uid": "ODD-00778",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-05-26"
+    },
+    {
+      "observation_uid": "ODD-00779",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-05-27"
+    },
+    {
+      "observation_uid": "ODD-00780",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-05-28"
+    },
+    {
+      "observation_uid": "ODD-00781",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-05-29"
+    },
+    {
+      "observation_uid": "ODD-00782",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-05-30"
+    },
+    {
+      "observation_uid": "ODD-00783",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-06-01"
+    },
+    {
+      "observation_uid": "ODD-00784",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-06-02"
+    },
+    {
+      "observation_uid": "ODD-00785",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-06-03"
+    },
+    {
+      "observation_uid": "ODD-00786",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-06-04"
+    },
+    {
+      "observation_uid": "ODD-00787",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-06-05"
+    },
+    {
+      "observation_uid": "ODD-00788",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-06-06"
+    },
+    {
+      "observation_uid": "ODD-00789",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-06-07"
+    },
+    {
+      "observation_uid": "ODD-00790",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-06-08"
+    },
+    {
+      "observation_uid": "ODD-00791",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-06-09"
+    },
+    {
+      "observation_uid": "ODD-00792",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-06-10"
+    },
+    {
+      "observation_uid": "ODD-00793",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-06-11"
+    },
+    {
+      "observation_uid": "ODD-00794",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-06-12"
+    },
+    {
+      "observation_uid": "ODD-00795",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-06-13"
+    },
+    {
+      "observation_uid": "ODD-00796",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-06-14"
+    },
+    {
+      "observation_uid": "ODD-00797",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-06-15"
+    },
+    {
+      "observation_uid": "ODD-00798",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-06-16"
+    },
+    {
+      "observation_uid": "ODD-00799",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-06-17"
+    },
+    {
+      "observation_uid": "ODD-00800",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-06-18"
+    },
+    {
+      "observation_uid": "ODD-00801",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-06-19"
+    },
+    {
+      "observation_uid": "ODD-00802",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-06-20"
+    },
+    {
+      "observation_uid": "ODD-00803",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-06-21"
+    },
+    {
+      "observation_uid": "ODD-00804",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-06-22"
+    },
+    {
+      "observation_uid": "ODD-00805",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-06-23"
+    },
+    {
+      "observation_uid": "ODD-00806",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-06-24"
+    },
+    {
+      "observation_uid": "ODD-00807",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-06-25"
+    },
+    {
+      "observation_uid": "ODD-00808",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-06-26"
+    },
+    {
+      "observation_uid": "ODD-00809",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-06-27"
+    },
+    {
+      "observation_uid": "ODD-00810",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-06-28"
+    },
+    {
+      "observation_uid": "ODD-00811",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-06-29"
+    },
+    {
+      "observation_uid": "ODD-00812",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-06-30"
+    },
+    {
+      "observation_uid": "ODD-00813",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-07-01"
+    },
+    {
+      "observation_uid": "ODD-00814",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-07-02"
+    },
+    {
+      "observation_uid": "ODD-00815",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-07-03"
+    },
+    {
+      "observation_uid": "ODD-00816",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-07-04"
+    },
+    {
+      "observation_uid": "ODD-00817",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-07-05"
+    },
+    {
+      "observation_uid": "ODD-00818",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-07-06"
+    },
+    {
+      "observation_uid": "ODD-00819",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-07-07"
+    },
+    {
+      "observation_uid": "ODD-00820",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-07-08"
+    },
+    {
+      "observation_uid": "ODD-00821",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-07-09"
+    },
+    {
+      "observation_uid": "ODD-00822",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-07-10"
+    },
+    {
+      "observation_uid": "ODD-00823",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-07-13"
+    },
+    {
+      "observation_uid": "ODD-00824",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-07-14"
+    },
+    {
+      "observation_uid": "ODD-00825",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-07-15"
+    },
+    {
+      "observation_uid": "ODD-00826",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-07-16"
+    },
+    {
+      "observation_uid": "ODD-00827",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-07-17"
+    },
+    {
+      "observation_uid": "ODD-00828",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-07-18"
+    },
+    {
+      "observation_uid": "ODD-00829",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-07-19"
+    },
+    {
+      "observation_uid": "ODD-00830",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-07-20"
+    },
+    {
+      "observation_uid": "ODD-00831",
+      "sample_uid": "SMP-103",
+      "measurement_date": "2026-07-21"
+    },
+    {
+      "observation_uid": "ODD-00832",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-04-14"
+    },
+    {
+      "observation_uid": "ODD-00833",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-04-15"
+    },
+    {
+      "observation_uid": "ODD-00834",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-04-16"
+    },
+    {
+      "observation_uid": "ODD-00835",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-04-17"
+    },
+    {
+      "observation_uid": "ODD-00836",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-04-24"
+    },
+    {
+      "observation_uid": "ODD-00837",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-04-25"
+    },
+    {
+      "observation_uid": "ODD-00838",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-04-26"
+    },
+    {
+      "observation_uid": "ODD-00839",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-04-27"
+    },
+    {
+      "observation_uid": "ODD-00840",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-04-28"
+    },
+    {
+      "observation_uid": "ODD-00841",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-04-29"
+    },
+    {
+      "observation_uid": "ODD-00842",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-04-30"
+    },
+    {
+      "observation_uid": "ODD-00843",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-05-01"
+    },
+    {
+      "observation_uid": "ODD-00844",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-05-02"
+    },
+    {
+      "observation_uid": "ODD-00845",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-05-03"
+    },
+    {
+      "observation_uid": "ODD-00846",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-05-04"
+    },
+    {
+      "observation_uid": "ODD-00847",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-05-05"
+    },
+    {
+      "observation_uid": "ODD-00848",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-05-06"
+    },
+    {
+      "observation_uid": "ODD-00849",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-05-07"
+    },
+    {
+      "observation_uid": "ODD-00850",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-05-08"
+    },
+    {
+      "observation_uid": "ODD-00851",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-05-09"
+    },
+    {
+      "observation_uid": "ODD-00852",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-05-10"
+    },
+    {
+      "observation_uid": "ODD-00853",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-05-11"
+    },
+    {
+      "observation_uid": "ODD-00854",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-05-12"
+    },
+    {
+      "observation_uid": "ODD-00855",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-05-13"
+    },
+    {
+      "observation_uid": "ODD-00856",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-05-14"
+    },
+    {
+      "observation_uid": "ODD-00857",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-05-15"
+    },
+    {
+      "observation_uid": "ODD-00858",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-05-16"
+    },
+    {
+      "observation_uid": "ODD-00859",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-05-17"
+    },
+    {
+      "observation_uid": "ODD-00860",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-05-18"
+    },
+    {
+      "observation_uid": "ODD-00861",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-05-19"
+    },
+    {
+      "observation_uid": "ODD-00862",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-05-20"
+    },
+    {
+      "observation_uid": "ODD-00863",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-05-21"
+    },
+    {
+      "observation_uid": "ODD-00864",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-05-22"
+    },
+    {
+      "observation_uid": "ODD-00865",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-05-23"
+    },
+    {
+      "observation_uid": "ODD-00866",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-05-24"
+    },
+    {
+      "observation_uid": "ODD-00867",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-05-25"
+    },
+    {
+      "observation_uid": "ODD-00868",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-05-26"
+    },
+    {
+      "observation_uid": "ODD-00869",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-05-27"
+    },
+    {
+      "observation_uid": "ODD-00870",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-05-28"
+    },
+    {
+      "observation_uid": "ODD-00871",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-05-29"
+    },
+    {
+      "observation_uid": "ODD-00872",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-05-30"
+    },
+    {
+      "observation_uid": "ODD-00873",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-06-01"
+    },
+    {
+      "observation_uid": "ODD-00874",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-06-02"
+    },
+    {
+      "observation_uid": "ODD-00875",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-06-03"
+    },
+    {
+      "observation_uid": "ODD-00876",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-06-04"
+    },
+    {
+      "observation_uid": "ODD-00877",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-06-05"
+    },
+    {
+      "observation_uid": "ODD-00878",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-06-06"
+    },
+    {
+      "observation_uid": "ODD-00879",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-06-07"
+    },
+    {
+      "observation_uid": "ODD-00880",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-06-08"
+    },
+    {
+      "observation_uid": "ODD-00881",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-06-09"
+    },
+    {
+      "observation_uid": "ODD-00882",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-06-10"
+    },
+    {
+      "observation_uid": "ODD-00883",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-06-11"
+    },
+    {
+      "observation_uid": "ODD-00884",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-06-12"
+    },
+    {
+      "observation_uid": "ODD-00885",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-06-13"
+    },
+    {
+      "observation_uid": "ODD-00886",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-06-14"
+    },
+    {
+      "observation_uid": "ODD-00887",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-06-15"
+    },
+    {
+      "observation_uid": "ODD-00888",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-06-16"
+    },
+    {
+      "observation_uid": "ODD-00889",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-06-17"
+    },
+    {
+      "observation_uid": "ODD-00890",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-06-18"
+    },
+    {
+      "observation_uid": "ODD-00891",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-06-19"
+    },
+    {
+      "observation_uid": "ODD-00892",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-06-20"
+    },
+    {
+      "observation_uid": "ODD-00893",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-06-21"
+    },
+    {
+      "observation_uid": "ODD-00894",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-06-22"
+    },
+    {
+      "observation_uid": "ODD-00895",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-06-23"
+    },
+    {
+      "observation_uid": "ODD-00896",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-06-24"
+    },
+    {
+      "observation_uid": "ODD-00897",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-06-25"
+    },
+    {
+      "observation_uid": "ODD-00898",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-06-26"
+    },
+    {
+      "observation_uid": "ODD-00899",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-06-27"
+    },
+    {
+      "observation_uid": "ODD-00900",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-06-28"
+    },
+    {
+      "observation_uid": "ODD-00901",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-06-29"
+    },
+    {
+      "observation_uid": "ODD-00902",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-06-30"
+    },
+    {
+      "observation_uid": "ODD-00903",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-07-01"
+    },
+    {
+      "observation_uid": "ODD-00904",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-07-02"
+    },
+    {
+      "observation_uid": "ODD-00905",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-07-03"
+    },
+    {
+      "observation_uid": "ODD-00906",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-07-04"
+    },
+    {
+      "observation_uid": "ODD-00907",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-07-05"
+    },
+    {
+      "observation_uid": "ODD-00908",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-07-06"
+    },
+    {
+      "observation_uid": "ODD-00909",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-07-07"
+    },
+    {
+      "observation_uid": "ODD-00910",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-07-08"
+    },
+    {
+      "observation_uid": "ODD-00911",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-07-09"
+    },
+    {
+      "observation_uid": "ODD-00912",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-07-10"
+    },
+    {
+      "observation_uid": "ODD-00913",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-07-13"
+    },
+    {
+      "observation_uid": "ODD-00914",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-07-14"
+    },
+    {
+      "observation_uid": "ODD-00915",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-07-15"
+    },
+    {
+      "observation_uid": "ODD-00916",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-07-16"
+    },
+    {
+      "observation_uid": "ODD-00917",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-07-17"
+    },
+    {
+      "observation_uid": "ODD-00918",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-07-18"
+    },
+    {
+      "observation_uid": "ODD-00919",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-07-19"
+    },
+    {
+      "observation_uid": "ODD-00920",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-07-20"
+    },
+    {
+      "observation_uid": "ODD-00921",
+      "sample_uid": "SMP-112",
+      "measurement_date": "2026-07-21"
+    },
+    {
+      "observation_uid": "ODD-00922",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-04-14"
+    },
+    {
+      "observation_uid": "ODD-00923",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-04-15"
+    },
+    {
+      "observation_uid": "ODD-00924",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-04-16"
+    },
+    {
+      "observation_uid": "ODD-00925",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-04-17"
+    },
+    {
+      "observation_uid": "ODD-00926",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-04-24"
+    },
+    {
+      "observation_uid": "ODD-00927",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-04-25"
+    },
+    {
+      "observation_uid": "ODD-00928",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-04-26"
+    },
+    {
+      "observation_uid": "ODD-00929",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-04-27"
+    },
+    {
+      "observation_uid": "ODD-00930",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-04-28"
+    },
+    {
+      "observation_uid": "ODD-00931",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-04-29"
+    },
+    {
+      "observation_uid": "ODD-00932",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-04-30"
+    },
+    {
+      "observation_uid": "ODD-00933",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-05-01"
+    },
+    {
+      "observation_uid": "ODD-00934",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-05-02"
+    },
+    {
+      "observation_uid": "ODD-00935",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-05-03"
+    },
+    {
+      "observation_uid": "ODD-00936",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-05-04"
+    },
+    {
+      "observation_uid": "ODD-00937",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-05-05"
+    },
+    {
+      "observation_uid": "ODD-00938",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-05-06"
+    },
+    {
+      "observation_uid": "ODD-00939",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-05-07"
+    },
+    {
+      "observation_uid": "ODD-00940",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-05-08"
+    },
+    {
+      "observation_uid": "ODD-00941",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-05-09"
+    },
+    {
+      "observation_uid": "ODD-00942",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-05-10"
+    },
+    {
+      "observation_uid": "ODD-00943",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-05-11"
+    },
+    {
+      "observation_uid": "ODD-00944",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-05-12"
+    },
+    {
+      "observation_uid": "ODD-00945",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-05-13"
+    },
+    {
+      "observation_uid": "ODD-00946",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-05-14"
+    },
+    {
+      "observation_uid": "ODD-00947",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-05-15"
+    },
+    {
+      "observation_uid": "ODD-00948",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-05-16"
+    },
+    {
+      "observation_uid": "ODD-00949",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-05-17"
+    },
+    {
+      "observation_uid": "ODD-00950",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-05-18"
+    },
+    {
+      "observation_uid": "ODD-00951",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-05-19"
+    },
+    {
+      "observation_uid": "ODD-00952",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-05-20"
+    },
+    {
+      "observation_uid": "ODD-00953",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-05-21"
+    },
+    {
+      "observation_uid": "ODD-00954",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-05-22"
+    },
+    {
+      "observation_uid": "ODD-00955",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-05-23"
+    },
+    {
+      "observation_uid": "ODD-00956",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-05-24"
+    },
+    {
+      "observation_uid": "ODD-00957",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-05-25"
+    },
+    {
+      "observation_uid": "ODD-00958",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-05-26"
+    },
+    {
+      "observation_uid": "ODD-00959",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-05-27"
+    },
+    {
+      "observation_uid": "ODD-00960",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-05-28"
+    },
+    {
+      "observation_uid": "ODD-00961",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-05-29"
+    },
+    {
+      "observation_uid": "ODD-00962",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-05-30"
+    },
+    {
+      "observation_uid": "ODD-00963",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-06-01"
+    },
+    {
+      "observation_uid": "ODD-00964",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-06-02"
+    },
+    {
+      "observation_uid": "ODD-00965",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-06-03"
+    },
+    {
+      "observation_uid": "ODD-00966",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-06-04"
+    },
+    {
+      "observation_uid": "ODD-00967",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-06-05"
+    },
+    {
+      "observation_uid": "ODD-00968",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-06-06"
+    },
+    {
+      "observation_uid": "ODD-00969",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-06-07"
+    },
+    {
+      "observation_uid": "ODD-00970",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-06-08"
+    },
+    {
+      "observation_uid": "ODD-00971",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-06-09"
+    },
+    {
+      "observation_uid": "ODD-00972",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-06-10"
+    },
+    {
+      "observation_uid": "ODD-00973",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-06-11"
+    },
+    {
+      "observation_uid": "ODD-00974",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-06-12"
+    },
+    {
+      "observation_uid": "ODD-00975",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-06-13"
+    },
+    {
+      "observation_uid": "ODD-00976",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-06-14"
+    },
+    {
+      "observation_uid": "ODD-00977",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-06-15"
+    },
+    {
+      "observation_uid": "ODD-00978",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-06-16"
+    },
+    {
+      "observation_uid": "ODD-00979",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-06-17"
+    },
+    {
+      "observation_uid": "ODD-00980",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-06-18"
+    },
+    {
+      "observation_uid": "ODD-00981",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-06-19"
+    },
+    {
+      "observation_uid": "ODD-00982",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-06-20"
+    },
+    {
+      "observation_uid": "ODD-00983",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-06-21"
+    },
+    {
+      "observation_uid": "ODD-00984",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-06-22"
+    },
+    {
+      "observation_uid": "ODD-00985",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-06-23"
+    },
+    {
+      "observation_uid": "ODD-00986",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-06-24"
+    },
+    {
+      "observation_uid": "ODD-00987",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-06-25"
+    },
+    {
+      "observation_uid": "ODD-00988",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-06-26"
+    },
+    {
+      "observation_uid": "ODD-00989",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-06-27"
+    },
+    {
+      "observation_uid": "ODD-00990",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-06-28"
+    },
+    {
+      "observation_uid": "ODD-00991",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-06-29"
+    },
+    {
+      "observation_uid": "ODD-00992",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-06-30"
+    },
+    {
+      "observation_uid": "ODD-00993",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-07-01"
+    },
+    {
+      "observation_uid": "ODD-00994",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-07-02"
+    },
+    {
+      "observation_uid": "ODD-00995",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-07-03"
+    },
+    {
+      "observation_uid": "ODD-00996",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-07-04"
+    },
+    {
+      "observation_uid": "ODD-00997",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-07-05"
+    },
+    {
+      "observation_uid": "ODD-00998",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-07-06"
+    },
+    {
+      "observation_uid": "ODD-00999",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-07-07"
+    },
+    {
+      "observation_uid": "ODD-01000",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-07-08"
+    },
+    {
+      "observation_uid": "ODD-01001",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-07-09"
+    },
+    {
+      "observation_uid": "ODD-01002",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-07-10"
+    },
+    {
+      "observation_uid": "ODD-01003",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-07-13"
+    },
+    {
+      "observation_uid": "ODD-01004",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-07-14"
+    },
+    {
+      "observation_uid": "ODD-01005",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-07-15"
+    },
+    {
+      "observation_uid": "ODD-01006",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-07-16"
+    },
+    {
+      "observation_uid": "ODD-01007",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-07-17"
+    },
+    {
+      "observation_uid": "ODD-01008",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-07-18"
+    },
+    {
+      "observation_uid": "ODD-01009",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-07-19"
+    },
+    {
+      "observation_uid": "ODD-01010",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-07-20"
+    },
+    {
+      "observation_uid": "ODD-01011",
+      "sample_uid": "SMP-114",
+      "measurement_date": "2026-07-21"
+    },
+    {
+      "observation_uid": "ODD-01012",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-05-12"
+    },
+    {
+      "observation_uid": "ODD-01013",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-05-13"
+    },
+    {
+      "observation_uid": "ODD-01014",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-05-14"
+    },
+    {
+      "observation_uid": "ODD-01015",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-05-15"
+    },
+    {
+      "observation_uid": "ODD-01016",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-05-16"
+    },
+    {
+      "observation_uid": "ODD-01017",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-05-17"
+    },
+    {
+      "observation_uid": "ODD-01018",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-05-18"
+    },
+    {
+      "observation_uid": "ODD-01019",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-05-19"
+    },
+    {
+      "observation_uid": "ODD-01020",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-05-20"
+    },
+    {
+      "observation_uid": "ODD-01021",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-05-21"
+    },
+    {
+      "observation_uid": "ODD-01022",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-05-22"
+    },
+    {
+      "observation_uid": "ODD-01023",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-05-23"
+    },
+    {
+      "observation_uid": "ODD-01024",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-05-24"
+    },
+    {
+      "observation_uid": "ODD-01025",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-05-25"
+    },
+    {
+      "observation_uid": "ODD-01026",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-05-26"
+    },
+    {
+      "observation_uid": "ODD-01027",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-05-27"
+    },
+    {
+      "observation_uid": "ODD-01028",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-05-28"
+    },
+    {
+      "observation_uid": "ODD-01029",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-05-29"
+    },
+    {
+      "observation_uid": "ODD-01030",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-05-30"
+    },
+    {
+      "observation_uid": "ODD-01031",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-06-01"
+    },
+    {
+      "observation_uid": "ODD-01032",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-06-02"
+    },
+    {
+      "observation_uid": "ODD-01033",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-06-03"
+    },
+    {
+      "observation_uid": "ODD-01034",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-06-04"
+    },
+    {
+      "observation_uid": "ODD-01035",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-06-05"
+    },
+    {
+      "observation_uid": "ODD-01036",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-06-06"
+    },
+    {
+      "observation_uid": "ODD-01037",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-06-07"
+    },
+    {
+      "observation_uid": "ODD-01038",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-06-08"
+    },
+    {
+      "observation_uid": "ODD-01039",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-06-09"
+    },
+    {
+      "observation_uid": "ODD-01040",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-06-10"
+    },
+    {
+      "observation_uid": "ODD-01041",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-06-11"
+    },
+    {
+      "observation_uid": "ODD-01042",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-06-12"
+    },
+    {
+      "observation_uid": "ODD-01043",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-06-13"
+    },
+    {
+      "observation_uid": "ODD-01044",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-06-14"
+    },
+    {
+      "observation_uid": "ODD-01045",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-06-15"
+    },
+    {
+      "observation_uid": "ODD-01046",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-06-16"
+    },
+    {
+      "observation_uid": "ODD-01047",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-06-17"
+    },
+    {
+      "observation_uid": "ODD-01048",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-06-18"
+    },
+    {
+      "observation_uid": "ODD-01049",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-06-19"
+    },
+    {
+      "observation_uid": "ODD-01050",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-06-20"
+    },
+    {
+      "observation_uid": "ODD-01051",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-06-21"
+    },
+    {
+      "observation_uid": "ODD-01052",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-06-22"
+    },
+    {
+      "observation_uid": "ODD-01053",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-06-23"
+    },
+    {
+      "observation_uid": "ODD-01054",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-06-24"
+    },
+    {
+      "observation_uid": "ODD-01055",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-06-25"
+    },
+    {
+      "observation_uid": "ODD-01056",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-06-26"
+    },
+    {
+      "observation_uid": "ODD-01057",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-06-27"
+    },
+    {
+      "observation_uid": "ODD-01058",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-06-28"
+    },
+    {
+      "observation_uid": "ODD-01059",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-06-29"
+    },
+    {
+      "observation_uid": "ODD-01060",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-06-30"
+    },
+    {
+      "observation_uid": "ODD-01061",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-07-01"
+    },
+    {
+      "observation_uid": "ODD-01062",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-07-02"
+    },
+    {
+      "observation_uid": "ODD-01063",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-07-03"
+    },
+    {
+      "observation_uid": "ODD-01064",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-07-04"
+    },
+    {
+      "observation_uid": "ODD-01065",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-07-05"
+    },
+    {
+      "observation_uid": "ODD-01066",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-07-06"
+    },
+    {
+      "observation_uid": "ODD-01067",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-07-07"
+    },
+    {
+      "observation_uid": "ODD-01068",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-07-08"
+    },
+    {
+      "observation_uid": "ODD-01069",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-07-09"
+    },
+    {
+      "observation_uid": "ODD-01070",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-07-10"
+    },
+    {
+      "observation_uid": "ODD-01071",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-07-13"
+    },
+    {
+      "observation_uid": "ODD-01072",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-07-14"
+    },
+    {
+      "observation_uid": "ODD-01073",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-07-15"
+    },
+    {
+      "observation_uid": "ODD-01074",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-07-16"
+    },
+    {
+      "observation_uid": "ODD-01075",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-07-17"
+    },
+    {
+      "observation_uid": "ODD-01076",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-07-18"
+    },
+    {
+      "observation_uid": "ODD-01077",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-07-19"
+    },
+    {
+      "observation_uid": "ODD-01078",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-07-20"
+    },
+    {
+      "observation_uid": "ODD-01079",
+      "sample_uid": "SMP-160",
+      "measurement_date": "2026-07-21"
+    },
+    {
+      "observation_uid": "ODD-01080",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-05-12"
+    },
+    {
+      "observation_uid": "ODD-01081",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-05-13"
+    },
+    {
+      "observation_uid": "ODD-01082",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-05-14"
+    },
+    {
+      "observation_uid": "ODD-01083",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-05-15"
+    },
+    {
+      "observation_uid": "ODD-01084",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-05-16"
+    },
+    {
+      "observation_uid": "ODD-01085",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-05-17"
+    },
+    {
+      "observation_uid": "ODD-01086",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-05-18"
+    },
+    {
+      "observation_uid": "ODD-01087",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-05-19"
+    },
+    {
+      "observation_uid": "ODD-01088",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-05-20"
+    },
+    {
+      "observation_uid": "ODD-01089",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-05-21"
+    },
+    {
+      "observation_uid": "ODD-01090",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-05-22"
+    },
+    {
+      "observation_uid": "ODD-01091",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-05-23"
+    },
+    {
+      "observation_uid": "ODD-01092",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-05-24"
+    },
+    {
+      "observation_uid": "ODD-01093",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-05-25"
+    },
+    {
+      "observation_uid": "ODD-01094",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-05-26"
+    },
+    {
+      "observation_uid": "ODD-01095",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-05-27"
+    },
+    {
+      "observation_uid": "ODD-01096",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-05-28"
+    },
+    {
+      "observation_uid": "ODD-01097",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-05-29"
+    },
+    {
+      "observation_uid": "ODD-01098",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-05-30"
+    },
+    {
+      "observation_uid": "ODD-01099",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-06-01"
+    },
+    {
+      "observation_uid": "ODD-01100",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-06-02"
+    },
+    {
+      "observation_uid": "ODD-01101",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-06-03"
+    },
+    {
+      "observation_uid": "ODD-01102",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-06-04"
+    },
+    {
+      "observation_uid": "ODD-01103",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-06-05"
+    },
+    {
+      "observation_uid": "ODD-01104",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-06-06"
+    },
+    {
+      "observation_uid": "ODD-01105",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-06-07"
+    },
+    {
+      "observation_uid": "ODD-01106",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-06-08"
+    },
+    {
+      "observation_uid": "ODD-01107",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-06-09"
+    },
+    {
+      "observation_uid": "ODD-01108",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-06-10"
+    },
+    {
+      "observation_uid": "ODD-01109",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-06-11"
+    },
+    {
+      "observation_uid": "ODD-01110",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-06-12"
+    },
+    {
+      "observation_uid": "ODD-01111",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-06-13"
+    },
+    {
+      "observation_uid": "ODD-01112",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-06-14"
+    },
+    {
+      "observation_uid": "ODD-01113",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-06-15"
+    },
+    {
+      "observation_uid": "ODD-01114",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-06-16"
+    },
+    {
+      "observation_uid": "ODD-01115",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-06-17"
+    },
+    {
+      "observation_uid": "ODD-01116",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-06-18"
+    },
+    {
+      "observation_uid": "ODD-01117",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-06-19"
+    },
+    {
+      "observation_uid": "ODD-01118",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-06-20"
+    },
+    {
+      "observation_uid": "ODD-01119",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-06-21"
+    },
+    {
+      "observation_uid": "ODD-01120",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-06-22"
+    },
+    {
+      "observation_uid": "ODD-01121",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-06-23"
+    },
+    {
+      "observation_uid": "ODD-01122",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-06-24"
+    },
+    {
+      "observation_uid": "ODD-01123",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-06-25"
+    },
+    {
+      "observation_uid": "ODD-01124",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-06-26"
+    },
+    {
+      "observation_uid": "ODD-01125",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-06-27"
+    },
+    {
+      "observation_uid": "ODD-01126",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-06-28"
+    },
+    {
+      "observation_uid": "ODD-01127",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-06-29"
+    },
+    {
+      "observation_uid": "ODD-01128",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-06-30"
+    },
+    {
+      "observation_uid": "ODD-01129",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-07-01"
+    },
+    {
+      "observation_uid": "ODD-01130",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-07-02"
+    },
+    {
+      "observation_uid": "ODD-01131",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-07-03"
+    },
+    {
+      "observation_uid": "ODD-01132",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-07-04"
+    },
+    {
+      "observation_uid": "ODD-01133",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-07-05"
+    },
+    {
+      "observation_uid": "ODD-01134",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-07-06"
+    },
+    {
+      "observation_uid": "ODD-01135",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-07-07"
+    },
+    {
+      "observation_uid": "ODD-01136",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-07-08"
+    },
+    {
+      "observation_uid": "ODD-01137",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-07-09"
+    },
+    {
+      "observation_uid": "ODD-01138",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-07-10"
+    },
+    {
+      "observation_uid": "ODD-01139",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-07-13"
+    },
+    {
+      "observation_uid": "ODD-01140",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-07-14"
+    },
+    {
+      "observation_uid": "ODD-01141",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-07-15"
+    },
+    {
+      "observation_uid": "ODD-01142",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-07-16"
+    },
+    {
+      "observation_uid": "ODD-01143",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-07-17"
+    },
+    {
+      "observation_uid": "ODD-01144",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-07-18"
+    },
+    {
+      "observation_uid": "ODD-01145",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-07-19"
+    },
+    {
+      "observation_uid": "ODD-01146",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-07-20"
+    },
+    {
+      "observation_uid": "ODD-01147",
+      "sample_uid": "SMP-177",
+      "measurement_date": "2026-07-21"
+    },
+    {
+      "observation_uid": "ODD-01148",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-05-12"
+    },
+    {
+      "observation_uid": "ODD-01149",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-05-13"
+    },
+    {
+      "observation_uid": "ODD-01150",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-05-14"
+    },
+    {
+      "observation_uid": "ODD-01151",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-05-15"
+    },
+    {
+      "observation_uid": "ODD-01152",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-05-16"
+    },
+    {
+      "observation_uid": "ODD-01153",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-05-17"
+    },
+    {
+      "observation_uid": "ODD-01154",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-05-18"
+    },
+    {
+      "observation_uid": "ODD-01155",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-05-19"
+    },
+    {
+      "observation_uid": "ODD-01156",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-05-20"
+    },
+    {
+      "observation_uid": "ODD-01157",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-05-21"
+    },
+    {
+      "observation_uid": "ODD-01158",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-05-22"
+    },
+    {
+      "observation_uid": "ODD-01159",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-05-23"
+    },
+    {
+      "observation_uid": "ODD-01160",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-05-24"
+    },
+    {
+      "observation_uid": "ODD-01161",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-05-25"
+    },
+    {
+      "observation_uid": "ODD-01162",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-05-26"
+    },
+    {
+      "observation_uid": "ODD-01163",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-05-27"
+    },
+    {
+      "observation_uid": "ODD-01164",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-05-28"
+    },
+    {
+      "observation_uid": "ODD-01165",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-05-29"
+    },
+    {
+      "observation_uid": "ODD-01166",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-05-30"
+    },
+    {
+      "observation_uid": "ODD-01167",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-06-01"
+    },
+    {
+      "observation_uid": "ODD-01168",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-06-02"
+    },
+    {
+      "observation_uid": "ODD-01169",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-06-03"
+    },
+    {
+      "observation_uid": "ODD-01170",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-06-04"
+    },
+    {
+      "observation_uid": "ODD-01171",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-06-05"
+    },
+    {
+      "observation_uid": "ODD-01172",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-06-06"
+    },
+    {
+      "observation_uid": "ODD-01173",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-06-07"
+    },
+    {
+      "observation_uid": "ODD-01174",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-06-08"
+    },
+    {
+      "observation_uid": "ODD-01175",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-06-09"
+    },
+    {
+      "observation_uid": "ODD-01176",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-06-10"
+    },
+    {
+      "observation_uid": "ODD-01177",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-06-11"
+    },
+    {
+      "observation_uid": "ODD-01178",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-06-12"
+    },
+    {
+      "observation_uid": "ODD-01179",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-06-13"
+    },
+    {
+      "observation_uid": "ODD-01180",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-06-14"
+    },
+    {
+      "observation_uid": "ODD-01181",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-06-15"
+    },
+    {
+      "observation_uid": "ODD-01182",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-06-16"
+    },
+    {
+      "observation_uid": "ODD-01183",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-06-17"
+    },
+    {
+      "observation_uid": "ODD-01184",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-06-18"
+    },
+    {
+      "observation_uid": "ODD-01185",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-06-19"
+    },
+    {
+      "observation_uid": "ODD-01186",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-06-20"
+    },
+    {
+      "observation_uid": "ODD-01187",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-06-21"
+    },
+    {
+      "observation_uid": "ODD-01188",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-06-22"
+    },
+    {
+      "observation_uid": "ODD-01189",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-06-23"
+    },
+    {
+      "observation_uid": "ODD-01190",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-06-24"
+    },
+    {
+      "observation_uid": "ODD-01191",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-06-25"
+    },
+    {
+      "observation_uid": "ODD-01192",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-06-26"
+    },
+    {
+      "observation_uid": "ODD-01193",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-06-27"
+    },
+    {
+      "observation_uid": "ODD-01194",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-06-28"
+    },
+    {
+      "observation_uid": "ODD-01195",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-06-29"
+    },
+    {
+      "observation_uid": "ODD-01196",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-06-30"
+    },
+    {
+      "observation_uid": "ODD-01197",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-07-01"
+    },
+    {
+      "observation_uid": "ODD-01198",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-07-02"
+    },
+    {
+      "observation_uid": "ODD-01199",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-07-03"
+    },
+    {
+      "observation_uid": "ODD-01200",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-07-04"
+    },
+    {
+      "observation_uid": "ODD-01201",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-07-05"
+    },
+    {
+      "observation_uid": "ODD-01202",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-07-06"
+    },
+    {
+      "observation_uid": "ODD-01203",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-07-07"
+    },
+    {
+      "observation_uid": "ODD-01204",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-07-08"
+    },
+    {
+      "observation_uid": "ODD-01205",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-07-09"
+    },
+    {
+      "observation_uid": "ODD-01206",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-07-10"
+    },
+    {
+      "observation_uid": "ODD-01207",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-07-13"
+    },
+    {
+      "observation_uid": "ODD-01208",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-07-14"
+    },
+    {
+      "observation_uid": "ODD-01209",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-07-15"
+    },
+    {
+      "observation_uid": "ODD-01210",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-07-16"
+    },
+    {
+      "observation_uid": "ODD-01211",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-07-17"
+    },
+    {
+      "observation_uid": "ODD-01212",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-07-18"
+    },
+    {
+      "observation_uid": "ODD-01213",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-07-19"
+    },
+    {
+      "observation_uid": "ODD-01214",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-07-20"
+    },
+    {
+      "observation_uid": "ODD-01215",
+      "sample_uid": "SMP-179",
+      "measurement_date": "2026-07-21"
     }
   ]
 }

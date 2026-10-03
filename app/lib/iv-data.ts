@@ -1,4 +1,4 @@
-export type MetricKey = "efficiency_pct" | "jsc_mA_cm2" | "voc_V" | "ff_pct" | "outdoor_pr_pct" | "outdoor_pmpp_W" | "outdoor_irradiance_W_m2";
+export type MetricKey = "efficiency_pct" | "jsc_mA_cm2" | "voc_V" | "ff_pct" | "outdoor_pr_pct" | "outdoor_pmpp_W" | "outdoor_irradiance_W_m2" | "light_pout_forward_mW_cm2" | "light_pout_reverse_mW_cm2";
 export type Aggregation = "mean" | "median";
 
 export interface Sample {
@@ -43,6 +43,8 @@ export interface Observation {
   outdoor_pr_pct?: number | null;
   outdoor_pmpp_W?: number | null;
   outdoor_irradiance_W_m2?: number | null;
+  light_pout_forward_mW_cm2?: number | null;
+  light_pout_reverse_mW_cm2?: number | null;
   action_or_status?: string | null;
   comments?: string | null;
   data_quality_flag?: string | null;
@@ -205,6 +207,10 @@ export function validateDataset(value: unknown): IVDataset {
   const fileIds = new Set(files.map((row) => row.file_uid));
   observations.forEach((row) => {
     if (!sampleIds.has(row.sample_uid)) throw new Error(`Observation ${row.observation_uid} references unknown sample ${row.sample_uid}.`);
+    for (const metric of ["light_pout_forward_mW_cm2", "light_pout_reverse_mW_cm2"] as const) {
+      const value = row[metric];
+      if (value !== undefined && value !== null && (typeof value !== "number" || !Number.isFinite(value))) throw new Error(`Invalid light-ageing metric in ${row.observation_uid}.`);
+    }
   });
   files.forEach((row) => {
     if (row.sample_uid && !sampleIds.has(row.sample_uid)) throw new Error(`File ${row.file_uid} references unknown sample ${row.sample_uid}.`);
@@ -491,6 +497,8 @@ export const METRICS: Record<MetricKey, { label: string; unit: string; digits: n
   outdoor_pr_pct: { label: "Outdoor PR (daily median)", unit: "%", digits: 1 },
   outdoor_pmpp_W: { label: "Outdoor Pmpp (daylight median)", unit: "W", digits: 2 },
   outdoor_irradiance_W_m2: { label: "Irradiance (daylight median)", unit: "W/m²", digits: 0 },
+  light_pout_forward_mW_cm2: { label: "Light-ageing Pout — forward", unit: "mW/cm²", digits: 2 },
+  light_pout_reverse_mW_cm2: { label: "Light-ageing Pout — reverse", unit: "mW/cm²", digits: 2 },
 };
 
 export { aggregate } from "./science";

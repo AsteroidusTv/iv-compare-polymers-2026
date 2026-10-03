@@ -82,6 +82,8 @@ export interface JVDiagnostic {
   instrument: { jsc_mA_cm2: number | null; voc_V: number | null; ff_pct: number | null; efficiency_pct: number | null; pmpp_mW_cm2: number | null };
   reconstructed: JVMetrics;
   currentDensityStatus: "consistent_not_calibrated" | "suspicious_surface_or_units" | "unresolved";
+  /** Safe for default exploratory display after automated numerical screening. */
+  screeningEligible: boolean;
   quantitativeEligible: boolean;
   validation: { numericallyConsistent: boolean; unitValidated: boolean; rangeValidated: boolean; experimentallyValidated: boolean };
   consistency: ReturnType<typeof metricConsistency>[];
@@ -138,7 +140,8 @@ export function getJVDiagnostics(dataset: IVDataset): ReadonlyMap<string, JVDiag
     if (!validation.rangeValidated) issues.push("Acquired range unresolved: a non-repeated branch is not proof of acquisition.");
     if (!validation.experimentallyValidated) issues.push("Experimental validation unresolved.");
     if (row.qa_flags) issues.push(`Source QA: ${row.qa_flags}`);
-    result.set(row.measurement_uid, { measurementUid: row.measurement_uid, analysis, segments, instrument, reconstructed, currentDensityStatus: currentMismatch ? "suspicious_surface_or_units" : reconstructed.jsc_mA_cm2 !== null && instrument.jsc_mA_cm2 !== null ? "consistent_not_calibrated" : "unresolved", quantitativeEligible: primaryIndex >= 0 && numericallyConsistent && validation.unitValidated && validation.rangeValidated && validation.experimentallyValidated && !row.qa_flags, validation, consistency, issues,
+    const screeningEligible = primaryIndex >= 0 && numericallyConsistent && !row.qa_flags;
+    result.set(row.measurement_uid, { measurementUid: row.measurement_uid, analysis, segments, instrument, reconstructed, currentDensityStatus: currentMismatch ? "suspicious_surface_or_units" : reconstructed.jsc_mA_cm2 !== null && instrument.jsc_mA_cm2 !== null ? "consistent_not_calibrated" : "unresolved", screeningEligible, quantitativeEligible: screeningEligible && validation.unitValidated && validation.rangeValidated && validation.experimentallyValidated, validation, consistency, issues,
       conversion: { voltageUnitInterpretation: row.voltage_unit_interpretation || "Pack V; original unit interpretation not recorded", currentUnitInterpretation: row.current_unit_interpretation || "Pack generated mA/cm²; original conversion not independently documented", surfaceUsed: row.cell_area_cm2 ?? null, conversionApplied: row.conversion_applied || "Legacy pack transformation retained, not altered", conversionConfidence: validation.unitValidated ? "documented" : "legacy_unverified" } });
   }
   cache.set(dataset, result); return result;
@@ -148,7 +151,7 @@ export function getJVDiagnostics(dataset: IVDataset): ReadonlyMap<string, JVDiag
 export function chooseSpecimenFirstMeasurement(rows: Measurement[], dataset: IVDataset, includeUnsafe = false): Measurement | null {
   const diagnostics = getJVDiagnostics(dataset), groups = new Map<string, Measurement[]>();
   for (const row of rows) {
-    if (!row.sample_uid || !finite(row.efficiency_pct) || (!includeUnsafe && !diagnostics.get(row.measurement_uid)?.quantitativeEligible)) continue;
+    if (!row.sample_uid || !finite(row.efficiency_pct) || (!includeUnsafe && !diagnostics.get(row.measurement_uid)?.screeningEligible)) continue;
     const group = groups.get(row.sample_uid) ?? []; group.push(row); groups.set(row.sample_uid, group);
   }
   const candidates = [...groups].map(([uid, entries]) => {

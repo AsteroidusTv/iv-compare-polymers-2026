@@ -1,6 +1,6 @@
 {
-  "pipelineVersion": "2.2.0",
-  "generatedOn": "2026-09-25",
+  "pipelineVersion": "2.4.1",
+  "generatedOn": "2026-10-03",
   "inventory": {
     "source": "data/raw/IV/Summary.xlsx",
     "rule": "Parse both Lami-results and Lami-results2. Forward-fill batch, electrode, owner, encapsulation date and material only inside each sheet's sample block. A non-empty Material or Sample ID starts a sample; following rows contain additional observations until the next sample.",
@@ -23,10 +23,21 @@
     "manualMetricAdjudications": "The versioned decision registry may exclude a source-bound daily PR aggregate by sample and date after owner QA adjudication; the PR metric only is excluded, raw rows and other metrics are retained, and the cause is not inferred.",
     "retentionBaseline": "Median of the first 3 to 7 QA-valid daily values for the same sample and metric; 3/7/14-day sensitivity is reported when enough data exist."
   },
+  "lightAgeing": {
+    "source": "data/raw/LightAgeing/Pearl_261001",
+    "decisionManifest": "data/decisions/light-ageing-pearl-v1.json",
+    "metrics": "Pout forward and reverse in mW/cm2, stored separately; no inferred PCE without incident irradiance.",
+    "time": "Recorded elapsed hours, not an inferred illuminated-dose duration.",
+    "irradianceExclusions": "Owner-adjudicated source-bound rows 5, 6 and 84 in each of the five summaries: 1.5-sun peaks and elevated startup transition. Raw values preserved; both sweep directions excluded even with QA inspection enabled.",
+    "retentionBaseline": "First recorded same-cell and same-direction point after explicit different-irradiance exclusions; no substitution for a missing, zero, negative, QA-excluded or ambiguous reference.",
+    "identity": "Unique A4 filename/inventory links remain provisional.",
+    "aggregation": "No temporal interpolation or forward/reverse pooling. XLSX Summary is authoritative; TXT and JVs are archived without double counting."
+  },
   "notes": [
     "Versioned raw snapshots are immutable; the active Summary.xlsx alias is updated only to a retained versioned snapshot, and the aggregate raw-tree SHA-256 is embedded in every .ivpack.",
     "The September intake also archives FTIR and SEM sources but does not interpret them as IV or ageing measurements.",
     "The processed workbook remains the auditable normalization decision ledger.",
-    "The compact browser package is rebuilt deterministically from versioned processed artifacts."
+    "The compact browser package is rebuilt deterministically from versioned processed artifacts.",
+    "October logger intake: 11 superseded CSV snapshots retained as archives; 8 provisional A1 links; no double counting. Export rounds timestamps to minutes and values to about 10 significant digits. Photos are archived without specimen attribution."
   ]
 }

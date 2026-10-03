@@ -25,12 +25,27 @@ The application supports exploratory comparison after damp heat (DH), thermal cy
 
 ## Data and provenance
 
+On this Windows workspace, the repository lives directly at
+`C:\Users\Achille\Documents\TM\iv-comparator-site`. It has no dependency on
+an external OneDrive import folder. Intake scripts take an explicit source
+directory argument; building, verifying and running use the versioned files
+inside this repository. `data/raw` keeps originals, `data/processed` keeps
+derived audit inputs, and `public/data` contains the packages served to the browser.
+
+Pearl adds **Light ageing**, with separate forward/reverse Pout metrics in
+mW/cm² and first-recorded-point retention. Five A4 cells of TPO-2 / Lenzing
+and POE-2 / TF4 supply 1,908 observations. See the
+[source audit and normalization rules](docs/data/LIGHT_AGEING_PEARL.md).
+Original files are in `data/raw/LightAgeing/`; the derived audit copy is
+`data/processed/Light_ageing_Pearl.json`. These observations are loaded directly
+from hashed raw summaries alongside the existing normalized workbook.
+
 - `data/raw/IV/`: versioned inventories through `Summary_v3.xlsx` (also copied as the active `Summary.xlsx`) and original solar-simulator `.xls` files through 23 September 2026. Earlier inventories remain archived.
 - `data/raw/Outdoor/`: immutable logger CSV files.
 - `data/raw/FTIR/` and `data/raw/SEM/`: archived original analytical sources; not yet interpreted or included in IV/ageing graphs.
 - `data/processed/IV_dataset_normalise_Outdoor.xlsx`: relational inventory, matching decisions, measurement metadata, and daily Outdoor aggregates.
 - `data/processed/IV_curve_points.tsv`: 1,137,150 ordered IV points.
-- `data/processed/Outdoor_raw_measurements.tsv`: 203,122 traceable Outdoor measurements.
+- `data/processed/Outdoor_raw_measurements.tsv`: 406,346 traceable Outdoor measurements through 29–30 September 2026.
 - `data/processed/normalization-protocol.json`: versioned transformation rules and scientific assumptions.
 - `data/processed/IV_Compare_DOWSIL.ivpack`: compact browser package.
 - `data/context/`: the publication and project presentation used as scientific context.
@@ -40,6 +55,13 @@ The browser package embeds SHA-256 provenance for the complete raw-data tree and
 Matching totals distinguish unresolved files from audit-only sources. Non-encapsulated and silicon reference cells, plus files already stored in laboratory `Trash` folders, remain preserved but are not counted as polymer-matching failures.
 The September intake added 11 A4 cells and 49 inventory observations. Of its 59 new IV files, 38 have provisional batch/material/specimen filename links, 9 aged files require identity review, and 12 Red-box pre-encapsulation files remain unlinked. These provisional links are not a laboratory adjudication. Outdoor CSVs contain no new numerical observations in this intake.
 
+The [3 October intake](docs/data/INTAKE_2026-10-03.md) adds 203,224 Outdoor raw rows
+and 1,078 daily aggregates. Eleven extended CSVs replace their historical sources
+in the active analysis; eight new A1 cells have provisional filename/inventory
+links. All historical sources remain archived without double counting. The 48
+cell photographs and an additional research presentation are archived as context,
+without invented specimen attribution. Inventory and IV curves are unchanged.
+
 Rebuild and verify the package:
 
 ```bash
@@ -48,7 +70,7 @@ pnpm data:verify
 pnpm data:verify:deep
 ```
 
-`data:verify` reconciles the recorded source links and row counts, then proves that both committed `.ivpack` files are byte-for-byte reproducible. `data:verify:deep` additionally reads every raw IV workbook and Outdoor CSV and compares all 1,137,150 IV points and 203,122 Outdoor measurements with the processed values.
+`data:verify` reconciles the recorded source links and row counts, then proves that both committed `.ivpack` files are byte-for-byte reproducible. `data:verify:deep` additionally reads every raw IV workbook and active Outdoor CSV and compares all 1,137,150 IV points and 406,346 Outdoor measurements with the processed values.
 
 ## Local development
 

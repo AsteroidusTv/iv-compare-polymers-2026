@@ -13,7 +13,7 @@ export interface FigureExportContext {
   seriesMetadata?: Record<string, unknown>;
   sourceCode?: unknown;
   analyticalTrendSeries?: TrendSeries[];
-  validation?: { quantitativeValidated: boolean };
+  validation?: { quantitativeValidated: boolean; screeningEligible?: boolean };
   analysisTrace?: Record<string, import("./normalization-trace").NormalizationTrace[]>;
   missingness?: { seriesId: string; rows: { sampleUid: string; time: number; exclusionReasons: string[] }[] }[];
   [key: string]: unknown;
@@ -32,7 +32,12 @@ export function jvMethodCaption(context:FigureExportContext,series:CurveSeries[]
     const file=source?.file;
     return file?[`${file.inferred_test_type??"protocole non renseigné"}, exposition ${file.inferred_exposure_duration??"non renseignée"}${file.inferred_test_type==="TC"?" cycles":file.inferred_test_type==="DH"?" h":""}, mesure du ${file.measurement_date??"date inconnue"}`]:[];
   });
-  return `${ids.length} cellule${ids.length===1?"":"s"} du registre ; ${descriptions.join(" ; ")||ids.join(", ")}. ${series.map(item=>item.label).join(" ; ")}. ${[...new Set(conditions)].join(" ; ")}. Courbes JV absolues, sans normalisation ni regroupement ; aucun intervalle de confiance. Les segments secondaires sont en tirets ; les résidus répétés suspectés sont en pointillés. ${context.validation?.quantitativeValidated===false?"Unités, plages ou validation expérimentale non résolues : inspection uniquement, sans valeur de preuve quantitative.":"Admissibilité et décisions de contrôle qualité consignées dans le manifeste."}`;
+  const validationNote = context.validation?.quantitativeValidated
+    ? "Validation quantitative et décisions de contrôle qualité consignées dans le manifeste."
+    : context.validation?.screeningEligible
+      ? "Courbes cohérentes au contrôle numérique automatique ; unités, plage acquise et validation expérimentale restent à confirmer."
+      : "Contrôle numérique ou branche acquise non résolus : inspection uniquement.";
+  return `${ids.length} cellule${ids.length===1?"":"s"} du registre ; ${descriptions.join(" ; ")||ids.join(", ")}. ${series.map(item=>item.label).join(" ; ")}. ${[...new Set(conditions)].join(" ; ")}. Courbes JV absolues, sans normalisation ni regroupement ; aucun intervalle de confiance. Les segments secondaires sont en tirets ; les résidus répétés suspectés sont en pointillés. ${validationNote}`;
 }
 export interface FigureManifest {
   schemaVersion: "iv-compare-figure/1";

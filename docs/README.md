@@ -10,8 +10,12 @@ stays at the repository root because it is the operational entry point for relea
 | Scientific calculations, QA and interpretation rules | [Scientific methods](science/SCIENTIFIC_METHODS.md) |
 | Questions awaiting laboratory evidence | [Laboratory questions](science/LAB_QUESTIONS.md) |
 | Rebuild the dataset from raw inputs | [Raw reconstruction](data/RAW_REBUILD.md) |
+| Pearl power trends and first-point retention | [Light ageing](data/LIGHT_AGEING_PEARL.md) |
 
 ## Dated records
+
+The [3 October data-intake report](data/INTAKE_2026-10-03.md) records the latest
+Outdoor extensions, new A1 logger series, source supersession and validation.
 
 The [25 September data-intake report](data/INTAKE_2026-09-25.md) lists the new
 raw sources, linked and unresolved files, and the interpretation limits.

@@ -83,6 +83,8 @@ const used = daily.getUsedRange(true);
 const matrix = used.values;
 const headers = matrix[0].map((value) => String(value ?? ""));
 const index = Object.fromEntries(headers.map((header, column) => [header, column]));
+index.pmpp_W_max ??= index.pmpp_W_daylight_median;
+index.irradiance_W_m2_max ??= index.irradiance_W_m2_daylight_median;
 const groups = await outdoorGroups();
 const protocol = "PR, Pmpp and irradiance median for Irr>=200 W/m2; electrical-only files use median positive Pmpp with explicit QA flag";
 
@@ -123,7 +125,7 @@ for (let rowIndex = 1; rowIndex < matrix.length; rowIndex += 1) {
 }
 
 used.values = matrix;
-daily.getRange("I2:K1216").format.numberFormat = "0.00";
+daily.getRange(`I2:K${matrix.length}`).format.numberFormat = "0.00";
 daily.getRange("A1:M1").format.wrapText = true;
 daily.getRange("A1:M1").format.rowHeight = 42;
 daily.freezePanes.freezeRows(1);
@@ -144,9 +146,9 @@ readme.getRange("A3:B10").values = [
 readme.getRange("D7:E7").values = [["Reference / audit-only files", auditFileCount]];
 readme.getRange("D3:E6").values = [
   ["Outdoor", "Value"],
-  ["CSV files", 15],
-  ["Raw measurements", 203122],
-  ["Daily aggregates", 1215],
+  ["CSV files", workbook.worksheets.getItem("Outdoor_Files").getUsedRange(true).values.length - 1],
+  ["Raw measurements", [...groups.values()].reduce((sum, group) => sum + group.rows.length, 0)],
+  ["Daily aggregates", matrix.length - 1],
 ];
 readme.getRange("A12").values = [["Relations and use"]];
 readme.getRange("D13:D16").values = [

@@ -13,14 +13,15 @@ export interface SeriesConfig {
 
 export const IV_METRICS: MetricKey[] = ["efficiency_pct", "jsc_mA_cm2", "voc_V", "ff_pct"];
 export const OUTDOOR_METRICS: MetricKey[] = ["outdoor_pr_pct", "outdoor_pmpp_W", "outdoor_irradiance_W_m2"];
-const STRESS_ORDER = ["DH", "TC", "Outdoor", "Unaged", "DH+TC"];
+export const LIGHT_AGEING_METRICS: MetricKey[] = ["light_pout_forward_mW_cm2", "light_pout_reverse_mW_cm2"];
+const STRESS_ORDER = ["DH", "TC", "Outdoor", "Light ageing", "Unaged", "DH+TC"];
 
 function unique(values: Array<string | null | undefined>): string[] {
   return [...new Set(values.filter((value): value is string => Boolean(value)))].sort((left, right) => left.localeCompare(right, "en"));
 }
 
 export function metricOptionsFor(stress: string): MetricKey[] {
-  return stress === "Outdoor" ? OUTDOOR_METRICS : IV_METRICS;
+  return stress === "Outdoor" ? OUTDOOR_METRICS : stress === "Light ageing" ? LIGHT_AGEING_METRICS : IV_METRICS;
 }
 
 type SampleFilters = Pick<SeriesConfig, "material" | "electrode" | "recipe" | "formulation" | "batch">;
@@ -61,7 +62,7 @@ export function normalizeSeriesConfig(dataset: IVDataset, config: SeriesConfig):
   const stresses = stressesForConfig(dataset, { ...config, material, electrode, recipe });
   const stress = stresses.includes(config.stress) ? config.stress : stresses[0] ?? "Unaged";
   const metrics = metricOptionsFor(stress);
-  const metric = metrics.includes(config.metric) ? config.metric : stress === "Outdoor" ? "outdoor_pr_pct" : "efficiency_pct";
+  const metric = metrics.includes(config.metric) ? config.metric : metrics[0];
   return { ...config, material, electrode, recipe, stress, metric };
 }
 

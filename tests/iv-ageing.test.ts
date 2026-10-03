@@ -8,9 +8,10 @@ import { ageingSampleCandidates, defaultAgeingTimes, resolveAgeingTimes, toggleA
 test("ageing evolution offers only the same physical cell at multiple exact times", () => {
   const dataset: IVDataset = JSON.parse(zlib.gunzipSync(fs.readFileSync("public/data/iv-compare-dowsil.ivpack")).toString());
   const config = { id: "a", material: "EVA", stress: "DH", metric: "efficiency_pct" as const, electrode: "all", recipe: "all" };
-  assert.equal(ageingSampleCandidates(dataset, config, false).length, 0, "Unresolved legacy units are not quantitatively validated");
-  const candidates = ageingSampleCandidates(dataset, config, false, true);
+  const candidates = ageingSampleCandidates(dataset, config, false);
   assert.ok(candidates.length > 0);
+  const inspectionCandidates = ageingSampleCandidates(dataset, config, false, true);
+  assert.ok(inspectionCandidates.length >= candidates.length);
   assert.ok(candidates.every((candidate) => candidate.times.length >= 2));
   assert.ok(candidates.every((candidate) => candidate.times.every((time) => time.measurements.every((measurement) => measurement.sample_uid === candidate.sampleUid))));
   assert.ok(candidates.every((candidate) => candidate.times.every((time) => time.measurements.every((measurement) => dataset.files.find((file) => file.file_uid === measurement.file_uid)?.inferred_test_type === "Unaged" ? time.time === 0 : time.time > 0))));

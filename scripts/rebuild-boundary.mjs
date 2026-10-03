@@ -46,6 +46,17 @@ export function validateDecisionRegistry(registry) {
     for (const item of registry[key]) { if (!item || typeof item[id] !== "string" || !item[id] || ids.has(item[id])) fail(`${key} duplicate/invalid identity`); ids.add(item[id]); }
   }
   for (const item of [...registry.matching, ...registry.outdoor]) if (!(item.target in registry.rawHashes)) fail("decision source missing from hashes");
+  if (registry.outdoorDailyIds !== undefined) {
+    if (!Array.isArray(registry.outdoorDailyIds) || registry.outdoorDailyIds.length > 100000) fail("Outdoor daily identities");
+    const ids = new Set(), days = new Set();
+    const samples = new Set(registry.inventoryIds.map(item => item.sample_uid));
+    for (const item of registry.outdoorDailyIds) {
+      const key = JSON.stringify([item.sample_uid, item.measurement_date]);
+      if (!/^ODD-\d{5}$/.test(item.observation_uid) || !samples.has(item.sample_uid)
+        || !/^\d{4}-\d{2}-\d{2}$/.test(item.measurement_date) || ids.has(item.observation_uid) || days.has(key)) fail("Outdoor daily duplicate/invalid identity");
+      ids.add(item.observation_uid); days.add(key);
+    }
+  }
   const outdoorTargets = new Map(registry.outdoor.map(item => [item.target, item.decision.sample_uid]));
   const outdoorAdjudications = new Set();
   for (const item of registry.outdoorMetricAdjudications) {

@@ -17,10 +17,8 @@ export function jvSelectionLedger(dataset:IVDataset, measurementIds:string[], se
   if(!selected.has(row.measurement_uid)) {
    if(!dataset.curves[row.measurement_uid]) reasons.push("no_curve_points");
    if(!includeQa&&measurementQualityReasons(row).length) reasons.push("qa_source_or_metric");
-   if(!inspectUnsafe&&!diagnostic?.quantitativeEligible) {
-    if(!diagnostic?.validation.unitValidated) reasons.push("unit_unresolved");
-    if(!diagnostic?.validation.rangeValidated) reasons.push("segment_unresolved");
-    if(!diagnostic?.validation.experimentallyValidated) reasons.push("experimental_validation_unresolved");
+   if(!inspectUnsafe&&!diagnostic?.screeningEligible) {
+    if((diagnostic?.analysis.primaryIndex??-1)<0) reasons.push("no_reviewable_primary_segment");
     if(!diagnostic?.validation.numericallyConsistent) reasons.push("numeric_consistency_unresolved");
    }
    if(typeof time!=="number"||!selectedTimes.includes(time)) reasons.push("not_selected_time");
@@ -47,7 +45,7 @@ export function fullJVSelectionCsv(dataset:IVDataset,measurementIds:string[]) {
   const curve=dataset.curves[measurement.measurement_uid],diagnostic=diagnostics.get(measurement.measurement_uid),file=files.get(measurement.file_uid);
   const membership=new Map<number,string[]>();
   for(const segment of diagnostic?.analysis.segments??[])for(const point of segment.points){const ids=membership.get(point.sourceIndex)??[];ids.push(segment.id);membership.set(point.sourceIndex,ids);}
-  const common={sample_uid:measurement.sample_uid,ribbon_raw:samples.get(measurement.sample_uid??"")?.ribbon_raw??null,measurement_uid:measurement.measurement_uid,file_uid:measurement.file_uid,source_file:file?.source_file,sheet:measurement.sheet_name,curve_series_index:measurement.curve_series_index,protocol:file?.inferred_test_type,time:file?.inferred_exposure_duration,surface_cm2:measurement.cell_area_cm2,unit_interpretation:diagnostic?.conversion,QA_status:diagnostic?.issues,validation:diagnostic?.validation,quantitative_eligible:diagnostic?.quantitativeEligible,package_sha256:datasetPackageHash(dataset),source_code:buildIdentity,export_scope:"full selected processed source points, including unresolved; not all quantitatively eligible",current_convention:"generated (legacy converted), not a new physical validation"};
+  const common={sample_uid:measurement.sample_uid,ribbon_raw:samples.get(measurement.sample_uid??"")?.ribbon_raw??null,measurement_uid:measurement.measurement_uid,file_uid:measurement.file_uid,source_file:file?.source_file,sheet:measurement.sheet_name,curve_series_index:measurement.curve_series_index,protocol:file?.inferred_test_type,time:file?.inferred_exposure_duration,surface_cm2:measurement.cell_area_cm2,unit_interpretation:diagnostic?.conversion,QA_status:diagnostic?.issues,validation:diagnostic?.validation,screening_eligible:diagnostic?.screeningEligible,quantitative_eligible:diagnostic?.quantitativeEligible,package_sha256:datasetPackageHash(dataset),source_code:buildIdentity,export_scope:"full selected processed source points, including unresolved; not all quantitatively validated",current_convention:"generated (legacy converted), not a new physical validation"};
   if(!curve){rows.push({...common,exclusion_reason:"no_curve_points"});continue;}
   curve.v.forEach((value,index)=>rows.push({...common,source_point_index:index,V:value,J:curve.j[index],segments:membership.get(index)??[],point_status:value===null||curve.j[index]===null?"non_numeric_point":"retained_full_selection"}));
  }

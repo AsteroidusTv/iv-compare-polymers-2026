@@ -12,10 +12,10 @@ test("full JV CSV retains unresolved and null source points, with stable indices
  const csv=fullJVSelectionCsv(dataset,["M"]),book=XLSX.read(csv,{type:"string",raw:true}),rows=XLSX.utils.sheet_to_json<Record<string,string>>(book.Sheets[book.SheetNames[0]],{defval:null});
  assert.equal(rows.length,4);assert.deepEqual(rows.map(row=>row.source_point_index),["0","1","2","3"]);
  assert.equal(rows[1].point_status,"non_numeric_point");assert.equal(rows[1].V,null);
- assert.ok(rows.every(row=>row.quantitative_eligible==="false"));assert.equal(rows[2].V,"0.5");assert.equal(rows[2].J,"10");
+ assert.ok(rows.every(row=>row.screening_eligible==="true"&&row.quantitative_eligible==="false"));assert.equal(rows[2].V,"0.5");assert.equal(rows[2].J,"10");
  assert.ok(!csv.includes("observation_uid"));assert.equal(fullJVSelectionCsv(dataset,[]),"");
  const quarantined=jvSelectionLedger(dataset,["M"],[],[100],false,false)[0];
- assert.equal(quarantined.included,false);assert.ok(quarantined.reasons.includes("unit_unresolved"));
+ assert.equal(quarantined.included,false);assert.deepEqual(quarantined.reasons,["not_selected_sweep"]);
  const inspected=jvSelectionLedger(dataset,["M"],["M"],[100],true,true)[0];
  assert.equal(inspected.included,true);assert.deepEqual(inspected.reasons,[]);assert.equal(inspected.validation?.unitValidated,false);
 });

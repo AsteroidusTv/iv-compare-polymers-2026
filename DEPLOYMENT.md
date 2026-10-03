@@ -8,7 +8,8 @@ For the standard, already-committed release path, run `./scripts/release-main.sh
 
 | Purpose | Location |
 | --- | --- |
-| Local source | `/home/achille/Documents/Projects/iv-compare-polymers-2026` |
+| Local source (Windows) | `C:\Users\Achille\Documents\TM\iv-comparator-site` |
+| Local source (Linux) | `/home/achille/Documents/Projects/iv-compare-polymers-2026` |
 | Git remote | `https://github.com/AsteroidusTv/iv-compare-polymers-2026` |
 | SSH host alias | `codex-server` (`achille@serv.theserver.life`) |
 | Active application | `/home/achille/apps/iv-compare` |

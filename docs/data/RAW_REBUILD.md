@@ -7,6 +7,8 @@ pnpm exec tsx scripts/rebuild-from-raw.ts --out /tmp/iv-rebuild-UNIQUE --compare
 ```
 
 Inputs are `data/raw`, parser code, and `data/decisions/registry-v1.json`.
+Pearl additionally uses `data/decisions/light-ageing-pearl-v1.json`; its hashed
+raw summaries supply [Light ageing](LIGHT_AGEING_PEARL.md) observations directly.
 The optional comparison pack is read only after the candidate has been written;
 it supplies no candidate metric, curve or daily value. No production replacement
 is performed. Occupied destinations, repository destinations (including symlink
@@ -45,6 +47,11 @@ Outdoor analysis, compatibility hashes may be extended only after checking
 that the generated and shipped analysis payloads are identical.
 
 ## Validation snapshot — 25 September 2026
+
+The current [3 October intake](INTAKE_2026-10-03.md) supersedes the Outdoor counts
+below: 406,346 raw rows and 2,293 daily aggregates, with historical daily IDs
+preserved by `outdoorDailyIds` in the registry. All IV counts remain unchanged.
+Its raw reconstruction evidence is `data/decisions/rebuild-validation-2026-10-03.json`.
 
 The independent reconstruction in `/tmp/iv-intake-final-yysgMf` produced candidate
 SHA-256 `292b0b294f998bc7431c30fe85db1bfb0ae06b4df4afe1d9597762cf63186783`:

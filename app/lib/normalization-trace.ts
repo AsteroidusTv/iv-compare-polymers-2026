@@ -1,6 +1,7 @@
 import type { IVDataset, MetricKey, Observation } from "./iv-data";
 import { numeric, outdoorBaseline } from "./science";
 import { sourceQualityFlagApplies } from "./lab-quality";
+import { lightIrradianceExcluded } from "./source-quality";
 
 export interface BaselineTrace {
   status: "valid" | "missing_baseline" | "zero_baseline" | "negative_baseline" | "ambiguous_baseline";
@@ -33,6 +34,15 @@ export function normalizationTraces(dataset: IVDataset, options: {
   ].filter((value): value is string => Boolean(value)))];
   const baselineFor = (sampleUid: string): BaselineTrace => {
     const cached = baselines.get(sampleUid); if (cached) return cached;
+    if (protocol === "Light ageing") {
+      const measured = dataset.observations.filter(row => row.sample_uid === sampleUid && row.test_type === protocol && !lightIrradianceExcluded(row.data_quality_flag) && numeric(row.exposure_duration_numeric)).sort((a,b) => a.exposure_duration_numeric! - b.exposure_duration_numeric!);
+      const first = measured[0];
+      const observations = first ? measured.filter(row => row.exposure_duration_numeric === first.exposure_duration_numeric) : [];
+      const value = observations.length === 1 && numeric(first[metric]) && (options.includeQa || !qaReasons(first).length) ? first[metric] as number : null;
+      const status = observations.length > 1 ? "ambiguous_baseline" : value === null ? "missing_baseline" : value === 0 ? "zero_baseline" : value < 0 ? "negative_baseline" : "valid";
+      const result: BaselineTrace = {status, value, observations, low:false, sensitivityPct:null, definition:"First recorded Pearl point of the same specimen and sweep direction after explicit owner-adjudicated different-irradiance exclusions; no Unaged substitution or automatic reference optimization"};
+      baselines.set(sampleUid,result); return result;
+    }
     const rows = dataset.observations.filter(row => row.sample_uid === sampleUid
       && row.test_type === (protocol === "Outdoor" ? "Outdoor" : "Unaged")
       && numeric(row[metric]) && (protocol === "Outdoor" ? qaReasons(row).length === 0 : options.includeQa || qaReasons(row).length === 0))
@@ -50,6 +60,7 @@ export function normalizationTraces(dataset: IVDataset, options: {
     const absoluteValue = numeric(observation[metric]) ? observation[metric] as number : null;
     const reasons = qaReasons(observation), exclusions: string[] = [];
     if (absoluteValue === null) exclusions.push("non_numeric_metric");
+    if (protocol === "Light ageing" && lightIrradianceExcluded(observation.data_quality_flag)) exclusions.push("different_irradiance");
     if (!options.includeQa && reasons.length) exclusions.push("qa_metric");
     if (protocol !== "Unaged" && !numeric(observation.exposure_duration_numeric)) exclusions.push("missing_time");
     const baseline = options.mode === "retention" ? baselineFor(observation.sample_uid) : null;

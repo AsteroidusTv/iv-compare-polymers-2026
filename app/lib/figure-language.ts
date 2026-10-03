@@ -10,6 +10,8 @@ export function figureMetricLabel(metric: MetricKey): string {
     outdoor_pr_pct: "PR (médiane journalière)",
     outdoor_pmpp_W: "Pmpp (médiane journalière)",
     outdoor_irradiance_W_m2: "Irradiance (médiane journalière)",
+    light_pout_forward_mW_cm2: "Pout (balayage avant)",
+    light_pout_reverse_mW_cm2: "Pout (balayage arrière)",
   };
   return labels[metric];
 }
@@ -19,6 +21,7 @@ export function figureAgeingContext(stress: string): string {
   if (stress === "TC") return "pendant l’essai de thermal cycling (TC)";
   if (stress === "DH+TC") return "pendant les essais de damp heat et de thermal cycling (DH+TC)";
   if (stress === "Outdoor") return "en exposition extérieure";
+  if (stress === "Light ageing") return "pendant le vieillissement sous lumière (Pearl)";
   return `sous vieillissement ${stress}`;
 }
 
