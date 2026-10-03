@@ -30,9 +30,9 @@ test("guide renders without a dataset and its chapter links resolve to real sect
   const html = await response.text();
   assert.match(html, /Guide &amp; scientific methods/);
   assert.match(html, /Screening ≠ validation/);
-  assert.match(html, /Open laboratory questions/);
+  assert.doesNotMatch(html, /Open laboratory questions|What still needs laboratory confirmation|id="limits"/);
   const chapterLinks = [...html.matchAll(/href="#([a-z-]+)"/g)].map(match => match[1]);
-  assert.ok(chapterLinks.length >= 10);
+  assert.ok(chapterLinks.length >= 9);
   for (const anchor of chapterLinks) assert.ok(html.includes(`id="${anchor}"`), `Missing guide target: ${anchor}`);
   assert.match(html, /href="\/"/);
   assert.doesNotMatch(html, /Loading dataset/);

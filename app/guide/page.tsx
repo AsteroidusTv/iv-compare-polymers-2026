@@ -11,7 +11,7 @@ const chapters = [
   ["references", "Retention & references"], ["groups", "Groups & cohorts"],
   ["statistics", "Statistics & sample counts"], ["quality", "Quality & missing data"],
   ["jv", "Reading JV curves"], ["paired", "Before / after encapsulation"],
-  ["exports", "Figures, exports & provenance"], ["limits", "Open laboratory questions"],
+  ["exports", "Figures, exports & provenance"],
 ] as const;
 
 export default function Guide() {
@@ -119,23 +119,7 @@ export default function Guide() {
           <p>Provisional filename/inventory links remain provisional. Ambiguous or unlinked files need identity review. Reference cells and laboratory Trash sources are preserved for audit but excluded from polymer-matching failures. FTIR, SEM and cell photos are archived context, not inferred measurements in these graphs. Extended Outdoor sources supersede their historical records without double counting.</p>
           <div className="guide-note"><strong>Before sharing a result</strong><p>Record metric and units, protocol and exact time range, filters and grouping, reference definition, QA inclusion, cohort counts, uncertainty type, source package and any visual clipping. Keep the figure data and manifest alongside the graphic.</p></div>
         </section>
-        <section id="limits"><p className="eyebrow">10 · Unresolved evidence</p><h3>What still needs laboratory confirmation?</h3>
-          <p>Laboratory clarifications recorded on 3 October 2026 confirm: one UID per cell; plateau-selected performance after light soaking; the stated nominal DH/TC/Light ageing conditions; follow-up ending due to failure; dark storage under nitrogen; all recorded labels; and standard PR normalization. These are owner declarations, distinct from per-measurement validation evidence. The remaining questions below limit the affected interpretation.</p>
-          <ul className="guide-questions">
-            <li>Do distinct cells share a substrate or fabrication dependencies, and how do channels map to the cell identifiers?</li>
-            <li>What do batch labels represent, and which batches or cells are independent experimental replicates?</li>
-            <li>Which formulations, silicone generations, TPO variants and aliases are experimentally equivalent? Are EVA 406 and 806 distinct formulations?</li>
-            <li>Which source measurements correspond to the selected plateau values, and what quantitative or operational criterion defines a plateau?</li>
-            <li>Can individual failure dates and affected cells be recorded, so confirmed failures can be distinguished from other missing rows?</li>
-            <li>What were the TC ramps and dwell times, exposure interruptions and per-cell dates, including the variable storage duration?</li>
-            <li>Is a plateau value a single retained sweep or a summary of plateau sweeps, and are Jsc, Voc and FF taken from that same source?</li>
-            <li>Which exact simulator model, JV irradiance/temperature, scan speed/direction, light-soaking duration, area/mask and calibration applied to each acquisition? Are the April V–I files current or current density?</li>
-            <li>Which repeated segments were genuinely acquired, and which have an adjudicated export origin?</li>
-            <li>Can the logger settings confirm the inferred Unaged reference, Pmpp units (mW suggested for 1 cm²; W currently stored), and any temperature correction?</li>
-          </ul>
-          <p>An adjudication should record the source, date, author, affected identifiers and approved treatment rule. Raw observations stay unchanged. A numerical screening result is never silently promoted to a laboratory conclusion.</p>
-          <Link className="primary-button" href="/">Return to the workspace →</Link>
-        </section>
+        <Link className="primary-button" href="/">Return to the workspace →</Link>
       </article>
     </div>
     <footer><span>IV Compare · Methods explained from the repository’s calculation rules</span><a href="#workflow">Back to the start ↑</a></footer>
