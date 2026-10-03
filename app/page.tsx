@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useWorkspaceState, useWorkspaceSet } from "./lib/use-workspace-state";
+import { readWorkspaceValue, writeWorkspaceValue } from "./lib/workspace-storage";
 
 import { DragEvent, Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CurveChart, CurveSeries, TrendChart, TrendPoint, TrendSeries } from "./components/Charts";
@@ -146,54 +148,73 @@ export default function Home() {
   const [dataset, setDataset] = useState<IVDataset | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
   const [loadMessage, setLoadMessage] = useState("Loading dataset…");
-  const [view, setView] = useState<View>("trend");
+  const [view, setView] = useWorkspaceState<View>("view", "trend", value => ["trend","curves","encapsulation"].includes(value as never));
   const [seriesConfigs, setSeriesConfigs] = useState<SeriesConfig[]>([]);
-  const [mode, setMode] = useState<ValueMode>("retention");
-  const [aggregation, setAggregation] = useState<Aggregation>("median");
-  const [grouping, setGrouping] = useState<AnalysisGrouping>("conservative");
-  const [selectedRibbon, setSelectedRibbon] = useState(ALL_RIBBONS);
-  const [splitByRibbon, setSplitByRibbon] = useState(false);
-  const [cohortMode, setCohortMode] = useState<"available" | "constant">("available");
-  const [cohortStart, setCohortStart] = useState(0);
-  const [cohortEnd, setCohortEnd] = useState(100);
-  const [outdoorWindow, setOutdoorWindow] = useState<3 | 7 | 14>(7);
-  const [inspectUnsafeJV, setInspectUnsafeJV] = useState(false);
-  const [trendDisplay, setTrendDisplay] = useState<TrendDisplay>("samples");
-  const [includeQa, setIncludeQa] = useState(false);
-  const [curveTime, setCurveTime] = useState<number | null>(null);
-  const [curveComparison, setCurveComparison] = useState<CurveComparison>("ageing");
-  const [curveAgeingSample, setCurveAgeingSample] = useState<string | null>(null);
-  const [curveAgeingTimes, setCurveAgeingTimes] = useState<number[]>([]);
-  const [currentConvention, setCurrentConvention] = useState<CurrentConvention>("instrument");
-  const [sweepView, setSweepView] = useState<SweepView>("primary");
-  const [curveScale, setCurveScale] = useState<CurveScale>("primary");
-  const [showCurvePoints, setShowCurvePoints] = useState(false);
-  const [showLandmarks, setShowLandmarks] = useState(true);
-  const [hiddenSeries, setHiddenSeries] = useState<Set<SeriesId>>(() => new Set());
+  const [mode, setMode] = useWorkspaceState<ValueMode>("mode", "retention", value => ["absolute","retention"].includes(value as never));
+  const [aggregation, setAggregation] = useWorkspaceState<Aggregation>("aggregation", "median", value => ["mean","median"].includes(value as never));
+  const [grouping, setGrouping] = useWorkspaceState<AnalysisGrouping>("grouping", "conservative", value => ["conservative","material","formulation","batch","recipe","electrode"].includes(value as never));
+  const [selectedRibbon, setSelectedRibbon] = useWorkspaceState("selectedRibbon", ALL_RIBBONS);
+  const [splitByRibbon, setSplitByRibbon] = useWorkspaceState("splitByRibbon", false);
+  const [cohortMode, setCohortMode] = useWorkspaceState<"available" | "constant">("cohortMode", "available", value => ["available","constant"].includes(value as never));
+  const [cohortStart, setCohortStart] = useWorkspaceState("cohortStart", 0);
+  const [cohortEnd, setCohortEnd] = useWorkspaceState("cohortEnd", 100);
+  const [outdoorWindow, setOutdoorWindow] = useWorkspaceState<3 | 7 | 14>("outdoorWindow", 7, value => [3,7,14].includes(value as never));
+  const [inspectUnsafeJV, setInspectUnsafeJV] = useWorkspaceState("inspectUnsafeJV", false);
+  const [trendDisplay, setTrendDisplay] = useWorkspaceState<TrendDisplay>("trendDisplay", "samples", value => ["aggregate","samples"].includes(value as never));
+  const [includeQa, setIncludeQa] = useWorkspaceState("includeQa", false);
+  const [curveTime, setCurveTime] = useWorkspaceState<number | null>("curveTime", null, value => value === null || typeof value === "number" && Number.isFinite(value));
+  const [curveComparison, setCurveComparison] = useWorkspaceState<CurveComparison>("curveComparison", "ageing", value => ["ageing","materials"].includes(value as never));
+  const [curveAgeingSample, setCurveAgeingSample] = useWorkspaceState<string | null>("curveAgeingSample", null, value => value === null || typeof value === "string");
+  const [curveAgeingTimes, setCurveAgeingTimes] = useWorkspaceState<number[]>("curveAgeingTimes", [], value => Array.isArray(value) && value.length <= 1000 && value.every(item => typeof item === "number" && Number.isFinite(item)));
+  const [currentConvention, setCurrentConvention] = useWorkspaceState<CurrentConvention>("currentConvention", "instrument", value => ["instrument","pv"].includes(value as never));
+  const [sweepView, setSweepView] = useWorkspaceState<SweepView>("sweepView", "primary", value => ["primary","all"].includes(value as never));
+  const [curveScale, setCurveScale] = useWorkspaceState<CurveScale>("curveScale", "primary", value => ["primary","all"].includes(value as never));
+  const [showCurvePoints, setShowCurvePoints] = useWorkspaceState("showCurvePoints", false);
+  const [showLandmarks, setShowLandmarks] = useWorkspaceState("showLandmarks", true);
+  const [hiddenSeries, setHiddenSeries] = useWorkspaceSet("hiddenSeries");
   const [expandedTrendRows, setExpandedTrendRows] = useState<Set<string>>(() => new Set());
-  const [trendSampleFilters, setTrendSampleFilters] = useState<Record<SeriesId, string[]>>({});
-  const [curveMeasurementIds, setCurveMeasurementIds] = useState<Record<SeriesId, string | null>>({});
+  const [trendSampleFilters, setTrendSampleFilters] = useWorkspaceState<Record<SeriesId, string[]>>("trendSampleFilters", {}, value => !!value && typeof value === "object" && !Array.isArray(value) && Object.values(value).every(items => Array.isArray(items) && items.every(item => typeof item === "string")));
+  const [curveMeasurementIds, setCurveMeasurementIds] = useWorkspaceState<Record<SeriesId, string | null>>("curveMeasurementIds", {}, value => !!value && typeof value === "object" && !Array.isArray(value) && Object.values(value).every(item => item === null || typeof item === "string"));
   const fileInputRef = useRef<HTMLInputElement>(null);
   const nextSeriesIdRef = useRef(2);
 
-  const installDataset = useCallback((next: IVDataset, message: string) => {
+  const installDataset = useCallback((next: IVDataset, message: string, restore = false) => {
     setDataset(next);
     setLoadState("ready");
     setLoadMessage(message);
-    setSeriesConfigs(createInitialSeries(next));
-    nextSeriesIdRef.current = 2;
-    setHiddenSeries(new Set());
+    let configs = createInitialSeries(next);
+    if (restore) {
+      try {
+        configs = readWorkspaceValue(window.localStorage, "seriesConfigs", configs, value => Array.isArray(value) && value.length > 0 && value.length <= MAX_SERIES
+          && new Set(value.map(item => item?.id)).size === value.length
+          && value.every(item => item && typeof item === "object"
+            && ["id", "material", "stress", "metric", "electrode", "recipe"].every(key => typeof item[key] === "string")
+            && /^(?:[a-h]|s\d{1,6})$/.test(item.id)
+            && ["formulation", "batch"].every(key => item[key] === undefined || typeof item[key] === "string")
+            && next.samples.some(sample => sample.material_family === item.material)));
+      } catch { /* Storage access denied: retain defaults. */ }
+    }
+    setSeriesConfigs(configs.map(config => normalizeSeriesConfig(next, config)));
+    nextSeriesIdRef.current = Math.max(2, ...configs.map(config => /^s\d+$/.test(config.id) ? Number(config.id.slice(1)) + 1 : 2));
     setExpandedTrendRows(new Set());
-    setTrendSampleFilters({});
-    setCurveMeasurementIds({});
-    setCurveAgeingSample(null);
-    setCurveAgeingTimes([]);
-  }, []);
+    if (!restore) {
+      setHiddenSeries(new Set());
+      setTrendSampleFilters({});
+      setCurveMeasurementIds({});
+      setCurveAgeingSample(null);
+      setCurveAgeingTimes([]);
+    }
+  }, [setHiddenSeries, setTrendSampleFilters, setCurveMeasurementIds, setCurveAgeingSample, setCurveAgeingTimes]);
+
+  useEffect(() => {
+    if (!dataset || !seriesConfigs.length) return;
+    try { writeWorkspaceValue(window.localStorage, "seriesConfigs", seriesConfigs); } catch { /* Storage access denied. */ }
+  }, [dataset, seriesConfigs]);
 
   useEffect(() => {
     let active = true;
     fetchDefaultDataset()
-      .then((next) => active && installDataset(next, "Dataset loaded"))
+      .then((next) => active && installDataset(next, "Dataset loaded", true))
       .catch((error: Error) => {
         if (!active) return;
         setLoadState("error");

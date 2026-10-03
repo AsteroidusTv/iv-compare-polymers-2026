@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useWorkspaceState, useWorkspaceSet } from "../lib/use-workspace-state";
 import type { CurveSeries } from "./Charts";
 import { CurveChart } from "./Charts";
 import type { EncapsulationCurvePair } from "../lib/encapsulation";
@@ -133,12 +134,12 @@ function EncapsulationJVComparison({ dataset, pairs, selections, splitByRibbon }
 
 export function EncapsulationComparison({ dataset, selections, ribbonSampleIds, ribbonSelection, splitByRibbon }: { dataset: IVDataset | null; selections: { material: string; color: string }[]; ribbonSampleIds: ReadonlySet<string>; ribbonSelection: string; splitByRibbon: boolean }) {
   const svgRef = useRef<SVGSVGElement>(null);
-  const [hiddenGroupKeys, setHiddenGroupKeys] = useState<Set<string>>(() => new Set());
-  const [excludedGroupKeys, setExcludedGroupKeys] = useState<Set<string>>(() => new Set());
+  const [hiddenGroupKeys, setHiddenGroupKeys] = useWorkspaceSet("encapsulation:hidden");
+  const [excludedGroupKeys, setExcludedGroupKeys] = useWorkspaceSet("encapsulation:excluded");
   const [exportError, setExportError] = useState<string | null>(null);
-  const [deltaSummary, setDeltaSummary] = useState<"mean" | "median" | "none">("median");
-  const [showMeasurementInterval, setShowMeasurementInterval] = useState(false);
-  const [showConnections, setShowConnections] = useState(false);
+  const [deltaSummary, setDeltaSummary] = useWorkspaceState<"mean" | "median" | "none">("encapsulation:delta", "median", value => ["mean", "median", "none"].includes(value as never));
+  const [showMeasurementInterval, setShowMeasurementInterval] = useWorkspaceState("encapsulation:interval", false);
+  const [showConnections, setShowConnections] = useWorkspaceState("encapsulation:connections", false);
   const selectedMaterials = selections.map((item) => item.material);
   const { groups: availableGroups, excluded } = encapsulationGroups((dataset?.samples ?? []).filter(sample => ribbonSampleIds.has(sample.sample_uid)), dataset?.observations ?? [], selectedMaterials, dataset?.files ?? [], splitByRibbon);
   availableGroups.sort((a, b) => selections.findIndex((item) => item.material === a.family) - selections.findIndex((item) => item.material === b.family) || a.material.localeCompare(b.material) || a.batch.localeCompare(b.batch, "en", { numeric: true }) || processOrder(a.recipe) - processOrder(b.recipe) || (a.recipe || "").localeCompare(b.recipe || "") || a.electrode.localeCompare(b.electrode));

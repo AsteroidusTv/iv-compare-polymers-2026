@@ -1,5 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
+import { useWorkspaceState } from "../lib/use-workspace-state";
 import { datasetPackageHash, type IVDataset } from "../lib/iv-data";
 import { synchronizedMetrics } from "../lib/synchronized-metrics";
 import { materialStyle, identityLinePattern } from "../lib/material-style";
@@ -13,11 +14,11 @@ import { ALL_RIBBONS, ribbonSelectionLabel } from "../lib/ribbon";
 const labels={efficiency_pct:"PCE / PCE₀",jsc_mA_cm2:"Jsc / Jsc₀",voc_V:"Voc / Voc₀",ff_pct:"FF / FF₀"};
 
 export function SynchronizedMetrics({dataset,materials,ribbonSampleIds,ribbonSelection}:{dataset:IVDataset;materials:string[];ribbonSampleIds:ReadonlySet<string>;ribbonSelection:string}) {
-  const [protocol,setProtocol]=useState<"DH"|"TC">("DH");
-  const [cutoff,setCutoff]=useState<number|null>(null);
-  const [hidden,setHidden]=useState<string[]>([]),[excluded,setExcluded]=useState<string[]>([]);
-  const [error,setError]=useState<string|null>(null),[manualY,setManualY]=useState(false);
-  const [yMinimum,setYMinimum]=useState(0),[yMaximum,setYMaximum]=useState(120);
+  const [protocol,setProtocol]=useWorkspaceState<"DH"|"TC">("synchronized:protocol", "DH", value => value === "DH" || value === "TC");
+  const [cutoff,setCutoff]=useWorkspaceState<number|null>("synchronized:cutoff", null, value => value === null || typeof value === "number" && Number.isFinite(value));
+  const [hidden,setHidden]=useWorkspaceState<string[]>("synchronized:hidden", []),[excluded,setExcluded]=useWorkspaceState<string[]>("synchronized:excluded", []);
+  const [error,setError]=useState<string|null>(null),[manualY,setManualY]=useWorkspaceState("synchronized:manualY", false);
+  const [yMinimum,setYMinimum]=useWorkspaceState("synchronized:yMinimum", 0),[yMaximum,setYMaximum]=useWorkspaceState("synchronized:yMaximum", 120);
   const svg=useRef<SVGSVGElement>(null);
   const samples=dataset.samples.filter(sample=>ribbonSampleIds.has(sample.sample_uid)&&materials.includes(sample.material_family)&&(sample.assigned_test===protocol||dataset.observations.some(row=>row.sample_uid===sample.sample_uid&&row.test_type===protocol)));
   const analysis=synchronizedMetrics(dataset,{sampleUids:samples.map(sample=>sample.sample_uid),protocol,graphEnd:cutoff,excludedSampleUids:excluded});

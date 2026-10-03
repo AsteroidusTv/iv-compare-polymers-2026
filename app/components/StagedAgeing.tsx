@@ -1,5 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
+import { useWorkspaceState } from "../lib/use-workspace-state";
 import { datasetPackageHash, type IVDataset } from "../lib/iv-data";
 import { stagedAgeing, stagedDisplayGroups } from "../lib/staged-ageing";
 import { materialStyle } from "../lib/material-style";
@@ -12,14 +13,14 @@ import { figureStageLabel, figureTimeUnit } from "../lib/figure-language";
 import { ALL_RIBBONS, recordedRibbon, ribbonLabel, ribbonSelectionLabel } from "../lib/ribbon";
 
 export function StagedAgeing({dataset,materials,ribbonSampleIds,ribbonSelection,splitByRibbon}:{dataset:IVDataset;materials:string[];ribbonSampleIds:ReadonlySet<string>;ribbonSelection:string;splitByRibbon:boolean}) {
-  const [protocol,setProtocol]=useState<"DH"|"TC">("DH");
-  const [timeMode,setTimeMode]=useState<"exact"|"last-common">("exact");
-  const [requestedTime,setRequestedTime]=useState<number|null>(null);
-  const [retention,setRetention]=useState(false);
-  const [showConnections,setShowConnections]=useState(false);
-  const [groupUnknownMetadata,setGroupUnknownMetadata]=useState(false);
-  const [aggregateAcrossBatches,setAggregateAcrossBatches]=useState(false);
-  const [hidden,setHidden]=useState<string[]>([]),[excluded,setExcluded]=useState<string[]>([]);
+  const [protocol,setProtocol]=useWorkspaceState<"DH"|"TC">("staged:protocol", "DH", value => value === "DH" || value === "TC");
+  const [timeMode,setTimeMode]=useWorkspaceState<"exact"|"last-common">("staged:timeMode", "exact", value => value === "exact" || value === "last-common");
+  const [requestedTime,setRequestedTime]=useWorkspaceState<number|null>("staged:time", null, value => value === null || typeof value === "number" && Number.isFinite(value));
+  const [retention,setRetention]=useWorkspaceState("staged:retention", false);
+  const [showConnections,setShowConnections]=useWorkspaceState("staged:connections", false);
+  const [groupUnknownMetadata,setGroupUnknownMetadata]=useWorkspaceState("staged:unknown", false);
+  const [aggregateAcrossBatches,setAggregateAcrossBatches]=useWorkspaceState("staged:pool", false);
+  const [hidden,setHidden]=useWorkspaceState<string[]>("staged:hidden", []),[excluded,setExcluded]=useWorkspaceState<string[]>("staged:excluded", []);
   const [error,setError]=useState<string|null>(null);
   const svg=useRef<SVGSVGElement>(null);
   const samples=dataset.samples.filter(sample=>ribbonSampleIds.has(sample.sample_uid) && materials.includes(sample.material_family) && (sample.assigned_test===protocol || dataset.observations.some(row=>row.sample_uid===sample.sample_uid && row.test_type===protocol)));

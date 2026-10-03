@@ -1,6 +1,7 @@
 "use client";
 
 import { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
+import { useWorkspaceState } from "../lib/use-workspace-state";
 
 import { legendElectrodesByKey, legendSelectionsByKey, pointsThrough, showTrendMarkers, trendDisplayValues, trendExportScaleWarning, trendIntervalVisible, uniqueLegendEntries } from "../lib/chart-export";
 import { figureCsv, figureManifest, jvMethodCaption, type FigureExportContext, type FigureManifest } from "../lib/figure-export";
@@ -320,10 +321,11 @@ export function TrendChart({
   exportContext?: FigureExportContext;
 }) {
   const [viewport, setViewport] = useState<TrendViewport>({ zoom: 1, centreX: 0.5, centreY: 0.5 });
-  const [graphEndInput, setGraphEndInput] = useState<string | null>(null);
-  const [pointInterval, setPointInterval] = useState(0);
-  const [manualY, setManualY] = useState<{ min: string; max: string } | null>(null);
-  const [showIntervals, setShowIntervals] = useState(true);
+  const storageKey = `trend:${xUnit}:${yUnit}:${reportYAxisLabel ?? ""}:${[...new Set(series.map(item => item.id.split(":")[0]))].sort().join(",")}`;
+  const [graphEndInput, setGraphEndInput] = useWorkspaceState<string | null>(`${storageKey}:end`, null, value => value === null || typeof value === "string");
+  const [pointInterval, setPointInterval] = useWorkspaceState(`${storageKey}:spacing`, 0, value => typeof value === "number" && Number.isFinite(value) && value >= 0);
+  const [manualY, setManualY] = useWorkspaceState<{ min: string; max: string } | null>(`${storageKey}:y`, null, value => value === null || !!value && typeof value === "object" && "min" in value && "max" in value && typeof value.min === "string" && typeof value.max === "string");
+  const [showIntervals, setShowIntervals] = useWorkspaceState(`${storageKey}:intervals`, true);
   const dragRef = useRef<{ clientX: number; clientY: number; centreX: number; centreY: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 

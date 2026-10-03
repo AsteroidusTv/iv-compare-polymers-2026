@@ -31,6 +31,13 @@ The application supports exploratory comparison after damp heat (DH), thermal cy
 
 ## Data and provenance
 
+Comparison settings are saved automatically in this browser's local storage:
+series and filters, selected cells, analysis/JV options, hidden groups, staged
+comparison options, graph limits and manual Y scales. Refreshing restores them.
+Only preferences are saved, not imported datasets. Invalid or inaccessible
+storage falls back to defaults; clearing site data resets saved preferences.
+Preferences are local to the browser and origin (localhost and production differ).
+
 On this Windows workspace, the repository lives directly at
 `C:\Users\Achille\Documents\TM\iv-comparator-site`. It has no dependency on
 an external OneDrive import folder. Intake scripts take an explicit source

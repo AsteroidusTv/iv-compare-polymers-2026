@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useWorkspaceState } from "../lib/use-workspace-state";
 import { datasetPackageHash, type IVDataset } from "../lib/iv-data";
 import { loadOutdoorBundle, type OutdoorSensitivityBundle } from "../lib/outdoor-sensitivity-data";
 import { materialStyle } from "../lib/material-style";
@@ -15,8 +16,8 @@ const dash:Record<number,string>={100:"3 3",200:"",300:"9 3"};
 const number=(value:number|null)=>value===null?"—":value.toFixed(2);
 export function OutdoorSensitivity({dataset,materials,ribbonSampleIds,ribbonSelection}:{dataset:IVDataset;materials:string[];ribbonSampleIds:ReadonlySet<string>;ribbonSelection:string}) {
  const [loaded,setLoaded]=useState<OutdoorSensitivityBundle|null>(null),[loadError,setLoadError]=useState<string|null>(null);
- const [sampleId,setSampleId]=useState(""),[metric,setMetric]=useState<"pr"|"pmpp">("pr"),[window,setWindow]=useState<3|7|14>(7);
- const [mode,setMode]=useState<"retention"|"absolute">("retention"),[graphEnd,setGraphEnd]=useState<number|null>(null),[hidden,setHidden]=useState<number[]>([]);
+ const [sampleId,setSampleId]=useWorkspaceState("sensitivity:sample", ""),[metric,setMetric]=useWorkspaceState<"pr"|"pmpp">("sensitivity:metric", "pr", value => value === "pr" || value === "pmpp"),[window,setWindow]=useWorkspaceState<3|7|14>("sensitivity:window", 7, value => [3,7,14].includes(value as never));
+ const [mode,setMode]=useWorkspaceState<"retention"|"absolute">("sensitivity:mode", "retention", value => value === "retention" || value === "absolute"),[graphEnd,setGraphEnd]=useWorkspaceState<number|null>("sensitivity:end", null, value => value === null || typeof value === "number" && Number.isFinite(value)),[hidden,setHidden]=useWorkspaceState<number[]>("sensitivity:hidden", [], value => Array.isArray(value) && value.every(item => [100,200,300].includes(item)));
  const [exportError,setExportError]=useState<string|null>(null);
  const svg=useRef<SVGSVGElement>(null),hash=datasetPackageHash(dataset);
  useEffect(()=>{const controller=new AbortController();loadOutdoorBundle(hash,controller.signal).then(result=>{setLoaded(result);setLoadError(null);}).catch(error=>{if(!controller.signal.aborted)setLoadError(String(error));});return()=>controller.abort();},[hash]);
