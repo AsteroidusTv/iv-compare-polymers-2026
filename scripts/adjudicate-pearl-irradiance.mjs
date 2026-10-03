@@ -7,20 +7,20 @@ import {parsePearlSummary,loadLightAgeing} from './light-ageing.mjs';
 const root=path.resolve(import.meta.dirname,'..');
 const file=path.join(root,'data/decisions/light-ageing-pearl-v1.json');
 const manifest=JSON.parse(await fs.readFile(file,'utf8'));
-if(manifest.irradianceExclusions)throw Error('Irradiance exclusions already registered');
-manifest.irradianceExclusions=[];
+manifest.irradianceExclusions??=[];
 for(const entry of manifest.entries){
  entry.baseline='First recorded same-cell and direction point after explicit different-irradiance exclusions';
  const bytes=await fs.readFile(path.join(root,'data/raw',entry.source));
  const observations=parsePearlSummary(bytes,entry);
- for(const sourceRow of [5,6,84]){
+ for(const sourceRow of [5,6,84,85,86,87]){
+  if(manifest.irradianceExclusions.some(item=>item.source===entry.source&&item.sourceRow===sourceRow))continue;
   const row=observations.find(row=>row.source_row===sourceRow);
   if(!row)throw Error('Missing reviewed source row');
   manifest.irradianceExclusions.push({source:entry.source,sample_uid:entry.sample_uid,sourceRow,
    sourceSha256:createHash('sha256').update(bytes).digest('hex'),
    expectedTime_h:row.exposure_duration_numeric,expectedForward_mW_cm2:row.light_pout_forward_mW_cm2,expectedReverse_mW_cm2:row.light_pout_reverse_mW_cm2,
    decision:'exclude_both_directions_from_standard_irradiance_trends',status:'owner_adjudicated',date:'2026-10-03',
-   reason:sourceRow===6?'Elevated startup transition adjacent to the owner-identified 1.5-sun test; not comparable to the standard-irradiance series.':'Owner identified synchronized high-power spikes as a 1.5-sun test, not comparable to the standard-irradiance ageing series.',
+   reason:sourceRow>=85?'Recovery transition immediately after the owner-identified 1.5-sun test (source rows 84–87); not comparable to the standard 1-sun ageing series.':sourceRow===6?'Elevated startup transition adjacent to the owner-identified 1.5-sun test; not comparable to the standard-irradiance series.':'Owner identified synchronized high-power spikes as a 1.5-sun test, not comparable to the standard-irradiance ageing series.',
    evidence:'Owner instruction plus synchronized forward/reverse power peaks in all five summaries at startup and approximately 21.3 h. No calibrated irradiance is inferred from photodiode readings.'});
  }
 }

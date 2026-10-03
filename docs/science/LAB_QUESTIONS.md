@@ -1,8 +1,30 @@
 # Adjudications scientifiques attendues du laboratoire
 
-État : **ouvert**. Aucune réponse n'est présumée. Une réponse devra être enregistrée
-avec sa source, sa date, son auteur, les fichiers/identifiants concernés et la règle
-de traitement approuvée. Les bruts restent inchangés.
+État : **partiellement résolu**, mis à jour le 3 octobre 2026 selon les réponses
+du responsable de l'étude dans cette conversation. Voir les
+[précisions sourcées](LAB_CLARIFICATIONS_2026-10-03.md) et le
+[diagnostic empirique du PR](OUTDOOR_PR_DIAGNOSTIC_2026-10-03.md).
+
+Confirmé : un UID correspond à une cellule ; valeur retenue au plateau de
+light soaking lorsque le rendement cesse d'augmenter ; DH 85 °C / 85 % HR ;
+TC −40 à 80 °C ; Light ageing 1 sun / 40 °C ; arrêt de suivi dû à une panne ;
+stockage dans le noir sous azote avec durée variable ; tous les labels
+confirmés ; PR déclaré standard ; surface active Outdoor de 1 cm².
+
+Restent à préciser : dépendances entre cellules et batches, critère chiffré du
+plateau et sweep retenu, conditions/calibration JV par acquisition, rampes et
+paliers TC, dates individuelles des pannes et interruptions, équivalences
+entre formulations, origine des segments répétés. Le diagnostic PR retrouve
+une référence numérique égale à la PCE Unaged pour 21 cellules ; avec 1 cm²,
+il suggère Pmpp en mW alors que le package indique W. L'unité brute et la
+configuration du logger restent à confirmer avant toute correction.
+
+## Liste initiale conservée pour traçabilité
+
+Certaines questions ci-dessous ont désormais une réponse dans les précisions
+du 3 octobre. Elles ne doivent pas être présentées comme toutes ouvertes.
+Toute adjudication individuelle doit conserver sa source, sa date, son auteur,
+les identifiants concernés et la règle approuvée. Les bruts restent inchangés.
 
 1. Que représente `sample_uid` : cellule électrique, pixel, patch ou substrat ?
    Cette unité détermine n et l'indépendance statistique, pas seulement le libellé.

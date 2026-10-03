@@ -3,12 +3,23 @@
 import { CSSProperties, ReactNode, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-export function InfoTip({ text, align = "center" }: { text: string; align?: "left" | "center" | "right" }) {
+export function InfoTip({ text, align = "center", label = "Explain this choice" }: { text: string; align?: "left" | "center" | "right"; label?: string }) {
   const id = useId();
-  const triggerRef = useRef<HTMLSpanElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const bubbleRef = useRef<HTMLSpanElement>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [open, setOpen] = useState(false);
   const [style, setStyle] = useState<CSSProperties>({ visibility: "hidden" });
+  const show = () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    setOpen(true);
+  };
+  const hide = () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => setOpen(false), 180);
+  };
+
+  useEffect(() => () => { if (closeTimer.current) clearTimeout(closeTimer.current); }, []);
 
   const positionBubble = useCallback(() => {
     const trigger = triggerRef.current;
@@ -27,7 +38,7 @@ export function InfoTip({ text, align = "center" }: { text: string; align?: "lef
     left = Math.min(Math.max(left, viewportPadding), window.innerWidth - bubbleRect.width - viewportPadding);
     const fitsAbove = triggerRect.top >= bubbleRect.height + gap + viewportPadding;
     const top = fitsAbove ? triggerRect.top - bubbleRect.height - gap : triggerRect.bottom + gap;
-    setStyle({ left, top: Math.max(viewportPadding, top), visibility: "visible" });
+    setStyle({ left, top: Math.max(viewportPadding, Math.min(top, window.innerHeight - bubbleRect.height - viewportPadding)), visibility: "visible" });
   }, [align]);
 
   useLayoutEffect(() => {
@@ -36,42 +47,49 @@ export function InfoTip({ text, align = "center" }: { text: string; align?: "lef
 
   useEffect(() => {
     if (!open) return;
+    const dismiss = (event: PointerEvent) => {
+      if (!triggerRef.current?.contains(event.target as Node) && !bubbleRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const escape = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("keydown", escape);
     window.addEventListener("resize", positionBubble);
     window.addEventListener("scroll", positionBubble, true);
     return () => {
+      document.removeEventListener("pointerdown", dismiss);
+      document.removeEventListener("keydown", escape);
       window.removeEventListener("resize", positionBubble);
       window.removeEventListener("scroll", positionBubble, true);
     };
   }, [open, positionBubble]);
 
   return (
-    <span
+    <button
+      type="button"
       ref={triggerRef}
       className={`info-tip align-${align}`}
-      role="button"
-      tabIndex={0}
       aria-describedby={open ? id : undefined}
-      aria-label="Show explanation"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-      onFocus={() => setOpen(true)}
-      onBlur={() => setOpen(false)}
+      aria-label={label}
+      onMouseEnter={show}
+      onMouseLeave={hide}
+      onFocus={show}
+      onBlur={hide}
+      onClick={show}
       onKeyDown={(event) => {
         if (event.key === "Escape") {
           setOpen(false);
-          triggerRef.current?.blur();
         }
       }}
     >
       <span aria-hidden="true">i</span>
       {open && typeof document !== "undefined" ? createPortal(
-        <span ref={bubbleRef} className="info-tip-bubble" id={id} role="tooltip" style={style}>{text}</span>,
+        <span ref={bubbleRef} className="info-tip-bubble" id={id} role="tooltip" style={style} onMouseEnter={show} onMouseLeave={hide}>{text}</span>,
         document.body,
       ) : null}
-    </span>
+    </button>
   );
 }
 
 export function FieldTitle({ children, help, align }: { children: ReactNode; help: string; align?: "left" | "center" | "right" }) {
-  return <span className="field-title">{children}<InfoTip text={help} align={align} /></span>;
+  return <span className="field-title">{children}<InfoTip text={help} align={align} label={typeof children === "string" ? `Explain ${children}` : undefined} /></span>;
 }

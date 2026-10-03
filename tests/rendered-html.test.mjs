@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-async function render() {
+async function render(path = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
   const { default: handleRequest } = await import(workerUrl.href);
-  return handleRequest(new Request("http://localhost/", { headers: { accept: "text/html" } }));
+  return handleRequest(new Request(`http://localhost${path}`, { headers: { accept: "text/html" } }));
 }
 
 test("server-renders the IV Compare application shell", async () => {
@@ -19,4 +19,21 @@ test("server-renders the IV Compare application shell", async () => {
   assert.match(html, /Import data/i);
   assert.match(html, /aria-busy="true"/i);
   assert.doesNotMatch(html, /Your site is taking shape|Building your site/i);
+  assert.match(html, /href="\/guide"/);
+  assert.match(html, /Scientific settings/);
+  assert.match(html, /Current method/);
+});
+
+test("guide renders without a dataset and its chapter links resolve to real sections", async () => {
+  const response = await render("/guide");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /Guide &amp; scientific methods/);
+  assert.match(html, /Screening ≠ validation/);
+  assert.match(html, /Open laboratory questions/);
+  const chapterLinks = [...html.matchAll(/href="#([a-z-]+)"/g)].map(match => match[1]);
+  assert.ok(chapterLinks.length >= 10);
+  for (const anchor of chapterLinks) assert.ok(html.includes(`id="${anchor}"`), `Missing guide target: ${anchor}`);
+  assert.match(html, /href="\/"/);
+  assert.doesNotMatch(html, /Loading dataset/);
 });

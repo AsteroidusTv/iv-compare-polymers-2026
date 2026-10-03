@@ -9,9 +9,10 @@ The mapping and SHA-256 hashes of all 649 archived files are in
 
 Select **Light ageing** in the comparison protocol, then **Pout — forward**
 or **Pout — reverse**. Power density is in mW/cm² and elapsed time in hours,
-as documented by the source evolution plots. Incident irradiance and controlled
-temperature are undocumented, so no PCE or equivalent illuminated-dose time
-is inferred. Directions are never pooled or selected by maximum performance.
+as documented by the source evolution plots. The owner clarified nominal conditions on 3 October 2026: 1 sun and 40 °C
+(see ../science/LAB_CLARIFICATIONS_2026-10-03.md). These declarations do not
+supply a calibration record or incident-power evidence per measurement.
+No PCE or equivalent illuminated-dose time is newly inferred. Directions are never pooled or selected by maximum performance.
 
 Retention is 100 × measured power / first recorded power of the same cell
 and direction after explicit different-irradiance exclusions. A missing, zero, negative,
@@ -23,10 +24,11 @@ curves use only exact recorded times, which differ between cells.
 The owner identified the synchronized high-power spikes as a 1.5-sun test.
 Worksheet rows 5 and 84 in all five summaries, plus the elevated startup
 transition in row 6, are explicitly excluded from both sweep directions.
-These 15 source-bound exclusions retain expected time, raw powers, source
+Recovery rows 85–87 immediately after the test are also excluded in all five
+summaries; row 88 resumes the standard series. These 30 source-bound exclusions retain expected time, raw powers, source
 SHA-256 and owner attribution in the decision manifest. No generic high-value
 filter or recalibration by dividing power by 1.5 is applied. All 1,908 raw
-observations remain in the audit package; 1,893 are eligible for trend analysis.
+observations remain in the audit package; 1,878 are eligible for trend analysis.
 The reference is row 7 for each cell. Enabling QA inspection does not mix
 these different-irradiance readings into the standard-irradiance experiment.
 

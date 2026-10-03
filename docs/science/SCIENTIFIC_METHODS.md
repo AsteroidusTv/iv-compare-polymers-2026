@@ -1,5 +1,16 @@
 # Scientific computation and adjudication rules
 
+## Laboratory clarifications (3 October 2026)
+
+The [owner declarations](LAB_CLARIFICATIONS_2026-10-03.md) confirm one cell per
+sample UID, light-soaking plateau selection, nominal ageing conditions, dark
+nitrogen storage, labels and general follow-up failure. These contextual facts
+do not supply missing per-acquisition calibration or validation evidence.
+The [Outdoor PR diagnostic](OUTDOOR_PR_DIAGNOSTIC_2026-10-03.md) identifies a
+numerical relation consistent with an Unaged reference; it also records the
+remaining Pmpp unit issue given the declared 1 cm² active area. It does not
+change the logger values, package units or B3/B7/B14 calculations.
+
 ## JV validation, version 2.0.0
 
 Numerical consistency, unit validation, acquired-range validation and experimental

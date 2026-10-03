@@ -5,10 +5,16 @@ stays at the repository root because it is the operational entry point for relea
 
 ## Current references
 
+The application now includes a user-facing **Guide & methods** page at `/guide`.
+The [3 October UI/UX review](UI_UX_REVIEW_2026-10-03.md) records its scope,
+interface decisions and validation.
+
 | Topic | Document |
 | --- | --- |
 | Scientific calculations, QA and interpretation rules | [Scientific methods](science/SCIENTIFIC_METHODS.md) |
 | Questions awaiting laboratory evidence | [Laboratory questions](science/LAB_QUESTIONS.md) |
+| Confirmed cell identity, plateau convention, protocols and storage | [3 October laboratory clarifications](science/LAB_CLARIFICATIONS_2026-10-03.md) |
+| Empirical logger PR formula and remaining power-unit question | [Outdoor PR diagnostic](science/OUTDOOR_PR_DIAGNOSTIC_2026-10-03.md) |
 | Rebuild the dataset from raw inputs | [Raw reconstruction](data/RAW_REBUILD.md) |
 | Pearl power trends and first-point retention | [Light ageing](data/LIGHT_AGEING_PEARL.md) |
 

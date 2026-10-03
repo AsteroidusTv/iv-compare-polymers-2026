@@ -79,7 +79,7 @@ function makeCurveSeries(pair: EncapsulationCurvePair, dataset: IVDataset, color
 function EncapsulationJVComparison({ dataset, pairs, selections, splitByRibbon }: { dataset: IVDataset; pairs: EncapsulationCurvePair[]; selections: { material: string; color: string }[]; splitByRibbon: boolean }) {
   const [requestedSampleUid, setRequestedSampleUid] = useState<string | null>(null);
   const [inspectUnresolved, setInspectUnresolved] = useState(false);
-  const inspectionControl = <label><input type="checkbox" checked={inspectUnresolved} onChange={event => setInspectUnresolved(event.target.checked)} /> Include JV pairs failing screening</label>;
+  const inspectionControl = <label className="check-control"><input type="checkbox" checked={inspectUnresolved} onChange={event => setInspectUnresolved(event.target.checked)} /> Include JV pairs failing screening</label>;
   const diagnostics = getJVDiagnostics(dataset);
   // The inventory pairing and its date coverage remain independent of JV eligibility.
   pairs = pairs.filter(pair => inspectUnresolved || (diagnostics.get(pair.beforeMeasurement.measurement_uid)?.screeningEligible && diagnostics.get(pair.afterMeasurement.measurement_uid)?.screeningEligible));
@@ -106,8 +106,10 @@ function EncapsulationJVComparison({ dataset, pairs, selections, splitByRibbon }
   const diagnosticHelp = `Measured JV curves from the same physical cell are compared before and after encapsulation. At each stage, the QA-valid raw sweep closest to the independently recorded PCE is used. Exact sweep IDs: ${pair.beforeMeasurement.measurement_uid} → ${pair.afterMeasurement.measurement_uid}. This is a mechanism-screening view, not an isolated causal estimate of the process.`;
   return <section className="chart-card encapsulation-jv" aria-label="JV comparison before and after encapsulation">
     <div className="chart-title"><div className="trend-panel-title"><strong>JV diagnostic · same cell before / after encapsulation</strong><InfoTip text={diagnosticHelp} align="left" /></div></div>
-    {inspectionControl}
-    <button onClick={()=>downloadFigureFile(fullJVSelectionCsv(dataset,dataset.measurements.filter(measurement=>measurement.file_uid===pair.beforeFile.file_uid||measurement.file_uid===pair.afterMeasurement.file_uid).map(measurement=>measurement.measurement_uid)),"paired-jv.full-selected.csv","text/csv")}>Full selected JV dataset CSV</button>
+    <div className="jv-action-bar">
+      {inspectionControl}
+      <button type="button" className="soft-button" onClick={()=>downloadFigureFile(fullJVSelectionCsv(dataset,dataset.measurements.filter(measurement=>measurement.file_uid===pair.beforeFile.file_uid||measurement.file_uid===pair.afterMeasurement.file_uid).map(measurement=>measurement.measurement_uid)),"paired-jv.full-selected.csv","text/csv")}>Full selected JV dataset CSV</button>
+    </div>
     <p role="status">{inspectUnresolved ? "Inspection mode includes curves with incomplete or inconsistent diagnostics." : "Displayed pairs pass automated branch and numerical-consistency screening. Instrument calibration and experimental validation remain to be documented."}</p>
     <div className="encapsulation-jv-controls">
       <label>Physical cell<select value={pair.sample.sample_uid} onChange={(event) => setRequestedSampleUid(event.target.value)}>{pairs.map((item) => <option value={item.sample.sample_uid} key={item.sample.sample_uid}>{item.sample.material_raw || item.sample.material_family} · batch {item.sample.batch_no_raw || "—"} · {item.sample.sample_id_raw || item.sample.sample_uid}</option>)}</select></label>

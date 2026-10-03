@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { DragEvent, Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CurveChart, CurveSeries, TrendChart, TrendPoint, TrendSeries } from "./components/Charts";
 import { EncapsulationComparison } from "./components/EncapsulationComparison";
@@ -77,23 +79,23 @@ type ContextTrendSeries = TrendSeries & {
 
 
 const METRIC_HELP: Record<MetricKey, string> = {
-  light_pout_forward_mW_cm2: "Pearl output power density from the forward sweep, in mW/cm², at the recorded elapsed time in hours. No calibrated incident irradiance is documented, so this is not PCE. Owner-identified different-irradiance tests are excluded; retention uses the first remaining point of this cell and direction.",
+  light_pout_forward_mW_cm2: "Pearl output power density from the forward sweep, in mW/cm², at the recorded elapsed time in hours. The laboratory confirms nominal Light ageing at 1 sun and 40 °C. This remains recorded Pout, not a newly reconstructed or calibrated PCE. Owner-identified different-irradiance tests are excluded; retention uses the first remaining point of this cell and direction.",
   light_pout_reverse_mW_cm2: "Pearl output power density from the reverse sweep, in mW/cm². Forward and reverse sweeps remain separate. Different-irradiance tests are excluded; retention uses the first remaining reverse-sweep point of this cell.",
-  efficiency_pct: "Efficiency is the maximum electrical power delivered divided by the incident light power. It combines the effects of Jsc, Voc, and fill factor.",
+  efficiency_pct: "Efficiency is maximum electrical power divided by incident light power. The laboratory selects the performance plateau reached after repeated JV measurements under light soaking. The laboratory recognizes the plateau when efficiency stops increasing; no numerical tolerance, minimum duration or scan count was supplied. The report will discuss measurement variability and this limitation.",
   jsc_mA_cm2: "Jsc is the short-circuit current density evaluated at V = 0. It mainly reflects the generation and collection of photogenerated charge carriers.",
   voc_V: "Voc is the open-circuit voltage measured when current is zero. It is sensitive to recombination losses and interface quality.",
   ff_pct: "Fill factor measures how rectangular the IV curve is: FF = Pmax / (Voc × Jsc). A decrease often indicates greater resistive or recombination losses.",
-  outdoor_pr_pct: "Performance Ratio (PR) reported by the logger, summarised as the daily median of measurements recorded at irradiance levels of at least 200 W/m². This threshold excludes night-time and very low light levels, where the ratio becomes unstable.",
-  outdoor_pmpp_W: "Power measured at the maximum power point outdoors, summarised as the median of measurements acquired at irradiance levels of at least 200 W/m². Files without irradiance use the median of positive Pmpp values and are explicitly flagged.",
+  outdoor_pr_pct: "The laboratory identifies PR as standard normalization. A held-out check is consistent with Pmpp/G and a reference numerically matching Unaged PCE; the raw power unit and logger configuration still require confirmation. PR is summarised as the daily median of measurements recorded at irradiance levels of at least 200 W/m². This threshold excludes night-time and very low light levels, where the ratio becomes unstable.",
+  outdoor_pmpp_W: "Power measured at the maximum power point outdoors. Unit review: the package labels this W, but the observed PR relation and the confirmed 1 cm² active area suggest the raw numbers are mW; the logger unit has not yet been confirmed. Values remain unchanged. Pmpp is summarised as the median of measurements acquired at irradiance levels of at least 200 W/m². Files without irradiance use the median of positive Pmpp values and are explicitly flagged.",
   outdoor_irradiance_W_m2: "Median incident irradiance for the same daylight observations used to summarise PR and Pmpp. It provides measurement context and is not itself a stability metric.",
 };
 
 const HELP = {
   polymer: "Family is a navigation label, not proof that formulations, batches or processes are interchangeable. Analysis grouping and filters are explicit below.",
   addMaterial: "Adds another independent comparison series. The same encapsulant can be selected more than once with a different ageing protocol or metric.",
-  ageing: "DH, TC, Outdoor and Light ageing are distinct protocols. Pearl Light ageing uses recorded elapsed hours; irradiance and controlled temperature are undocumented. Compare durations only within the same protocol.",
+  ageing: "Laboratory-confirmed nominal conditions: DH at 85 °C / 85% relative humidity; TC from -40 to 80 °C; Light ageing at 1 sun / 40 °C. TC uses cycles, DH and Light ageing hours, Outdoor days. Ramps, dwell times and interruptions are not specified. Compare durations within the same protocol.",
   retention: "Retention = same-cell value / reference × 100. DH/TC use unique Unaged; Light ageing uses the first recorded Pearl point of the same cell and sweep direction after the explicit different-irradiance exclusions. Outdoor uses the median of the first 3–7 valid days, with B3/B14 sensitivity.",
-  labConvention: "One sample UID is one physical cell. Cells from the same batch share a manufacturing session; independent batches were produced on different days. Ag-labelled cells are included and can be stratified with the electrode filter, but Ag/Cu remains a potential comparison factor.",
+  labConvention: "The laboratory confirms one sample UID is one cell and all recorded material/electrode labels, including Ag/Cu. Shared substrates and batch independence remain unspecified. Counts describe cells, not proof of statistically independent replicates.",
   traceDisplay: "Individual samples draws one separate trajectory for every checked patch, using the same material colour and different line patterns. Mean or Median replaces those trajectories with one aggregate curve per material.",
   matching: "Matching links each IV file to an inventory sample using its metadata. “To resolve” contains only genuinely ambiguous or unidentified files. Reference cells and files already placed in laboratory Trash folders are retained separately for audit and do not participate in polymer comparisons.",
   observations: "Total number of individual measurements contributing to the points currently shown. This is not the number of durations or averages.",
@@ -102,20 +104,27 @@ const HELP = {
   globalReplicate: "Sample filters are independent for every series. Checking or unchecking a sample immediately updates the individual curves. Choose Mean or Median above to replace them with one aggregate curve per material. At least one sample remains selected.",
   patchReference: "Sample name and reference from the Excel inventory. In aggregate mode, the cell lists the samples contributing to the point; in individual mode, it identifies the exact plotted sample.",
   targetTime: "Only measurements acquired at this exact ageing duration are eligible. This prevents curves from different ageing times being overlaid as if they were equivalent.",
-  curveChoice: "An example near the group median is selected specimen first, then sweep. Repeat acquisitions do not add independent specimens. Curves passing the automated branch and numerical-consistency screen are visible by default; this screening does not establish instrument calibration or experimental validation.",
+  curveChoice: "An example near the group median is selected specimen first, then sweep. Inventory performance is selected at the light-soaking plateau by the laboratory; the site does not automatically detect that plateau. Repeat acquisitions do not add independent specimens. Curves passing the automated branch and numerical-consistency screen are visible by default; this screening does not establish instrument calibration or experimental validation.",
   convention: "The instrument convention displays negative photocurrent, matching the raw solar simulator values. The PV convention only reverses the sign to show positive generated current; the underlying physics does not change.",
   sweep: "The point sequence is split when a voltage jump or sweep reversal is detected. The primary segment normally covers V = 0 and the Voc crossing; other segments are retained.",
   scale: "The ‘Primary segments’ scale stays readable for material comparisons. ‘All data’ expands the axes to secondary segments without changing any values.",
   rawPoints: "Shows every measured point. No interpolation or smoothing is used to draw the line between successive points in a segment.",
   landmarks: "Jsc is interpolated at V = 0, Voc at J = 0, and MPP is the measured point that maximises delivered power. These landmarks help read the curve; they do not replace values from the source software.",
   qa: "Also includes measurements with an automatic flag, such as an extreme value, ambiguous metadata, or another inconsistency. They are hidden by default but remain available for explicit review.",
-  outdoorQa: "Outdoor values are checked against conservative physical bounds and against the history of the same sample. Only extreme high-side spikes are detected statistically, so a genuine performance loss is not hidden. Flagged values stay in the source data and can be restored with this control.",
+  outdoorQa: "Outdoor values are checked against conservative physical bounds and against the history of the same sample. The screen reviews isolated high-side spikes and isolated dropouts followed by recovery; sustained low output is retained. These are review heuristics, not proof of an instrument fault. Flagged values stay in the source data and can be restored with this control.",
   pointAudit: "The numerator is the number of points plotted in the selected mode; the denominator is the total number of points in the files. Hidden points are never deleted.",
   segmentation: "The primary segment is selected automatically based on sweep continuity, inclusion of V = 0, and consistency with Voc. Every segment keeps its original acquisition order.",
   efficiency: "Maximum power extracted under illumination, divided by incident power and expressed as a percentage.",
   voc: "Open-circuit voltage at the point where current density crosses zero.",
   jsc: "Current density at V = 0. The card retains the positive value reported by the software even when the curve uses the negative instrument convention.",
   ff: "FF = Pmax / (Voc × Jsc). A sharper knee and lower resistive losses produce a higher value.",
+  formulation: "The exact recorded formulation can differ within one material family. Selecting All retains these differences; conservative aggregation keeps known formulations separate.",
+  batch: "The recorded batch label identifies provenance. All batches does not imply independent manufacture or identical conditions. Batch independence still requires laboratory evidence.",
+  recipe: "The recorded lamination recipe is process metadata. Different recipes remain separate in conservative groups; an observed difference does not isolate the causal effect of lamination.",
+  electrode: "Filter by the recorded electrode label. All recorded labels, including Ag/Cu, are confirmed by the laboratory. Label confirmation does not establish equivalence between materials or processes.",
+  grouping: "Conservative grouping keeps formulation, batch, recipe and electrode separate. Missing metadata keeps specimens separate too. Other modes intentionally pool differences and support descriptive exploration, not a controlled material comparison.",
+  cohort: "Available observations uses the eligible cells at each time, so n may change. Constant cohort keeps only cells observed at every recorded time in the chosen window: this can select survivors. Individual trajectories help inspect these changes. Missing measurements never become zero.",
+  outdoorReference: "B7 is the median of up to the first seven QA-valid daily values, with at least three required. B3 and B14 test reference sensitivity. These are valid observation days, not necessarily consecutive calendar days. A positive baseline is required; it is never optimized for a favorable trend.",
 } as const;
 
 function unique(values: Array<string | null | undefined>): string[] {
@@ -332,6 +341,8 @@ export default function Home() {
     };
     return seriesConfigs.map(build);
   }, [dataset, seriesConfigs, mode, aggregation, sampleMap, normalizationBySeries]);
+
+  const lightIrradianceExclusionCount = new Set([...normalizationBySeries.values()].flatMap(traces => traces.filter(trace => trace.exclusions.includes("different_irradiance")).map(trace => trace.observation.observation_uid))).size;
 
   const sharedCurveStress = seriesConfigs.length && seriesConfigs.every((config) => config.stress === seriesConfigs[0].stress) ? seriesConfigs[0].stress : null;
   const curveXUnit = sharedCurveStress ? timeUnit(sharedCurveStress) : "";
@@ -624,7 +635,7 @@ export default function Home() {
   const trendInsight = (() => {
     if (trendDisplay === "samples") return {
       title: `${sampleTrendSeries.length} individual trajectories`,
-      detail: "Each line follows one inventory specimen. Its relation to pixels/substrates is not fully adjudicated. Shared colours identify the material family.",
+      detail: "Each line follows one cell, as confirmed by the laboratory. Shared colours identify the material family; shared-substrate and batch independence remain unspecified.",
       time: null,
       count: sampleTrendSeries.reduce((total, series) => total + series.points.length, 0),
     };
@@ -719,20 +730,27 @@ export default function Home() {
 
   return (
     <main className="app-shell">
+      <a className="skip-link" href="#comparison">Skip to comparison</a>
       <header className="topbar">
         <div className="brand-mark">IV</div>
         <div>
           <p className="eyebrow">Internal tool · IV data</p>
           <h1>IV Compare</h1>
         </div>
-        <div className={`dataset-pill ${loadState}`}><span /> {loadMessage}</div>
+        <nav className="site-nav" aria-label="Main navigation"><Link href="/" aria-current="page">Workspace</Link><Link href="/guide">Guide & methods <span aria-hidden="true">↗</span></Link></nav>
+        <div className={`dataset-pill ${loadState}`} role="status"><span /> {loadMessage}</div>
       </header>
+
+      <section className="workspace-intro" aria-label="Getting started">
+        <div><p className="eyebrow">Photovoltaic encapsulants · research workspace</p><h2>Explore performance.<br /><span>Understand the comparison.</span></h2><p>Follow ageing, inspect a cell’s JV curves, or compare PCE before and after encapsulation.</p></div>
+        <Link className="guide-callout" href="/guide"><span className="guide-icon" aria-hidden="true">?</span><div><strong>Start with a clear method</strong><span>How to use the workspace, what the defaults mean, and where uncertainty remains.</span></div><span aria-hidden="true">→</span></Link>
+      </section>
 
       <section className="dataset-toolbar">
         <div className="dataset-stats" aria-label="Dataset summary">
-          <div><strong>{report ? fr.format(report.samples) : "—"}</strong><span>samples</span></div>
-          <div><strong>{report ? fr.format(report.measurements) : "—"}</strong><span>IV curves</span></div>
-          <div><strong>{report ? `${fr.format(report.points / 1000)}k` : "—"}</strong><span>points</span></div>
+          <div><strong>{report ? fr.format(report.samples) : "—"}</strong><span>inventory samples <InfoTip text="All identifiers in the loaded inventory. Dataset coverage is not the number of eligible or independent cells in the current graph." /></span></div>
+          <div><strong>{report ? fr.format(report.measurements) : "—"}</strong><span>IV measurements <InfoTip text="Raw measurement records. Multiple acquisitions of one sample do not add independent cells; not every record passes screening." /></span></div>
+          <div><strong>{report ? `${fr.format(report.points / 1000)}k` : "—"}</strong><span>raw points <InfoTip text="All voltage/current points, including secondary segments. The chart point audit explains the displayed subset." /></span></div>
         </div>
         <label className={`compact-import ${loadState === "loading" ? "busy" : ""}`} onDragOver={(event) => event.preventDefault()} onDrop={onDrop}>
           <input ref={fileInputRef} type="file" multiple accept=".ivpack,.json,.gz,.xlsx,.tsv" aria-label="Import IV data" onChange={(event) => void processFiles(Array.from(event.target.files ?? []))} />
@@ -741,17 +759,24 @@ export default function Home() {
         </label>
       </section>
 
-      <section className="workspace-card" aria-busy={loadState === "loading"}>
+      <section id="comparison" className="workspace-card" aria-busy={loadState === "loading"}>
         <div className="workspace-head">
           <div>
             <p className="eyebrow">Comparison workspace</p>
-            <h3>{view === "curves" && curveComparison === "ageing" ? "Évolution JV d’une cellule" : view === "encapsulation" ? "Avant / après encapsulation" : sharedCurveStress ? (sharedCurveStress === "Unaged" ? "Comparaison à l’état initial" : `Évolution après ${sharedCurveStress}`) : "Comparaison des conditions"}</h3>
+            <h3>{view === "curves" && curveComparison === "ageing" ? "One cell through ageing" : view === "encapsulation" ? "Before / after encapsulation" : sharedCurveStress ? (sharedCurveStress === "Unaged" ? "Initial-state comparison" : `Performance after ${sharedCurveStress}`) : "Compare recorded conditions"}</h3>
           </div>
           <div className="head-actions">
             <a className="soft-button" href="/data/iv-compare-dowsil.ivpack" download>Sample package</a>
             {view === "trend" && <button type="button" className="primary-button" onClick={exportTrend} disabled={!comparisonCount}>Full selected dataset CSV</button>}
           </div>
         </div>
+
+        <nav className="view-tabs" aria-label="Chart type">
+          <button aria-pressed={view === "trend"} className={view === "trend" ? "active" : ""} onClick={() => setView("trend")}><span>01</span> Ageing trends<small>Track performance over time</small></button>
+          <button aria-pressed={view === "curves"} className={view === "curves" ? "active" : ""} onClick={() => setView("curves")}><span>02</span> JV curves<small>Inspect measured sweeps</small></button>
+          <button aria-pressed={view === "encapsulation"} className={view === "encapsulation" ? "active" : ""} onClick={() => setView("encapsulation")}><span>03</span> Before / after<small>Compare paired PCE values</small></button>
+        </nav>
+        <p className="view-description">{view === "trend" ? "Choose a material, ageing protocol and metric for each series. Start with individual samples, then compare summaries if needed." : view === "curves" ? "Inspect the same cell at exact measured stages, or compare materials at one time. Passing numerical screening does not establish experimental validation." : "Pair Initial Eff with the same cell’s unique Unaged PCE. Ageing controls and trend sample filters do not define this comparison."} <Link href={`/guide#${view === "curves" ? "jv" : view === "encapsulation" ? "paired" : "workflow"}`}>Read the method →</Link></p>
 
         <div className="materials-panel">
           <div className="materials-panel-title"><FieldTitle help={`${HELP.polymer} ${HELP.addMaterial}`}>{view === "curves" && curveComparison === "ageing" ? "Material and ageing protocol" : "Comparison series"}</FieldTitle><span>{view === "curves" && curveComparison === "ageing" ? "1 material" : `${comparisonMaterials.length} series`}</span></div>
@@ -762,11 +787,12 @@ export default function Home() {
               return <article className="material-selector series-config-card" key={config.id} style={{ borderTopColor: materialStyle(config.material).color }}>
                 <div className="series-config-title"><span className="material-slot"><i style={{ background: materialStyle(config.material).color }} />Series {String.fromCharCode(65 + index)}</span>{index >= 2 ? <button type="button" className="remove-material" onClick={() => removeComparisonMaterial(config.id)} aria-label={`Remove series ${String.fromCharCode(65 + index)}`} title="Remove this series">×</button> : null}</div>
                 <div className="series-config-grid">
-                  <label>Encapsulant<select aria-label={`Series ${String.fromCharCode(65 + index)} encapsulant`} value={config.material} onChange={(event) => { updateSeriesConfig(config.id, { material: event.target.value }); setCurveAgeingSample(null); setCurveAgeingTimes([]); setCurveMeasurementIds({}); }}>{materials.map((item) => <option key={item}>{item}</option>)}</select></label>
-                  {view !== "encapsulation" && <label>Ageing protocol<select aria-label={`Series ${String.fromCharCode(65 + index)} ageing protocol`} value={config.stress} onChange={(event) => { updateSeriesConfig(config.id, { stress: event.target.value }); setCurveAgeingSample(null); setCurveAgeingTimes([]); setCurveMeasurementIds({}); }}>{stresses.map((item) => <option key={item}>{item}</option>)}</select></label>}
-                  {view !== "encapsulation" && <label className="series-metric">Metric<select aria-label={`Series ${String.fromCharCode(65 + index)} metric`} value={config.metric} onChange={(event) => updateSeriesConfig(config.id, { metric: event.target.value as MetricKey })}>{metrics.map((key) => <option key={key} value={key}>{METRICS[key].label}</option>)}</select></label>}
-                  {view !== "encapsulation" && ([['formulation','Formulation','material_raw'],['batch','Batch','batch_no_raw'],['recipe','Recipe','recipe_uid'],['electrode','Electrode','electrode']] as const).map(([field,label,source]) => <label key={field}>{label}<select aria-label={`Series ${String.fromCharCode(65 + index)} ${label.toLowerCase()}`} value={config[field] ?? "all"} onChange={(event) => updateSeriesConfig(config.id,{[field]:event.target.value})}><option value="all">All recorded values</option>{unique(dataset?.samples.filter((sample) => sample.material_family === config.material).map((sample) => sample[source]) ?? []).map((value) => <option key={value} value={value}>{field === "recipe" ? dataset?.recipes.find((recipe) => recipe.recipe_uid === value)?.recipe_raw || value : value}</option>)}</select></label>)}
+                  <label><FieldTitle help={HELP.polymer}>Encapsulant</FieldTitle><select aria-label={`Series ${String.fromCharCode(65 + index)} encapsulant`} value={config.material} onChange={(event) => { updateSeriesConfig(config.id, { material: event.target.value }); setCurveAgeingSample(null); setCurveAgeingTimes([]); setCurveMeasurementIds({}); }}>{materials.map((item) => <option key={item}>{item}</option>)}</select></label>
+                  {view !== "encapsulation" && <label><FieldTitle help={HELP.ageing}>Ageing protocol</FieldTitle><select aria-label={`Series ${String.fromCharCode(65 + index)} ageing protocol`} value={config.stress} onChange={(event) => { updateSeriesConfig(config.id, { stress: event.target.value }); setCurveAgeingSample(null); setCurveAgeingTimes([]); setCurveMeasurementIds({}); }}>{stresses.map((item) => <option key={item}>{item}</option>)}</select></label>}
+                  {view !== "encapsulation" && <label className="series-metric"><FieldTitle help={METRIC_HELP[config.metric]}>Metric</FieldTitle><select aria-label={`Series ${String.fromCharCode(65 + index)} metric`} value={config.metric} onChange={(event) => updateSeriesConfig(config.id, { metric: event.target.value as MetricKey })}>{metrics.map((key) => <option key={key} value={key}>{METRICS[key].label}</option>)}</select></label>}
+
                 </div>
+                {view !== "encapsulation" && <details className="series-details"><summary>Refine selection <span>{(["formulation", "batch", "recipe", "electrode"] as const).filter(field => config[field] && config[field] !== "all").length || "No"} active filters</span></summary><div className="series-config-grid">{([['formulation','Formulation','material_raw'],['batch','Batch','batch_no_raw'],['recipe','Recipe','recipe_uid'],['electrode','Electrode','electrode']] as const).map(([field,label,source]) => <label key={field}><FieldTitle help={HELP[field]}>{label}</FieldTitle><select aria-label={`Series ${String.fromCharCode(65 + index)} ${label.toLowerCase()}`} value={config[field] ?? "all"} onChange={(event) => updateSeriesConfig(config.id,{[field]:event.target.value})}><option value="all">All recorded values</option>{unique(dataset?.samples.filter((sample) => sample.material_family === config.material).map((sample) => sample[source]) ?? []).map((value) => <option key={value} value={value}>{field === "recipe" ? dataset?.recipes.find((recipe) => recipe.recipe_uid === value)?.recipe_raw || value : value}</option>)}</select></label>)}</div></details>}
               </article>;
             })}
             {!(view === "curves" && curveComparison === "ageing") && <div className="add-material-wrap">
@@ -776,7 +802,36 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="control-row" aria-label="Sélection des rubans">
+
+
+
+        {view === "trend" && <div className="control-row primary-controls">
+          <div className="segmented" aria-label="Value mode">
+            <button aria-pressed={mode === "retention"} className={mode === "retention" ? "active" : ""} onClick={() => setMode("retention")}>Retention</button>
+            <button aria-pressed={mode === "absolute"} className={mode === "absolute" ? "active" : ""} onClick={() => setMode("absolute")}>Absolute value</button>
+          </div>
+          <InfoTip text={HELP.retention} align="left" />
+          <div className="segmented" aria-label="Trend display">
+            <button aria-pressed={trendDisplay === "samples"} className={trendDisplay === "samples" ? "active" : ""} onClick={() => { setTrendDisplay("samples"); setCohortMode("available"); setHiddenSeries(new Set()); }}>Individual samples</button>
+            <button aria-pressed={trendDisplay === "aggregate"} className={trendDisplay === "aggregate" ? "active" : ""} onClick={() => { setTrendDisplay("aggregate"); setHiddenSeries(new Set()); }}>{aggregation === "mean" ? "Mean" : "Median"}</button>
+          </div>
+          <InfoTip text={HELP.traceDisplay} align="left" />
+          {trendDisplay === "aggregate" && <label className="inline-select"><FieldTitle help={aggregationHelp}>Aggregation</FieldTitle><select aria-label="Aggregation" value={aggregation} onChange={(event) => setAggregation(event.target.value as Aggregation)}><option value="mean">Mean + 95% CI</option><option value="median">Median + IQR</option></select></label>}
+          <span className="condition-group"><span className="condition-chip">Experimental metadata retained</span><InfoTip text={HELP.labConvention} /></span>
+
+          <span className="quality-note">{report ? `${report.matchedFiles}/${report.files} files matched · ${report.reviewFiles} to resolve${report.auditFiles ? ` · ${report.auditFiles} reference/audit` : ""}` : ""}<InfoTip text={HELP.matching} align="right" /></span>
+        </div>
+
+        }
+        {view === "trend" && <details className="advanced-panel"><summary><span>Scientific settings</span><span>{grouping === "conservative" ? "Conservative groups" : "Pooling active"} / {cohortMode === "constant" ? "constant cohort" : "available data"}{includeQa ? " / flagged data included" : ""}</span></summary><section className="control-row advanced-content" aria-label="Scientific analysis controls">
+          <label><FieldTitle help={HELP.grouping}>Analysis grouping</FieldTitle><select aria-label="Analysis grouping" value={grouping} onChange={(event) => setGrouping(event.target.value as AnalysisGrouping)}><option value="conservative">Formulation + batch + recipe + electrode (default)</option><option value="material">Material family (explicit pooling)</option><option value="formulation">Formulation</option><option value="batch">Batch</option><option value="recipe">Recipe</option><option value="electrode">Electrode</option></select></label>
+          <label><FieldTitle help={HELP.cohort}>Cohort</FieldTitle><select aria-label="Cohort" value={trendDisplay === "samples" ? "individual" : cohortMode} onChange={(event) => { const value = event.target.value; setCohortMode(value === "constant" ? "constant" : "available"); setTrendDisplay(value === "individual" ? "samples" : "aggregate"); }}><option value="available">Available observations</option><option value="constant">Constant cohort — diagnostic</option><option value="individual">Individual trajectories — no pooling</option></select></label>
+          {cohortMode === "constant" && <><label>Window start<input type="number" value={cohortStart} onChange={(event) => setCohortStart(Number(event.target.value))}/></label><label>Window end<input type="number" value={cohortEnd} onChange={(event) => setCohortEnd(Number(event.target.value))}/></label><span role="status">Only specimens present at every recorded time within this window contribute. Missing final measurements are not zeros; omitted specimens remain in Available observations.</span></>}
+          {seriesConfigs.some((config) => config.stress === "Outdoor") && <label><FieldTitle help={HELP.outdoorReference}>Outdoor reference</FieldTitle><select aria-label="Outdoor reference" value={outdoorWindow} onChange={(event) => setOutdoorWindow(Number(event.target.value) as 3 | 7 | 14)}><option value="7">B7 — primary convention (3–7 valid days)</option><option value="3">B3 — sensitivity</option><option value="14">B14 — sensitivity</option></select></label>}
+          {grouping !== "conservative" && <span role="status">Explicit pooling: formulations, batches, recipes or electrodes may differ. Inspect composition below; this is not an isolated material effect.</span>}
+          <span className="check-item outdoor-quality-toggle"><label className="check-control"><input type="checkbox" checked={includeQa} onChange={(event) => setIncludeQa(event.target.checked)} /> Include QA-flagged data{relevantOutdoorIssues.length ? ` (${relevantOutdoorIssues.length} outdoor)` : ""}</label><InfoTip text={`${HELP.qa} ${HELP.outdoorQa}`} align="right" /></span>
+        </section></details>}
+        <details className="advanced-panel"><summary><span>Ribbon selection</span><span>{ribbonSelectionLabel(ribbonSelection)}{splitByRibbon ? " / groups split" : ""}</span></summary><div className="advanced-content"><div className="control-row" aria-label="Sélection des rubans">
           <label>Type de ruban<select aria-label="Filtrer les cellules par type de ruban" value={ribbonSelection} onChange={(event) => setSelectedRibbon(event.target.value)}>
             <option value={ALL_RIBBONS}>Tous les rubans</option>
             {availableRibbons.map((value) => <option key={value} value={ribbonChoice(value)}>{value}</option>)}
@@ -784,40 +839,12 @@ export default function Home() {
           </select></label>
           <label className="check-control"><input type="checkbox" checked={splitByRibbon} onChange={(event) => setSplitByRibbon(event.target.checked)} /> Séparer les groupes par type de ruban</label>
           <InfoTip text="Le filtre s'applique à tous les graphes. La séparation agit sur les agrégats et boîtes ; les courbes JV et les trajectoires individuelles restent par cellule. « Non renseigné », « stand » et les notes « too short », « facing down », « all the length » sont classés comme ruban standard faute de référence explicite. Ces notes de préparation restent dans les données brutes et ne prouvent pas une pose identique." />
-        </div>
-
-        {view !== "encapsulation" && <div className="control-row">
-          <div className="segmented" aria-label="Value mode">
-            <button className={mode === "retention" ? "active" : ""} onClick={() => setMode("retention")}>Retention</button>
-            <button className={mode === "absolute" ? "active" : ""} onClick={() => setMode("absolute")}>Absolute value</button>
-          </div>
-          <InfoTip text={HELP.retention} align="left" />
-          <div className="segmented" aria-label="Trend display">
-            <button className={trendDisplay === "samples" ? "active" : ""} onClick={() => { setTrendDisplay("samples"); setCohortMode("available"); setHiddenSeries(new Set()); }}>Individual samples</button>
-            <button className={trendDisplay === "aggregate" ? "active" : ""} onClick={() => { setTrendDisplay("aggregate"); setHiddenSeries(new Set()); }}>{aggregation === "mean" ? "Mean" : "Median"}</button>
-          </div>
-          <InfoTip text={HELP.traceDisplay} align="left" />
-          <label className="inline-select"><FieldTitle help={aggregationHelp}>Aggregation</FieldTitle><select value={aggregation} onChange={(event) => setAggregation(event.target.value as Aggregation)}><option value="mean">Mean + 95% CI</option><option value="median">Median + IQR</option></select></label>
-          <span className="condition-group"><span className="condition-chip">Experimental metadata retained</span><InfoTip text={HELP.labConvention} /></span>
-          <span className="check-item outdoor-quality-toggle"><label className="check-control"><input type="checkbox" checked={includeQa} onChange={(event) => setIncludeQa(event.target.checked)} /> Include QA-flagged data{relevantOutdoorIssues.length ? ` (${relevantOutdoorIssues.length} outdoor)` : ""}</label><InfoTip text={`${HELP.qa} ${HELP.outdoorQa}`} align="right" /></span>
-          <span className="quality-note">{report ? `${report.matchedFiles}/${report.files} files matched · ${report.reviewFiles} to resolve${report.auditFiles ? ` · ${report.auditFiles} reference/audit` : ""}` : ""}<InfoTip text={HELP.matching} align="right" /></span>
-        </div>
-
-        }
-        {view === "trend" && <section className="control-row" aria-label="Scientific analysis controls">
-          <label>Analysis grouping<select value={grouping} onChange={(event) => setGrouping(event.target.value as AnalysisGrouping)}><option value="conservative">Formulation + batch + recipe + electrode (default)</option><option value="material">Material family (explicit pooling)</option><option value="formulation">Formulation</option><option value="batch">Batch</option><option value="recipe">Recipe</option><option value="electrode">Electrode</option></select></label>
-          <label>Cohort<select value={trendDisplay === "samples" ? "individual" : cohortMode} onChange={(event) => { const value = event.target.value; setCohortMode(value === "constant" ? "constant" : "available"); setTrendDisplay(value === "individual" ? "samples" : "aggregate"); }}><option value="available">Available observations</option><option value="constant">Constant cohort — diagnostic</option><option value="individual">Individual trajectories — no pooling</option></select></label>
-          {cohortMode === "constant" && <><label>Window start<input type="number" value={cohortStart} onChange={(event) => setCohortStart(Number(event.target.value))}/></label><label>Window end<input type="number" value={cohortEnd} onChange={(event) => setCohortEnd(Number(event.target.value))}/></label><span role="status">Only specimens present at every recorded time within this window contribute. Missing final measurements are not zeros; omitted specimens remain in Available observations.</span></>}
-          {seriesConfigs.some((config) => config.stress === "Outdoor") && <label>Outdoor reference<select value={outdoorWindow} onChange={(event) => setOutdoorWindow(Number(event.target.value) as 3 | 7 | 14)}><option value="7">B7 — primary convention (3–7 valid days)</option><option value="3">B3 — sensitivity</option><option value="14">B14 — sensitivity</option></select></label>}
-          {grouping !== "conservative" && <span role="status">Explicit pooling: formulations, batches, recipes or electrodes may differ. Inspect composition below; this is not an isolated material effect.</span>}
-        </section>}
+        </div></div></details>
+        {view === "trend" && <div className={`method-summary ${includeQa || grouping !== "conservative" ? "attention" : ""}`} role="status"><strong>Current method</strong><span>{mode === "retention" ? "Same-sample reference / retention (%)" : "Absolute values / recorded units"} / {trendDisplay === "samples" ? "individual trajectories" : `${aggregation === "median" ? "median / IQR" : "mean / 95% CI"} / ${grouping} groups / ${cohortMode} cohort`} / {includeQa ? "QA-flagged observations included" : "QA-flagged observations excluded"}{seriesConfigs.some(config => config.stress === "Outdoor") && mode === "retention" ? ` / Outdoor B${outdoorWindow}` : ""}</span><Link href="/guide#quality">Method & limits</Link></div>}
+        {view === "trend" && lightIrradianceExclusionCount > 0 && <div className="quality-alert" role="status"><strong>{lightIrradianceExclusionCount} observations excluded · 1.5-sun test & recovery</strong><span>Different illumination and the following transition are excluded from 1-sun curves, summaries and references, including QA inspection mode. Raw records remain available.</span><InfoTip text="Owner-confirmed 1.5-sun test: explicit worksheet rows 5–6 and 84–87 in each Pearl summary. Row 7 remains the reference; row 88 resumes the standard series. These source-bound exclusions apply to both sweep directions, without smoothing or dividing powers by 1.5." /></div>}
         {view === "trend" && relevantLabIssues.size > 0 && <details style={{ margin: "12px 24px" }}><summary>Lab QA · {relevantLabIssues.size} flagged observations {includeQa ? "included" : "excluded from curves, aggregates and references"}</summary><ul>{[...relevantLabIssues].map(([id, reason]) => <li key={id}>{reason}</li>)}</ul></details>}
         {view === "trend" && trendDisplay === "aggregate" && aggregation === "mean" && <p style={{ margin: "12px 24px" }}>95% confidence intervals can be very wide with only two cells. They are not measured values or QA flags. Use individual samples or Median + IQR to inspect the spread.</p>}
-        <nav className="view-tabs" aria-label="Chart type">
-          <button className={view === "trend" ? "active" : ""} onClick={() => setView("trend")}><span>01</span> Évolution dans le temps</button>
-          <button className={view === "curves" ? "active" : ""} onClick={() => setView("curves")}><span>02</span> Courbes JV</button>
-          <button className={view === "encapsulation" ? "active" : ""} onClick={() => setView("encapsulation")}><span>03</span> Avant / après encapsulation</button>
-        </nav>
+
 
         {view === "encapsulation" ? <EncapsulationComparison dataset={dataset} selections={seriesConfigs.map((config) => ({ material: config.material, color: materialStyle(config.material).color }))} ribbonSampleIds={ribbonSampleIds} ribbonSelection={ribbonSelection} splitByRibbon={splitByRibbon} /> : view === "trend" ? (
           <div className="chart-layout">
@@ -863,7 +890,7 @@ export default function Home() {
               </dl>
               {outdoorIssueExample ? <div className="quality-alert" role="status"><strong>{relevantOutdoorIssues.length} outdoor anomal{relevantOutdoorIssues.length > 1 ? "ies" : "y"} {includeQa ? "included for review" : "excluded from analysis"}</strong><span>{outdoorIssueSample?.material_family ?? outdoorIssueExample.sampleUid}{numeric(outdoorIssueExample.time) ? ` · day ${fr.format(outdoorIssueExample.time)}` : ""}: {outdoorIssueExample.reason}{relevantOutdoorIssues.length > 1 ? ` ${relevantOutdoorIssues.length - 1} additional flagged value${relevantOutdoorIssues.length > 2 ? "s" : ""}.` : ""}</span></div> : null}
               {selectedTrendSeries.some((series) => series.sampleSetChanges || series.baselineWarnings.length) ? <p className="caution">{selectedTrendSeries.some((series) => series.sampleSetChanges) ? "The contributing sample set changes between some durations. " : ""}{selectedTrendSeries.flatMap((series) => series.baselineWarnings).slice(0, 2).join(" · ")}</p> : null}
-              {seriesConfigs.some(config => config.stress === "Light ageing") ? <p className="caution">Pearl : Pout en mW/cm², temps écoulé en heures. Les lectures à 1,5 sun et leur transition initiale sont exclues (15 lignes). La rétention utilise le premier point restant de chaque cellule et sens de balayage. Les liens avec l’inventaire sont provisoires. Aucune interpolation n’est appliquée.</p> : null}
+              {seriesConfigs.some(config => config.stress === "Light ageing") ? <p className="caution">Pearl : Pout en mW/cm², temps écoulé en heures. Les lectures à 1,5 sun et leurs transitions sont exclues (30 lignes dans les cinq cellules). La rétention utilise le premier point restant de chaque cellule et sens de balayage. Les liens avec l’inventaire sont provisoires. Aucune interpolation n’est appliquée.</p> : null}
               {trendDisplay!=="samples" && cohortDiagnostics.some(group=>group.timeline.some(point=>point.apparentRecoveryRisk)) && <p className="caution" role="status">Apparent recovery may be affected by changing cohort composition. Inspect the contributing specimens below.</p>}
             </aside>
             <section className="data-table-card">
@@ -918,19 +945,21 @@ export default function Home() {
           </div>
         ) : (
           <div className="curve-workspace">
-            <button onClick={()=>{if(dataset)downloadFigureFile(fullJVSelectionCsv(dataset,fullJVMeasurementIds(dataset,seriesConfigs,curveComparison,resolvedAgeingSample?.sampleUid??null,ribbonSampleIds)),"jv.full-selected.csv","text/csv");}}>Full selected JV dataset CSV</button>
+            <div className="jv-action-bar">
             <div className="segmented" aria-label="IV comparison mode">
               <button className={curveComparison === "ageing" ? "active" : ""} onClick={() => { setCurveComparison("ageing"); setHiddenSeries(new Set()); setCurveMeasurementIds({}); }}>One cell over ageing</button>
               <button className={curveComparison === "materials" ? "active" : ""} onClick={() => { setCurveComparison("materials"); setHiddenSeries(new Set()); setCurveMeasurementIds({}); }}>Materials at one time</button>
             </div>
+            <button type="button" className="soft-button" disabled={!dataset} onClick={()=>{if(dataset)downloadFigureFile(fullJVSelectionCsv(dataset,fullJVMeasurementIds(dataset,seriesConfigs,curveComparison,resolvedAgeingSample?.sampleUid??null,ribbonSampleIds)),"jv.full-selected.csv","text/csv");}}>Full selected JV dataset CSV</button>
+            </div>
             {curveComparison === "materials" && !sharedCurveStress ? <div className="missing-selection"><strong>IV curve overlay requires one shared ageing protocol.</strong><span>The performance view still compares these conditions in separate panels. Choose the same protocol in every series to overlay raw IV curves.</span></div> : <>
             <div className="curve-toolbar">
-              {curveComparison === "materials" ? <label><FieldTitle help={HELP.targetTime}>Target time</FieldTitle><select value={resolvedCurveTime ?? ""} onChange={(event) => { setCurveTime(Number(event.target.value)); setCurveMeasurementIds({}); }} disabled={!selectableCurveTimes.length}>{selectableCurveTimes.length ? selectableCurveTimes.map((time) => <option key={time} value={time}>{fr.format(time)} {curveXUnit}{curveTimes.common.includes(time) ? " · exact for all series" : ""}</option>) : <option>No exact shared time available</option>}</select></label> : <label><FieldTitle help="Only cells with QA-valid raw IV curves at two or more exact stages are offered. Every curve belongs to this same physical cell.">Physical cell</FieldTitle><select aria-label="Physical cell for IV ageing" value={resolvedAgeingSample?.sampleUid ?? ""} disabled={!ageingCandidates.length} onChange={(event) => { setCurveAgeingSample(event.target.value); setCurveAgeingTimes([]); setCurveMeasurementIds({}); setHiddenSeries(new Set()); }}>{ageingCandidates.length ? ageingCandidates.map((candidate) => <option key={candidate.sampleUid} value={candidate.sampleUid}>{candidate.label} · {candidate.sampleUid} · {candidate.times.length} stages</option>) : <option>No cell with multiple exact IV stages</option>}</select></label>}
-              <label><FieldTitle help={HELP.convention}>Current convention</FieldTitle><select value={currentConvention} onChange={(event) => setCurrentConvention(event.target.value as CurrentConvention)}><option value="instrument">Instrument · negative J</option><option value="pv">PV · positive generated J</option></select></label>
-              <label><FieldTitle help={HELP.sweep}>Sweep</FieldTitle><select value={sweepView} onChange={(event) => setSweepView(event.target.value as SweepView)}><option value="primary">Primary · recommended</option><option value="all">All segments</option></select></label>
-              <label><FieldTitle help={HELP.scale} align="right">Scale</FieldTitle><select value={curveScale} onChange={(event) => setCurveScale(event.target.value as CurveScale)}><option value="primary">Primary segments</option><option value="all">All data</option></select></label>
+              {curveComparison === "materials" ? <label><FieldTitle help={HELP.targetTime}>Target time</FieldTitle><select aria-label="Target time" value={resolvedCurveTime ?? ""} onChange={(event) => { setCurveTime(Number(event.target.value)); setCurveMeasurementIds({}); }} disabled={!selectableCurveTimes.length}>{selectableCurveTimes.length ? selectableCurveTimes.map((time) => <option key={time} value={time}>{fr.format(time)} {curveXUnit}{curveTimes.common.includes(time) ? " · exact for all series" : ""}</option>) : <option>No exact shared time available</option>}</select></label> : <label><FieldTitle help="Only cells with QA-valid raw IV curves at two or more exact stages are offered. Every curve belongs to this same physical cell.">Physical cell</FieldTitle><select aria-label="Physical cell for IV ageing" value={resolvedAgeingSample?.sampleUid ?? ""} disabled={!ageingCandidates.length} onChange={(event) => { setCurveAgeingSample(event.target.value); setCurveAgeingTimes([]); setCurveMeasurementIds({}); setHiddenSeries(new Set()); }}>{ageingCandidates.length ? ageingCandidates.map((candidate) => <option key={candidate.sampleUid} value={candidate.sampleUid}>{candidate.label} · {candidate.sampleUid} · {candidate.times.length} stages</option>) : <option>No cell with multiple exact IV stages</option>}</select></label>}
+              <label><FieldTitle help={HELP.convention}>Current convention</FieldTitle><select aria-label="Current convention" value={currentConvention} onChange={(event) => setCurrentConvention(event.target.value as CurrentConvention)}><option value="instrument">Instrument · negative J</option><option value="pv">PV · positive generated J</option></select></label>
+              <label><FieldTitle help={HELP.sweep}>Sweep</FieldTitle><select aria-label="Sweep" value={sweepView} onChange={(event) => setSweepView(event.target.value as SweepView)}><option value="primary">Primary · recommended</option><option value="all">All segments</option></select></label>
+              <label><FieldTitle help={HELP.scale} align="right">Scale</FieldTitle><select aria-label="Scale" value={curveScale} onChange={(event) => setCurveScale(event.target.value as CurveScale)}><option value="primary">Primary segments</option><option value="all">All data</option></select></label>
               <div className="curve-checks">
-                <span className="check-item"><label className="check-control"><input type="checkbox" checked={inspectUnsafeJV} onChange={(event) => setInspectUnsafeJV(event.target.checked)} /> Include curves failing screening</label><InfoTip text="The default view already includes curves with a usable branch and numerical consistency. This option also includes incomplete, inconsistent or otherwise unresolved curves for source inspection only." /></span>
+                <span className="check-item"><label className="check-control"><input type="checkbox" checked={inspectUnsafeJV} onChange={(event) => setInspectUnsafeJV(event.target.checked)} /> Include curves failing screening</label><InfoTip text="The default view includes curves with a usable branch and numerical consistency, even when strict experimental validation is unresolved. This option also includes curves failing numerical screening for source inspection only. It does not validate any curve." /></span>
                 <span className="check-item"><label className="check-control"><input type="checkbox" checked={showCurvePoints} onChange={(event) => setShowCurvePoints(event.target.checked)} /> Measured points</label><InfoTip text={HELP.rawPoints} align="left" /></span>
                 <span className="check-item"><label className="check-control"><input type="checkbox" checked={showLandmarks} onChange={(event) => setShowLandmarks(event.target.checked)} /> IV landmarks</label><InfoTip text={HELP.landmarks} /></span>
                 <span className="check-item"><label className="check-control"><input type="checkbox" checked={includeQa} onChange={(event) => setIncludeQa(event.target.checked)} /> QA-flagged measurements</label><InfoTip text={HELP.qa} align="right" /></span>
@@ -940,7 +969,7 @@ export default function Home() {
               {curveComparison === "ageing" && resolvedAgeingSample ? <div className="sample-filter-card" style={{ borderTopColor: materialStyle(seriesConfigs[0]?.material ?? "").color }}><strong>Ageing stages · same cell</strong><div className="sample-filter-options">{resolvedAgeingSample.times.map((candidate) => { const checked = selectedAgeingTimes.includes(candidate.time); return <label className={checked ? "active" : ""} key={candidate.time}><input type="checkbox" checked={checked} disabled={checked && selectedAgeingTimes.length <= 2} onChange={() => { setCurveAgeingTimes(toggleAgeingTime(selectedAgeingTimes, candidate.time)); setCurveMeasurementIds({}); setHiddenSeries(new Set()); }} /> {fr.format(candidate.time)} {timeUnit(seriesConfigs[0]?.stress ?? "")}</label>; })}</div><small>Choose at least two measured stages. 0 means Unaged after encapsulation, when an IV file is linked to this same cell.</small></div> : null}
               {(curveComparison === "ageing" ? ageingCurveSelections.map((selection) => ({ seriesId: selection.seriesId, color: selection.color, candidates: resolvedAgeingSample?.times.find((item) => item.time === selection.actualTime)?.measurements ?? [], title: `${fr.format(selection.actualTime)} ${timeUnit(selection.config.stress)} measurement` })) : curveCandidateGroups.map((group, index) => ({ ...group, title: `Series ${String.fromCharCode(65 + index)} measurement` }))).map((group, index) => <label key={group.seriesId} style={{ borderTopColor: group.color }}>
                 <FieldTitle help={HELP.curveChoice} align={index === curveCandidateGroups.length - 1 ? "right" : "left"}>{group.title}</FieldTitle>
-                <select value={curveMeasurementIds[group.seriesId] ?? "representative"} disabled={!group.candidates.length} onChange={(event) => setCurveMeasurementIds((current) => ({ ...current, [group.seriesId]: event.target.value === "representative" ? null : event.target.value }))}>
+                <select aria-label={`${group.title} measurement`} value={curveMeasurementIds[group.seriesId] ?? "representative"} disabled={!group.candidates.length} onChange={(event) => setCurveMeasurementIds((current) => ({ ...current, [group.seriesId]: event.target.value === "representative" ? null : event.target.value }))}>
                   <option value="representative">Example cell · nearest specimen median efficiency</option>
                   {group.candidates.map((measurement) => {
                     const sample = measurement.sample_uid ? sampleMap.get(measurement.sample_uid) : undefined;
@@ -959,7 +988,7 @@ export default function Home() {
                 })}
                 <span>{currentConvention === "instrument" ? "Instrument convention · negative photocurrent" : "PV convention · positive generated current"}</span>
               </div>
-              {curveAudit.raw ? <div className={`curve-audit ${curveAudit.raw === curveAudit.primary ? "clean" : "segmented"}`} role="status"><span className="curve-audit-title"><strong>{displayedPointCount}/{curveAudit.raw} points displayed</strong><InfoTip text={HELP.pointAudit} align="left" /></span><span>{curveAudit.raw === curveAudit.primary ? "Continuous sweep" : `${curveAudit.raw - curveAudit.primary} additional points retained · ${curveAudit.segments} segments detected`}</span></div> : null}
+              {curveAudit.raw ? <div className={`curve-audit ${curveAudit.raw === curveAudit.primary ? "clean" : "has-segments"}`} role="status"><span className="curve-audit-title"><strong>{displayedPointCount}/{curveAudit.raw} points displayed</strong><InfoTip text={HELP.pointAudit} align="left" /></span><span>{curveAudit.raw === curveAudit.primary ? "Continuous sweep" : `${curveAudit.raw - curveAudit.primary} additional points retained · ${curveAudit.segments} segments detected`}</span></div> : null}
               {!curveSelections.length ? <div className="empty-chart" role="status"><strong>{inspectUnsafeJV?"No JV measurements match this selection":"No JV curves pass the numerical screening"}</strong><span>{inspectUnsafeJV?"Check the specimen, exact times and QA filters.":"No curve in this selection has both a usable photovoltaic branch and acceptable numerical consistency. Enable explicit inspection to review the source curves."}</span></div> : <CurveChart series={visibleCurveSeries} yAxisLabel={currentConvention === "instrument" ? "J instrument (mA/cm²)" : "J généré (mA/cm²)"} currentConvention={currentConvention} showPoints={showCurvePoints} showLandmarks={showLandmarks} scaleMode={curveScale} exportContext={figureContext} />}
             </section>
             <div className="measurement-grid">
@@ -987,7 +1016,7 @@ export default function Home() {
       {dataset&&view==="trend"&&seriesConfigs.some(config=>config.stress==="Outdoor")&&<OutdoorSensitivity dataset={dataset} materials={seriesConfigs.filter(config=>config.stress==="Outdoor").map(config=>config.material)} ribbonSampleIds={ribbonSampleIds} ribbonSelection={ribbonSelection}/>}
       <footer>
         <span>IV Compare · format .ivpack v{dataset?.schemaVersion ?? "1.0"}</span>
-        <span>Extreme values remain available through the QA control.</span>
+        <Link href="/guide">Guide, scientific choices & limitations</Link>
       </footer>
     </main>
   );

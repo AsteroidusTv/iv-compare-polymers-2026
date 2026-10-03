@@ -64,15 +64,16 @@ test("owner-confirmed different irradiation is excluded in both modes even with 
   if(mode==="retention")assert.equal(result[1].baseline?.observations[0].observation_uid,"B");
  }
 });
-test("all five Pearl cells omit only the reviewed peaks and use source row 7 as reference",async()=>{
+test("all five Pearl cells omit reviewed 1.5-sun peaks and recovery transitions, keeping row 7 as reference",async()=>{
  const dataset=validateDataset(JSON.parse(gunzipSync(await fs.readFile("public/data/iv-compare-dowsil.ivpack")).toString()));
  const observations=dataset.observations.filter(row=>row.test_type==="Light ageing");
  const sampleUids=[...new Set(observations.map(row=>row.sample_uid))];
  for(const metric of [forward,reverse] as const){
   const result=normalizationTraces(dataset,{sampleUids,protocol:"Light ageing",metric,mode:"retention",includeQa:true,outdoorWindow:7,qaIssues:new Map()});
   const excluded=result.filter(t=>t.exclusions.includes("different_irradiance"));
-  assert.equal(excluded.length,15);assert.equal(result.filter(t=>t.value!==null).length,1893);
-  assert.ok(excluded.every(t=>[5,6,84].includes(t.observation.source_row!)));
+  assert.equal(excluded.length,30);assert.equal(result.filter(t=>t.value!==null).length,1878);
+  assert.ok(excluded.every(t=>[5,6,84,85,86,87].includes(t.observation.source_row!)));
+  assert.ok(result.filter(t=>[83,88].includes(t.observation.source_row!)).every(t=>t.value!==null));
   assert.ok(result.every(t=>t.baseline?.observations[0].source_row===7));
   assert.ok(result.filter(t=>t.observation.source_row===7).every(t=>t.value===100));
  }

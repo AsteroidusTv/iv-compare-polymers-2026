@@ -4,13 +4,19 @@ Internal scientific application for comparing photovoltaic encapsulants, ageing 
 
 ## Documentation
 
+Open **Guide & methods** in the application (`/guide`) for the usage walkthrough,
+scientific defaults, QA rules, reference choices and unresolved interpretation
+limits. Contextual information buttons explain the controls directly in the
+workspace. Advanced selection and scientific settings are expandable; the
+active trend method remains visible above the charts.
+
 The [documentation index](docs/README.md) points to the current scientific
 methods, open laboratory questions, raw-data rebuild procedure and dated audit
 records. The [deployment runbook](DEPLOYMENT.md) remains at the repository root.
 
 ## Scientific scope
 
-The application supports exploratory comparison after damp heat (DH), thermal cycling (TC), outdoor exposure, or in the initial state. Lamination recipes are recorded as process metadata, not a causal comparison variable. Grouping preserves known formulation, batch, process and electrode differences; a separate descriptive option allows matching specimens with missing process metadata to appear together. The laboratory has not resolved the validity of every recorded Ag electrode. Ageing protocol and metric remain explicit comparison controls.
+The application supports exploratory comparison after damp heat (DH), thermal cycling (TC), outdoor exposure, or in the initial state. Lamination recipes are recorded as process metadata, not a causal comparison variable. Grouping preserves known formulation, batch, process and electrode differences; a separate descriptive option allows matching specimens with missing process metadata to appear together. The laboratory confirms all recorded labels, including Ag/Cu (3 October 2026); this does not establish formulation equivalence or statistical independence. Ageing protocol and metric remain explicit comparison controls.
 
 - Mean aggregation is shown with a 95% confidence interval.
 - Median aggregation is shown with an interquartile range.

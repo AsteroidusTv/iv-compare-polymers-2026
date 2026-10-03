@@ -1534,8 +1534,8 @@
     "source_file": "LightAgeing/Pearl_261001/260924_141642_Group_Len1_Sub_A4-len1.xlsx",
     "source_row": 85,
     "action_or_status": "Pearl light-ageing measurement",
-    "comments": "A4-len1 / C337; separate F/R sweeps; filename/inventory specimen link is provisional. Irradiance is undocumented; Pout is not PCE.",
-    "data_quality_flag": null,
+    "comments": "A4-len1 / C337; separate F/R sweeps; filename/inventory specimen link is provisional. Irradiance is undocumented; Pout is not PCE. Excluded from standard-irradiance trends: Recovery transition immediately after the owner-identified 1.5-sun test (source rows 84–87); not comparable to the standard 1-sun ageing series.",
+    "data_quality_flag": "light_irradiance_changed",
     "aggregation_protocol": "Individual Pearl summary row; elapsed source hours; no temporal averaging, interpolation or F/R pooling"
   },
   {
@@ -1553,8 +1553,8 @@
     "source_file": "LightAgeing/Pearl_261001/260924_141642_Group_Len1_Sub_A4-len1.xlsx",
     "source_row": 86,
     "action_or_status": "Pearl light-ageing measurement",
-    "comments": "A4-len1 / C337; separate F/R sweeps; filename/inventory specimen link is provisional. Irradiance is undocumented; Pout is not PCE.",
-    "data_quality_flag": null,
+    "comments": "A4-len1 / C337; separate F/R sweeps; filename/inventory specimen link is provisional. Irradiance is undocumented; Pout is not PCE. Excluded from standard-irradiance trends: Recovery transition immediately after the owner-identified 1.5-sun test (source rows 84–87); not comparable to the standard 1-sun ageing series.",
+    "data_quality_flag": "light_irradiance_changed",
     "aggregation_protocol": "Individual Pearl summary row; elapsed source hours; no temporal averaging, interpolation or F/R pooling"
   },
   {
@@ -1572,8 +1572,8 @@
     "source_file": "LightAgeing/Pearl_261001/260924_141642_Group_Len1_Sub_A4-len1.xlsx",
     "source_row": 87,
     "action_or_status": "Pearl light-ageing measurement",
-    "comments": "A4-len1 / C337; separate F/R sweeps; filename/inventory specimen link is provisional. Irradiance is undocumented; Pout is not PCE.",
-    "data_quality_flag": null,
+    "comments": "A4-len1 / C337; separate F/R sweeps; filename/inventory specimen link is provisional. Irradiance is undocumented; Pout is not PCE. Excluded from standard-irradiance trends: Recovery transition immediately after the owner-identified 1.5-sun test (source rows 84–87); not comparable to the standard 1-sun ageing series.",
+    "data_quality_flag": "light_irradiance_changed",
     "aggregation_protocol": "Individual Pearl summary row; elapsed source hours; no temporal averaging, interpolation or F/R pooling"
   },
   {
@@ -8811,8 +8811,8 @@
     "source_file": "LightAgeing/Pearl_261001/260924_141819_Group_Len1_Sub_A4-len2.xlsx",
     "source_row": 85,
     "action_or_status": "Pearl light-ageing measurement",
-    "comments": "A4-len2 / C340; separate F/R sweeps; filename/inventory specimen link is provisional. Irradiance is undocumented; Pout is not PCE.",
-    "data_quality_flag": null,
+    "comments": "A4-len2 / C340; separate F/R sweeps; filename/inventory specimen link is provisional. Irradiance is undocumented; Pout is not PCE. Excluded from standard-irradiance trends: Recovery transition immediately after the owner-identified 1.5-sun test (source rows 84–87); not comparable to the standard 1-sun ageing series.",
+    "data_quality_flag": "light_irradiance_changed",
     "aggregation_protocol": "Individual Pearl summary row; elapsed source hours; no temporal averaging, interpolation or F/R pooling"
   },
   {
@@ -8830,8 +8830,8 @@
     "source_file": "LightAgeing/Pearl_261001/260924_141819_Group_Len1_Sub_A4-len2.xlsx",
     "source_row": 86,
     "action_or_status": "Pearl light-ageing measurement",
-    "comments": "A4-len2 / C340; separate F/R sweeps; filename/inventory specimen link is provisional. Irradiance is undocumented; Pout is not PCE.",
-    "data_quality_flag": null,
+    "comments": "A4-len2 / C340; separate F/R sweeps; filename/inventory specimen link is provisional. Irradiance is undocumented; Pout is not PCE. Excluded from standard-irradiance trends: Recovery transition immediately after the owner-identified 1.5-sun test (source rows 84–87); not comparable to the standard 1-sun ageing series.",
+    "data_quality_flag": "light_irradiance_changed",
     "aggregation_protocol": "Individual Pearl summary row; elapsed source hours; no temporal averaging, interpolation or F/R pooling"
   },
   {
@@ -8849,8 +8849,8 @@
     "source_file": "LightAgeing/Pearl_261001/260924_141819_Group_Len1_Sub_A4-len2.xlsx",
     "source_row": 87,
     "action_or_status": "Pearl light-ageing measurement",
-    "comments": "A4-len2 / C340; separate F/R sweeps; filename/inventory specimen link is provisional. Irradiance is undocumented; Pout is not PCE.",
-    "data_quality_flag": null,
+    "comments": "A4-len2 / C340; separate F/R sweeps; filename/inventory specimen link is provisional. Irradiance is undocumented; Pout is not PCE. Excluded from standard-irradiance trends: Recovery transition immediately after the owner-identified 1.5-sun test (source rows 84–87); not comparable to the standard 1-sun ageing series.",
+    "data_quality_flag": "light_irradiance_changed",
     "aggregation_protocol": "Individual Pearl summary row; elapsed source hours; no temporal averaging, interpolation or F/R pooling"
   },
   {
@@ -16069,8 +16069,8 @@
     "source_file": "LightAgeing/Pearl_261001/260924_141819_Group_TF4_Sub_A4-TF4-1.xlsx",
     "source_row": 85,
     "action_or_status": "Pearl light-ageing measurement",
-    "comments": "A4-TF4-1 / C343; separate F/R sweeps; filename/inventory specimen link is provisional. Irradiance is undocumented; Pout is not PCE.",
-    "data_quality_flag": null,
+    "comments": "A4-TF4-1 / C343; separate F/R sweeps; filename/inventory specimen link is provisional. Irradiance is undocumented; Pout is not PCE. Excluded from standard-irradiance trends: Recovery transition immediately after the owner-identified 1.5-sun test (source rows 84–87); not comparable to the standard 1-sun ageing series.",
+    "data_quality_flag": "light_irradiance_changed",
     "aggregation_protocol": "Individual Pearl summary row; elapsed source hours; no temporal averaging, interpolation or F/R pooling"
   },
   {
@@ -16088,8 +16088,8 @@
     "source_file": "LightAgeing/Pearl_261001/260924_141819_Group_TF4_Sub_A4-TF4-1.xlsx",
     "source_row": 86,
     "action_or_status": "Pearl light-ageing measurement",
-    "comments": "A4-TF4-1 / C343; separate F/R sweeps; filename/inventory specimen link is provisional. Irradiance is undocumented; Pout is not PCE.",
-    "data_quality_flag": null,
+    "comments": "A4-TF4-1 / C343; separate F/R sweeps; filename/inventory specimen link is provisional. Irradiance is undocumented; Pout is not PCE. Excluded from standard-irradiance trends: Recovery transition immediately after the owner-identified 1.5-sun test (source rows 84–87); not comparable to the standard 1-sun ageing series.",
+    "data_quality_flag": "light_irradiance_changed",
     "aggregation_protocol": "Individual Pearl summary row; elapsed source hours; no temporal averaging, interpolation or F/R pooling"
   },
   {
@@ -16107,8 +16107,8 @@
     "source_file": "LightAgeing/Pearl_261001/260924_141819_Group_TF4_Sub_A4-TF4-1.xlsx",
     "source_row": 87,
     "action_or_status": "Pearl light-ageing measurement",
-    "comments": "A4-TF4-1 / C343; separate F/R sweeps; filename/inventory specimen link is provisional. Irradiance is undocumented; Pout is not PCE.",
-    "data_quality_flag": null,
+    "comments": "A4-TF4-1 / C343; separate F/R sweeps; filename/inventory specimen link is provisional. Irradiance is undocumented; Pout is not PCE. Excluded from standard-irradiance trends: Recovery transition immediately after the owner-identified 1.5-sun test (source rows 84–87); not comparable to the standard 1-sun ageing series.",
+    "data_quality_flag": "light_irradiance_changed",
     "aggregation_protocol": "Individual Pearl summary row; elapsed source hours; no temporal averaging, interpolation or F/R pooling"
   },
   {
@@ -23308,8 +23308,8 @@
     "source_file": "LightAgeing/Pearl_261001/260924_141819_Group_TF4_Sub_A4-TF4-2.xlsx",
     "source_row": 85,
     "action_or_status": "Pearl light-ageing measurement",
-    "comments": "A4-TF4-2 / C346; separate F/R sweeps; filename/inventory specimen link is provisional. Irradiance is undocumented; Pout is not PCE.",
-    "data_quality_flag": null,
+    "comments": "A4-TF4-2 / C346; separate F/R sweeps; filename/inventory specimen link is provisional. Irradiance is undocumented; Pout is not PCE. Excluded from standard-irradiance trends: Recovery transition immediately after the owner-identified 1.5-sun test (source rows 84–87); not comparable to the standard 1-sun ageing series.",
+    "data_quality_flag": "light_irradiance_changed",
     "aggregation_protocol": "Individual Pearl summary row; elapsed source hours; no temporal averaging, interpolation or F/R pooling"
   },
   {
@@ -23327,8 +23327,8 @@
     "source_file": "LightAgeing/Pearl_261001/260924_141819_Group_TF4_Sub_A4-TF4-2.xlsx",
     "source_row": 86,
     "action_or_status": "Pearl light-ageing measurement",
-    "comments": "A4-TF4-2 / C346; separate F/R sweeps; filename/inventory specimen link is provisional. Irradiance is undocumented; Pout is not PCE.",
-    "data_quality_flag": null,
+    "comments": "A4-TF4-2 / C346; separate F/R sweeps; filename/inventory specimen link is provisional. Irradiance is undocumented; Pout is not PCE. Excluded from standard-irradiance trends: Recovery transition immediately after the owner-identified 1.5-sun test (source rows 84–87); not comparable to the standard 1-sun ageing series.",
+    "data_quality_flag": "light_irradiance_changed",
     "aggregation_protocol": "Individual Pearl summary row; elapsed source hours; no temporal averaging, interpolation or F/R pooling"
   },
   {
@@ -23346,8 +23346,8 @@
     "source_file": "LightAgeing/Pearl_261001/260924_141819_Group_TF4_Sub_A4-TF4-2.xlsx",
     "source_row": 87,
     "action_or_status": "Pearl light-ageing measurement",
-    "comments": "A4-TF4-2 / C346; separate F/R sweeps; filename/inventory specimen link is provisional. Irradiance is undocumented; Pout is not PCE.",
-    "data_quality_flag": null,
+    "comments": "A4-TF4-2 / C346; separate F/R sweeps; filename/inventory specimen link is provisional. Irradiance is undocumented; Pout is not PCE. Excluded from standard-irradiance trends: Recovery transition immediately after the owner-identified 1.5-sun test (source rows 84–87); not comparable to the standard 1-sun ageing series.",
+    "data_quality_flag": "light_irradiance_changed",
     "aggregation_protocol": "Individual Pearl summary row; elapsed source hours; no temporal averaging, interpolation or F/R pooling"
   },
   {
@@ -30547,8 +30547,8 @@
     "source_file": "LightAgeing/Pearl_261001/260924_141819_Group_TF4_Sub_A4-TF4-3.xlsx",
     "source_row": 85,
     "action_or_status": "Pearl light-ageing measurement",
-    "comments": "A4-TF4-3 / C349; separate F/R sweeps; filename/inventory specimen link is provisional. Irradiance is undocumented; Pout is not PCE.",
-    "data_quality_flag": null,
+    "comments": "A4-TF4-3 / C349; separate F/R sweeps; filename/inventory specimen link is provisional. Irradiance is undocumented; Pout is not PCE. Excluded from standard-irradiance trends: Recovery transition immediately after the owner-identified 1.5-sun test (source rows 84–87); not comparable to the standard 1-sun ageing series.",
+    "data_quality_flag": "light_irradiance_changed",
     "aggregation_protocol": "Individual Pearl summary row; elapsed source hours; no temporal averaging, interpolation or F/R pooling"
   },
   {
@@ -30566,8 +30566,8 @@
     "source_file": "LightAgeing/Pearl_261001/260924_141819_Group_TF4_Sub_A4-TF4-3.xlsx",
     "source_row": 86,
     "action_or_status": "Pearl light-ageing measurement",
-    "comments": "A4-TF4-3 / C349; separate F/R sweeps; filename/inventory specimen link is provisional. Irradiance is undocumented; Pout is not PCE.",
-    "data_quality_flag": null,
+    "comments": "A4-TF4-3 / C349; separate F/R sweeps; filename/inventory specimen link is provisional. Irradiance is undocumented; Pout is not PCE. Excluded from standard-irradiance trends: Recovery transition immediately after the owner-identified 1.5-sun test (source rows 84–87); not comparable to the standard 1-sun ageing series.",
+    "data_quality_flag": "light_irradiance_changed",
     "aggregation_protocol": "Individual Pearl summary row; elapsed source hours; no temporal averaging, interpolation or F/R pooling"
   },
   {
@@ -30585,8 +30585,8 @@
     "source_file": "LightAgeing/Pearl_261001/260924_141819_Group_TF4_Sub_A4-TF4-3.xlsx",
     "source_row": 87,
     "action_or_status": "Pearl light-ageing measurement",
-    "comments": "A4-TF4-3 / C349; separate F/R sweeps; filename/inventory specimen link is provisional. Irradiance is undocumented; Pout is not PCE.",
-    "data_quality_flag": null,
+    "comments": "A4-TF4-3 / C349; separate F/R sweeps; filename/inventory specimen link is provisional. Irradiance is undocumented; Pout is not PCE. Excluded from standard-irradiance trends: Recovery transition immediately after the owner-identified 1.5-sun test (source rows 84–87); not comparable to the standard 1-sun ageing series.",
+    "data_quality_flag": "light_irradiance_changed",
     "aggregation_protocol": "Individual Pearl summary row; elapsed source hours; no temporal averaging, interpolation or F/R pooling"
   },
   {

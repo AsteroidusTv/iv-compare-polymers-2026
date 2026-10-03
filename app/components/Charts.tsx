@@ -8,6 +8,8 @@ import { downloadFigureFile } from "../lib/browser-figure-download";
 import { markerPath, segmentLinePattern, type MaterialStyle } from "../lib/material-style";
 import { applyReportSvgStyle } from "../lib/report-svg";
 import { figureXAxisLabel } from "../lib/figure-language";
+import { FieldTitle, InfoTip } from "./InfoTip";
+import { sampleDisplayPoints } from "../lib/display-sampling";
 
 export interface TrendPoint {
   x: number;
@@ -310,6 +312,7 @@ export function TrendChart({
 }) {
   const [viewport, setViewport] = useState<TrendViewport>({ zoom: 1, centreX: 0.5, centreY: 0.5 });
   const [graphEndInput, setGraphEndInput] = useState<string | null>(null);
+  const [pointInterval, setPointInterval] = useState(0);
   const [manualY, setManualY] = useState<{ min: string; max: string } | null>(null);
   const [showIntervals, setShowIntervals] = useState(true);
   const dragRef = useRef<{ clientX: number; clientY: number; centreX: number; centreY: number } | null>(null);
@@ -365,13 +368,15 @@ export function TrendChart({
   const graphEnd = displayedGraphEnd.trim() && Number.isFinite(requestedGraphEnd) && requestedGraphEnd >= minimumTime && requestedGraphEnd < maximumTime
     ? requestedGraphEnd
     : null;
-  const plottedSeries = series
+  const analyticalSeries = series
     .map((item) => ({ ...item, points: pointsThrough(item.points, graphEnd) }))
     .filter((item) => item.points.length);
+  const displayInterval = xUnit === "h" ? pointInterval : 0;
+  const plottedSeries = analyticalSeries.map(item => ({ ...item, points: sampleDisplayPoints(item.points, displayInterval) }));
   const all = plottedSeries.flatMap((item) => item.points);
   const isRetention = yUnit === "% of reference";
   const allTimes = all.map((point) => point.x);
-  const allValues = trendDisplayValues(all, showIntervals);
+  const allValues = trendDisplayValues(analyticalSeries.flatMap(item => item.points), showIntervals);
   const maximumPlottedTime = Math.max(...allTimes, 0);
   const fullXStep = niceStep(graphEnd ?? maximumPlottedTime);
   const fullXMin = 0;
@@ -409,12 +414,13 @@ export function TrendChart({
   }));
   const exportTitle = reportTitle ?? `Évolution au cours du temps — ${yUnit}`;
   const scaleNote = `${manualYValid ? "Manual" : "Auto"} Y: ${numberFormat.format(yMin)}–${numberFormat.format(yMax)} ${yUnit}${clippedY ? " · values or intervals clipped" : ""}${showIntervals ? "" : " · uncertainty intervals hidden"}`;
-  const exportSubtitle = trendExportScaleWarning(clippedY, showIntervals);
+  const samplingNote = displayInterval ? `Affichage espacé de ${displayInterval} h par courbe ; premier et dernier points conservés, sans moyenne ni interpolation. Analyse sur les données complètes.` : "";
+  const exportSubtitle = [trendExportScaleWarning(clippedY, showIntervals), samplingNote].filter(Boolean).join(" · ");
   const yAxisLabel = reportYAxisLabel ?? yUnit;
   const exportStem = exportFileStem(graphEnd === null ? "performance-over-time" : `performance-over-time-through-${graphEnd}-${xUnit}`, exportSeries);
   const manifest = figureManifest({ kind: "trend", title: exportTitle, caption: [exportTitle, exportSubtitle, exportContext.methodCaption, "Les lignes relient les durées mesurées ; aucune interpolation temporelle"].filter(Boolean).join(". ") + ".", context: exportContext,
     xUnit, yUnit, analyticLimit: { maximumX: graphEnd, interpolation: "none" }, viewport: { xMin, xMax, yMin, yMax },
-    intervalsVisible: showIntervals, series: exportSeries, display: { zoom: viewport.zoom, yScale: manualYValid ? "manual" : "auto", clippedY, smallSampleMembersShown: true } });
+    intervalsVisible: showIntervals, series: exportSeries, display: { zoom: viewport.zoom, yScale: manualYValid ? "manual" : "auto", clippedY, smallSampleMembersShown: true, pointInterval: displayInterval, pointIntervalUnit: xUnit, pointSelection: "first, then first recorded point at least interval after previous selected point, and last; display only", analyticalPointCount: analyticalSeries.reduce((sum, item) => sum + item.points.length, 0) } });
 
   const changeZoom = (nextZoom: number, anchorX = 0.5, anchorY = 0.5) => {
     setViewport((current) => {
@@ -477,8 +483,10 @@ export function TrendChart({
         <output aria-live="polite">{Math.round(viewport.zoom * 100)}%</output>
         <button type="button" onClick={() => changeZoom(viewport.zoom * 1.5)} disabled={viewport.zoom === MAX_TREND_ZOOM} aria-label="Zoom in">+</button>
         <button type="button" className="chart-reset-button" onClick={() => setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 })} disabled={viewport.zoom === 1}>Reset</button>
-        <label className="chart-end-control">Graph end <input type="number" min={minimumTime} max={maximumTime} step="1" inputMode="numeric" value={displayedGraphEnd} aria-label={`Graph end (${xUnit})`} onChange={(event) => { setGraphEndInput(event.target.value); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} /><span>{xUnit}</span></label>
+        <label className="chart-end-control"><FieldTitle help="Limits this figure to observations at or before the chosen time, without interpolation. Figure CSV follows this cutoff; Full selected dataset CSV retains the full selection. This does not alter the raw source.">Graph end</FieldTitle> <input type="number" min={minimumTime} max={maximumTime} step="1" inputMode="numeric" value={displayedGraphEnd} aria-label={`Graph end (${xUnit})`} onChange={(event) => { setGraphEndInput(event.target.value); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} /><span>{xUnit}</span></label>
         <button type="button" className="chart-reset-button" onClick={() => { setGraphEndInput(null); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} disabled={graphEndInput === null}>Max</button>
+        {xUnit === "h" && <label className="chart-density-control"><FieldTitle help="Display only: for each curve, keep the first measured point, then the first recorded point at least the chosen interval after the previous displayed point. Always keep the last point, even if closer. Times and values are unchanged: no averaging, smoothing or interpolation. Statistics, references and Y-axis scale use all eligible points. Figure exports follow this display; Full selected dataset CSV retains the full data.">Point spacing</FieldTitle><select aria-label="Displayed point spacing" value={pointInterval} onChange={event => setPointInterval(Number(event.target.value))}><option value={0}>All points</option>{[1, 2, 5, 10, 24].map(interval => <option key={interval} value={interval}>Every {interval} h</option>)}</select></label>}
+        {displayInterval > 0 && <span role="status">{all.length}/{analyticalSeries.reduce((sum, item) => sum + item.points.length, 0)} points displayed · analysis unchanged</span>}
         <span className="chart-export-divider" aria-hidden="true" />
         <button type="button" className="chart-export-button" onClick={() => {
           if (!svgRef.current) return;
@@ -501,7 +509,7 @@ export function TrendChart({
           <label>Y max <input aria-label="Y maximum" type="number" step="any" style={{ width: 90 }} value={manualY.max} onChange={(event) => { setManualY({ ...manualY, max: event.target.value }); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} /></label>
           {!manualYValid && <span role="alert">Enter finite bounds with min &lt; max. Auto scale used meanwhile.</span>}
         </>}
-        <label><input type="checkbox" checked={showIntervals} onChange={(event) => { setShowIntervals(event.target.checked); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} /> Show uncertainty intervals (95% CI / IQR)</label>
+        <label><input type="checkbox" checked={showIntervals} onChange={(event) => { setShowIntervals(event.target.checked); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} /> Show uncertainty intervals (95% CI / IQR)</label><InfoTip text="The median interval describes the middle 50% of observations; a mean confidence interval describes conditional precision. Hiding intervals changes visual scaling only, not calculations. With one cell there is no interval; median mode also omits it with two cells." />
         <span role="status">{scaleNote}</span>
         {all.some((point) => !point.selectedLabel && point.n < 3) && <span title="For one or two contributing cells, individual values are drawn. An interval cannot establish population precision from such a small sample.">Small n: individual values shown</span>}
         {showIntervals && all.some(point => trendIntervalVisible(point, true) && point.intervalLabel === "95% CI" && point.n < 5) && <span role="status">Small-n 95% CI: highly uncertain, shown without truncation. Points show the observed spread.</span>}
