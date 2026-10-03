@@ -21,7 +21,8 @@ import {
   MetricKey,
 } from "./lib/iv-data";
 import { getJVDiagnostics, chooseSpecimenFirstMeasurement, type JVDiagnostic } from "./lib/jv-science";
-import { materialStyle, identityLinePattern } from "./lib/material-style";
+import { materialStyle, identityLinePattern, evaFormulationStyle, aggregateSeriesMarkers, markerPath } from "./lib/material-style";
+import { sampleFormulation } from "./lib/formulation";
 import { buildIdentity } from "./lib/build-identity";
 import { normalizationTraces } from "./lib/normalization-trace";
 import { missingnessTable } from "./lib/missingness";
@@ -534,10 +535,11 @@ export default function Home() {
     });
     return { seriesId: config.id, protocol: config.stress, metric: config.metric, rows };
   });
-  const selectedTrendSeries: ContextTrendSeries[] = selectedUnsplitSeries.flatMap((series) => {
+  const selectedTrendSeries: ContextTrendSeries[] = aggregateSeriesMarkers(selectedUnsplitSeries.flatMap((series) => {
     const ids = new Set(series.points.flatMap((point) => point.members.map((member) => member.sampleUid)));
     const groups = analysisGroups((dataset?.samples ?? []).filter((sample) => ids.has(sample.sample_uid)), grouping, false, splitByRibbon);
     return groups.map((group, groupIndex) => {
+      const formulationStyle = evaFormulationStyle(series.config.material, group.samples.map(sample => sample.material_raw));
       const ribbon = recordedRibbon(group.samples[0]);
       const sameRibbonGroups = splitByRibbon ? groups.filter((candidate) => recordedRibbon(candidate.samples[0]) === ribbon) : [];
       const ribbonSubgroup = sameRibbonGroups.length > 1 ? `sous-groupe ${sameRibbonGroups.findIndex((candidate) => candidate.key === group.key) + 1}` : null;
@@ -548,9 +550,9 @@ export default function Home() {
         const summary = summarise(members.map((member) => member.value), aggregation);
         return [{ ...point, y: summary.value, min: summary.min, max: summary.max, intervalLow: summary.intervalLow, intervalHigh: summary.intervalHigh, intervalLabel: summary.intervalLabel, n: summary.n, members }];
       });
-      return { ...series, id: `${series.id}::group:${group.key}`, parentSeriesId: series.id, label: group.label, exportLabel: [series.config.material, ...(splitByRibbon ? [ribbonLabel(ribbon), ribbonSubgroup] : groups.length > 1 ? [`groupe ${groupIndex + 1}`] : [])].filter(Boolean).join(" · "), contextLabel: [series.config.stress, METRICS[series.config.metric].label, describeGraphElectrode(group.samples.map(sample => sample.electrode))].filter(Boolean).join(" · "), exportLegendKey: `${series.id}:${group.key}`, linePattern: identityLinePattern(group.key), points, sampleSetChanges: new Set(points.map((point) => point.members.map((member) => member.sampleUid).sort().join("|"))).size > 1 };
+      return { ...series, id: `${series.id}::group:${group.key}`, parentSeriesId: series.id, label: group.label, exportLabel: [formulationStyle?.label ?? series.config.material, ...(splitByRibbon ? [ribbonLabel(ribbon), ribbonSubgroup] : groups.length > 1 ? [`groupe ${groupIndex + 1}`] : [])].filter(Boolean).join(" · "), contextLabel: [series.config.stress, METRICS[series.config.metric].label, describeGraphElectrode(group.samples.map(sample => sample.electrode))].filter(Boolean).join(" · "), exportLegendKey: `${series.id}:${group.key}`, linePattern: formulationStyle?.linePattern ?? identityLinePattern(group.key), points, sampleSetChanges: new Set(points.map((point) => point.members.map((member) => member.sampleUid).sort().join("|"))).size > 1 };
     });
-  });
+  }));
   const cohortDiagnostics = selectedTrendSeries.map((series) => ({ series, timeline: cohortTimeline(series.points.flatMap((point) => point.members.map((member) => ({ time: point.x, sampleUid: member.sampleUid, value: member.value, batch: member.batchNo }))), aggregation) }));
   const sampleTrendSeries: ContextTrendSeries[] = filteredTrendSeries.flatMap((series, parentIndex) => (
     (trendSampleOptions[series.id] ?? []).map((sample, sampleIndex) => ({ sample, sampleIndex })).filter(({ sample }) => activeTrendSampleIds[series.id]?.includes(sample.sampleUid)).map(({ sample, sampleIndex }) => {
@@ -792,7 +794,7 @@ export default function Home() {
                   {view !== "encapsulation" && <label className="series-metric"><FieldTitle help={METRIC_HELP[config.metric]}>Metric</FieldTitle><select aria-label={`Series ${String.fromCharCode(65 + index)} metric`} value={config.metric} onChange={(event) => updateSeriesConfig(config.id, { metric: event.target.value as MetricKey })}>{metrics.map((key) => <option key={key} value={key}>{METRICS[key].label}</option>)}</select></label>}
 
                 </div>
-                {view !== "encapsulation" && <details className="series-details"><summary>Refine selection <span>{(["formulation", "batch", "recipe", "electrode"] as const).filter(field => config[field] && config[field] !== "all").length || "No"} active filters</span></summary><div className="series-config-grid">{([['formulation','Formulation','material_raw'],['batch','Batch','batch_no_raw'],['recipe','Recipe','recipe_uid'],['electrode','Electrode','electrode']] as const).map(([field,label,source]) => <label key={field}><FieldTitle help={HELP[field]}>{label}</FieldTitle><select aria-label={`Series ${String.fromCharCode(65 + index)} ${label.toLowerCase()}`} value={config[field] ?? "all"} onChange={(event) => updateSeriesConfig(config.id,{[field]:event.target.value})}><option value="all">All recorded values</option>{unique(dataset?.samples.filter((sample) => sample.material_family === config.material).map((sample) => sample[source]) ?? []).map((value) => <option key={value} value={value}>{field === "recipe" ? dataset?.recipes.find((recipe) => recipe.recipe_uid === value)?.recipe_raw || value : value}</option>)}</select></label>)}</div></details>}
+                {view !== "encapsulation" && <details className="series-details"><summary>Refine selection <span>{(["formulation", "batch", "recipe", "electrode"] as const).filter(field => config[field] && config[field] !== "all").length || "No"} active filters</span></summary><div className="series-config-grid">{([['formulation','Formulation','material_raw'],['batch','Batch','batch_no_raw'],['recipe','Recipe','recipe_uid'],['electrode','Electrode','electrode']] as const).map(([field,label,source]) => <label key={field}><FieldTitle help={HELP[field]}>{label}</FieldTitle><select aria-label={`Series ${String.fromCharCode(65 + index)} ${label.toLowerCase()}`} value={config[field] ?? "all"} onChange={(event) => updateSeriesConfig(config.id,{[field]:event.target.value})}><option value="all">All recorded values</option>{unique(dataset?.samples.filter((sample) => sample.material_family === config.material).map((sample) => field === "formulation" ? sampleFormulation(sample) : sample[source]) ?? []).map((value) => <option key={value} value={value}>{field === "recipe" ? dataset?.recipes.find((recipe) => recipe.recipe_uid === value)?.recipe_raw || value : value}</option>)}</select></label>)}</div></details>}
               </article>;
             })}
             {!(view === "curves" && curveComparison === "ageing") && <div className="add-material-wrap">
@@ -852,7 +854,7 @@ export default function Home() {
               <div className="chart-title">
                 {displayedTrendSeries.map((series) => {
                   const hidden = hiddenSeries.has(series.id);
-                  return <button type="button" className={`legend-toggle ${hidden ? "hidden" : ""}`} key={series.id} aria-pressed={!hidden} onClick={() => toggleSeries(series.id)} title={`${hidden ? "Show" : "Hide"} ${series.label} · ${series.contextLabel} — calculations remain unchanged`}><svg className="legend-stroke" viewBox="0 0 24 8" aria-hidden="true"><line x1="1" x2="23" y1="4" y2="4" stroke={series.color} strokeWidth="3" strokeDasharray={series.linePattern} /></svg>{series.label}</button>;
+                  return <button type="button" className={`legend-toggle ${hidden ? "hidden" : ""}`} key={series.id} aria-pressed={!hidden} onClick={() => toggleSeries(series.id)} title={`${hidden ? "Show" : "Hide"} ${series.label} · ${series.contextLabel} — calculations remain unchanged`}><svg className="legend-stroke" viewBox="0 0 24 8" aria-hidden="true"><line x1="1" x2="23" y1="4" y2="4" stroke={series.color} strokeWidth="3" strokeDasharray={series.linePattern} /><path d={markerPath(series.marker,12,4,2.5)} fill="white" stroke={series.color} strokeWidth="1.4" /></svg>{series.label}</button>;
                 })}
                 <span>{overlayCompatible ? "Shared scale" : "Separate scales"} <InfoTip text={overlayCompatible ? "The selected series share compatible axes and can be overlaid directly." : "Different time units or absolute metrics are displayed in separate panels to prevent a misleading comparison."} align="right" /></span>
               </div>

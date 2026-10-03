@@ -15,6 +15,7 @@ certificats de calibration ou de validations individuelles de chaque fichier.
 | Arrêt de suivi | Panne des cellules | Dates et identifiants individuels des pannes non encodés pour chaque absence. Une absence reste une absence, pas un zéro inventé |
 | Stockage | Dans le noir, dans une petite boîte sous azote ; durée variable | L'intervalle disponible peut être affiché. Les différences temporelles et l'historique des mesures restent des facteurs de comparaison |
 | Labels | Tous les labels confirmés, dont Ag/Cu | Confirmation des labels ≠ équivalence des formulations. Les liens fichier/cellule provisoires restent provisoires |
+| Silicone | Les mentions 2nd, 3d, 4th et 5th correspondent au même silicone, pas à des formulations chimiques différentes | Ces mentions brutes restent conservées pour la traçabilité. Le filtre et le regroupement par formulation utilisent Silicone / PDMS ; les lots, procédés et électrodes restent distincts dans le regroupement conservateur |
 | PR Outdoor | Normalisation standard selon le responsable | Une comparaison empirique des formules est demandée ; voir le diagnostic PR. La référence et les unités doivent être distinguées de la formule numérique |
 | Surface active Outdoor | 1 cm², confirmé après le diagnostic PR | L'utilisateur n'a pas encore précisé l'unité de la colonne Pmpp brute. Avec cette surface, la relation numérique observée est compatible avec Pmpp en mW ; le package utilise actuellement l'étiquette W. Ne pas transformer les bruts sur la seule base d'une étiquette supposée |
 

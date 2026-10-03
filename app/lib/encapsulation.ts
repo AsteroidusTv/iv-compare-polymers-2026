@@ -1,6 +1,7 @@
 import type { IVFile, IVDataset, Measurement, Observation, Recipe, Sample } from "./iv-data";
 import { measurementQualityReasons, numeric, quantile } from "./science";
 import { recordedRibbon } from "./ribbon";
+import { sampleFormulation } from "./formulation";
 
 export interface EncapsulationPair {
   sampleUid: string;
@@ -105,7 +106,7 @@ export function encapsulationGroups(samples: Sample[], observations: Observation
       excluded += 1;
       continue;
     }
-    const material = sample.material_raw || sample.material_family;
+    const material = sampleFormulation(sample) || sample.material_family;
     const batch = sample.batch_no_raw || "Unknown";
     const electrode = sample.electrode || "Unknown";
     const recipeUid = sample.recipe_uid || null;

@@ -1,6 +1,24 @@
-export interface MaterialStyle { color: string; marker: "circle" | "square" | "diamond" | "triangle"; dash: string }
+export interface MaterialStyle { color: string; marker: "circle" | "square" | "diamond" | "triangle" | "cross" | "star"; dash: string }
+/** Compare same-family aggregates without relying on colour or a hash collision. */
+export function aggregateSeriesMarkers<T extends { id: string; config: { material: string }; marker?: MaterialStyle["marker"] }>(series: T[]): T[] {
+  const shapes: MaterialStyle["marker"][] = ["circle", "square", "triangle", "diamond", "cross", "star"];
+  return series.map(item => {
+    const peers = series.filter(peer => peer.config.material === item.config.material).map(peer => peer.id).sort();
+    return peers.length < 2 ? item : { ...item, marker: shapes[peers.indexOf(item.id) % shapes.length] };
+  });
+}
+/** Presentation only: a pooled EVA population must not masquerade as one formulation. */
+export function evaFormulationStyle(material: string, formulations: Array<string | null | undefined>) {
+  const values = [...new Set(formulations)];
+  if (material !== "EVA" || values.length !== 1) return null;
+  if (values[0] === "EVA 406") return { label: "EVA 406", linePattern: "" };
+  if (values[0] === "EVA 806") return { label: "EVA 806", linePattern: "14 7" };
+  return null;
+}
 /** SVG paths keep the same marker geometry in DOM, SVG and PNG exports. */
 export function markerPath(marker:MaterialStyle["marker"]="circle",x:number,y:number,r:number):string {
+  if(marker==="cross")return `M${x-r/2} ${y-r*1.4}h${r}v${r*.9}h${r*.9}v${r}h${-r*.9}v${r*.9}h${-r}v${-r*.9}h${-r*.9}v${-r}h${r*.9}Z`;
+  if(marker==="star")return Array.from({length:10},(_,i)=>{const angle=-Math.PI/2+i*Math.PI/5,radius=i%2?r*.65:r*1.5;return `${i?"L":"M"}${x+Math.cos(angle)*radius} ${y+Math.sin(angle)*radius}`;}).join("")+"Z";
   if(marker==="square")return `M${x-r} ${y-r}h${2*r}v${2*r}h${-2*r}Z`;
   if(marker==="diamond")return `M${x} ${y-r*1.3}L${x+r*1.3} ${y}L${x} ${y+r*1.3}L${x-r*1.3} ${y}Z`;
   if(marker==="triangle")return `M${x} ${y-r*1.4}L${x+r*1.3} ${y+r}L${x-r*1.3} ${y+r}Z`;

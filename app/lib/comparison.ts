@@ -1,4 +1,5 @@
 import { IVDataset, MetricKey, Sample } from "./iv-data";
+import { canonicalFormulation, sampleFormulation } from "./formulation";
 
 export interface SeriesConfig {
   id: string;
@@ -31,7 +32,7 @@ function matchesSample(sample: Sample, config: SampleFilters): boolean {
   return sample.material_family === config.material
     && selected(config.electrode, sample.electrode)
     && selected(config.recipe, sample.recipe_uid ?? sample.recipe_raw)
-    && selected(config.formulation, sample.material_raw)
+    && selected(canonicalFormulation(config.material, config.formulation) ?? undefined, sampleFormulation(sample))
     && selected(config.batch, sample.batch_no_raw);
 }
 
@@ -63,7 +64,7 @@ export function normalizeSeriesConfig(dataset: IVDataset, config: SeriesConfig):
   const stress = stresses.includes(config.stress) ? config.stress : stresses[0] ?? "Unaged";
   const metrics = metricOptionsFor(stress);
   const metric = metrics.includes(config.metric) ? config.metric : metrics[0];
-  return { ...config, material, electrode, recipe, stress, metric };
+  return { ...config, formulation: canonicalFormulation(material, config.formulation) ?? undefined, material, electrode, recipe, stress, metric };
 }
 
 export function createInitialSeries(dataset: IVDataset): SeriesConfig[] {

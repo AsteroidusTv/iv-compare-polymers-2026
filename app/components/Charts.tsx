@@ -91,6 +91,7 @@ const EXPORT_STYLES = `
 `;
 
 type ExportSeries = Pick<TrendSeries | CurveSeries, "label" | "color"> & {
+  marker?: MaterialStyle["marker"];
   exportDetail?: string;
   exportLabel?: string;
   exportLegendKey?: string;
@@ -174,6 +175,14 @@ function serialiseChart(
     const pattern = item.linePattern;
     if (pattern) marker.setAttribute("stroke-dasharray", pattern);
     legend.appendChild(marker);
+    if (item.marker) {
+      const symbol = document.createElementNS(SVG_NAMESPACE, "path");
+      symbol.setAttribute("d", markerPath(item.marker, x + 8, y - 3, 2.5));
+      symbol.setAttribute("fill", "white");
+      symbol.setAttribute("stroke", item.color);
+      symbol.setAttribute("stroke-width", "1.4");
+      legend.appendChild(symbol);
+    }
     appendSvgText(legend, item.exportLabel ?? item.label, x + 22, y, "export-legend");
     if (item.exportDetail) appendSvgText(legend, item.exportDetail.slice(0, 48), x + 22, y + 11, "export-subtitle");
     if (item.exportSelection) appendSvgText(legend, item.exportSelection.slice(0, 48), x + 22, y + (item.exportDetail ? 22 : 11), "export-subtitle");
