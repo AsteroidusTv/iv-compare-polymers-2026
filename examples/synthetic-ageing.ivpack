@@ -1,0 +1,269 @@
+{
+  "schemaVersion": "1.2",
+  "name": "SYNTHETIC DEMO — not experimental data",
+  "provenance": {
+    "pipelineVersion": "synthetic-example/1",
+    "notes": [
+      "Entirely invented values, identifiers and process metadata. Do not use as experimental results."
+    ]
+  },
+  "report": {
+    "samples": 6,
+    "recipes": 1,
+    "observations": 18,
+    "files": 0,
+    "measurements": 0,
+    "points": 0,
+    "matchedFiles": 0,
+    "reviewFiles": 0,
+    "auditFiles": 0
+  },
+  "samples": [
+    {
+      "sample_uid": "DEMO-A1",
+      "material_family": "EVA",
+      "material_raw": "Synthetic A",
+      "sample_label": "Demo A1",
+      "batch_no_raw": "DEMO",
+      "electrode": "Cu",
+      "recipe_uid": "DEMO-PROCESS",
+      "recipe_raw": "Synthetic standard process",
+      "assigned_test": "DH",
+      "initial_efficiency_pct": 16.8
+    },
+    {
+      "sample_uid": "DEMO-A2",
+      "material_family": "EVA",
+      "material_raw": "Synthetic A",
+      "sample_label": "Demo A2",
+      "batch_no_raw": "DEMO",
+      "electrode": "Cu",
+      "recipe_uid": "DEMO-PROCESS",
+      "recipe_raw": "Synthetic standard process",
+      "assigned_test": "DH",
+      "initial_efficiency_pct": 17
+    },
+    {
+      "sample_uid": "DEMO-A3",
+      "material_family": "EVA",
+      "material_raw": "Synthetic A",
+      "sample_label": "Demo A3",
+      "batch_no_raw": "DEMO",
+      "electrode": "Cu",
+      "recipe_uid": "DEMO-PROCESS",
+      "recipe_raw": "Synthetic standard process",
+      "assigned_test": "DH",
+      "initial_efficiency_pct": 17.2
+    },
+    {
+      "sample_uid": "DEMO-B1",
+      "material_family": "POE-2 / TF4",
+      "material_raw": "Synthetic B",
+      "sample_label": "Demo B1",
+      "batch_no_raw": "DEMO",
+      "electrode": "Cu",
+      "recipe_uid": "DEMO-PROCESS",
+      "recipe_raw": "Synthetic standard process",
+      "assigned_test": "DH",
+      "initial_efficiency_pct": 17
+    },
+    {
+      "sample_uid": "DEMO-B2",
+      "material_family": "POE-2 / TF4",
+      "material_raw": "Synthetic B",
+      "sample_label": "Demo B2",
+      "batch_no_raw": "DEMO",
+      "electrode": "Cu",
+      "recipe_uid": "DEMO-PROCESS",
+      "recipe_raw": "Synthetic standard process",
+      "assigned_test": "DH",
+      "initial_efficiency_pct": 17.2
+    },
+    {
+      "sample_uid": "DEMO-B3",
+      "material_family": "POE-2 / TF4",
+      "material_raw": "Synthetic B",
+      "sample_label": "Demo B3",
+      "batch_no_raw": "DEMO",
+      "electrode": "Cu",
+      "recipe_uid": "DEMO-PROCESS",
+      "recipe_raw": "Synthetic standard process",
+      "assigned_test": "DH",
+      "initial_efficiency_pct": 17.4
+    }
+  ],
+  "recipes": [
+    {
+      "recipe_uid": "DEMO-PROCESS",
+      "recipe_raw": "Synthetic standard process",
+      "laminator": "Synthetic standard laminator"
+    }
+  ],
+  "observations": [
+    {
+      "observation_uid": "DEMO-A1-Unaged-0",
+      "sample_uid": "DEMO-A1",
+      "test_type": "Unaged",
+      "exposure_duration_numeric": 0,
+      "exposure_unit": "h",
+      "efficiency_pct": 16.6,
+      "comments": "Synthetic demonstration only; not measured data."
+    },
+    {
+      "observation_uid": "DEMO-A1-DH-100",
+      "sample_uid": "DEMO-A1",
+      "test_type": "DH",
+      "exposure_duration_numeric": 100,
+      "exposure_unit": "h",
+      "efficiency_pct": 15.6,
+      "comments": "Synthetic demonstration only; not measured data."
+    },
+    {
+      "observation_uid": "DEMO-A1-DH-500",
+      "sample_uid": "DEMO-A1",
+      "test_type": "DH",
+      "exposure_duration_numeric": 500,
+      "exposure_unit": "h",
+      "efficiency_pct": 13.28,
+      "comments": "Synthetic demonstration only; not measured data."
+    },
+    {
+      "observation_uid": "DEMO-A2-Unaged-0",
+      "sample_uid": "DEMO-A2",
+      "test_type": "Unaged",
+      "exposure_duration_numeric": 0,
+      "exposure_unit": "h",
+      "efficiency_pct": 16.8,
+      "comments": "Synthetic demonstration only; not measured data."
+    },
+    {
+      "observation_uid": "DEMO-A2-DH-100",
+      "sample_uid": "DEMO-A2",
+      "test_type": "DH",
+      "exposure_duration_numeric": 100,
+      "exposure_unit": "h",
+      "efficiency_pct": 15.79,
+      "comments": "Synthetic demonstration only; not measured data."
+    },
+    {
+      "observation_uid": "DEMO-A2-DH-500",
+      "sample_uid": "DEMO-A2",
+      "test_type": "DH",
+      "exposure_duration_numeric": 500,
+      "exposure_unit": "h",
+      "efficiency_pct": 13.44,
+      "comments": "Synthetic demonstration only; not measured data."
+    },
+    {
+      "observation_uid": "DEMO-A3-Unaged-0",
+      "sample_uid": "DEMO-A3",
+      "test_type": "Unaged",
+      "exposure_duration_numeric": 0,
+      "exposure_unit": "h",
+      "efficiency_pct": 17,
+      "comments": "Synthetic demonstration only; not measured data."
+    },
+    {
+      "observation_uid": "DEMO-A3-DH-100",
+      "sample_uid": "DEMO-A3",
+      "test_type": "DH",
+      "exposure_duration_numeric": 100,
+      "exposure_unit": "h",
+      "efficiency_pct": 15.98,
+      "comments": "Synthetic demonstration only; not measured data."
+    },
+    {
+      "observation_uid": "DEMO-A3-DH-500",
+      "sample_uid": "DEMO-A3",
+      "test_type": "DH",
+      "exposure_duration_numeric": 500,
+      "exposure_unit": "h",
+      "efficiency_pct": 13.6,
+      "comments": "Synthetic demonstration only; not measured data."
+    },
+    {
+      "observation_uid": "DEMO-B1-Unaged-0",
+      "sample_uid": "DEMO-B1",
+      "test_type": "Unaged",
+      "exposure_duration_numeric": 0,
+      "exposure_unit": "h",
+      "efficiency_pct": 16.3,
+      "comments": "Synthetic demonstration only; not measured data."
+    },
+    {
+      "observation_uid": "DEMO-B1-DH-100",
+      "sample_uid": "DEMO-B1",
+      "test_type": "DH",
+      "exposure_duration_numeric": 100,
+      "exposure_unit": "h",
+      "efficiency_pct": 15.32,
+      "comments": "Synthetic demonstration only; not measured data."
+    },
+    {
+      "observation_uid": "DEMO-B1-DH-500",
+      "sample_uid": "DEMO-B1",
+      "test_type": "DH",
+      "exposure_duration_numeric": 500,
+      "exposure_unit": "h",
+      "efficiency_pct": 13.04,
+      "comments": "Synthetic demonstration only; not measured data."
+    },
+    {
+      "observation_uid": "DEMO-B2-Unaged-0",
+      "sample_uid": "DEMO-B2",
+      "test_type": "Unaged",
+      "exposure_duration_numeric": 0,
+      "exposure_unit": "h",
+      "efficiency_pct": 16.5,
+      "comments": "Synthetic demonstration only; not measured data."
+    },
+    {
+      "observation_uid": "DEMO-B2-DH-100",
+      "sample_uid": "DEMO-B2",
+      "test_type": "DH",
+      "exposure_duration_numeric": 100,
+      "exposure_unit": "h",
+      "efficiency_pct": 15.51,
+      "comments": "Synthetic demonstration only; not measured data."
+    },
+    {
+      "observation_uid": "DEMO-B2-DH-500",
+      "sample_uid": "DEMO-B2",
+      "test_type": "DH",
+      "exposure_duration_numeric": 500,
+      "exposure_unit": "h",
+      "efficiency_pct": 13.2,
+      "comments": "Synthetic demonstration only; not measured data."
+    },
+    {
+      "observation_uid": "DEMO-B3-Unaged-0",
+      "sample_uid": "DEMO-B3",
+      "test_type": "Unaged",
+      "exposure_duration_numeric": 0,
+      "exposure_unit": "h",
+      "efficiency_pct": 16.7,
+      "comments": "Synthetic demonstration only; not measured data."
+    },
+    {
+      "observation_uid": "DEMO-B3-DH-100",
+      "sample_uid": "DEMO-B3",
+      "test_type": "DH",
+      "exposure_duration_numeric": 100,
+      "exposure_unit": "h",
+      "efficiency_pct": 15.7,
+      "comments": "Synthetic demonstration only; not measured data."
+    },
+    {
+      "observation_uid": "DEMO-B3-DH-500",
+      "sample_uid": "DEMO-B3",
+      "test_type": "DH",
+      "exposure_duration_numeric": 500,
+      "exposure_unit": "h",
+      "efficiency_pct": 13.36,
+      "comments": "Synthetic demonstration only; not measured data."
+    }
+  ],
+  "files": [],
+  "measurements": [],
+  "curves": {}
+}
