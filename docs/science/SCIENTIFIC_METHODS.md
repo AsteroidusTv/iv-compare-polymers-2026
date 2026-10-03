@@ -97,6 +97,12 @@ interpolation is performed. All stage counts and missing reasons are exported.
 Ageing retention is 100 × aged/post, not post/before.
 
 The synchronized diagnostic uses identical specimen/time grids in four panels.
+Its optional single-cell overlay shows PCE, Jsc, Voc and FF on one retention
+axis, each normalized to that cell's own unique Unaged reference. Colours,
+line patterns and symbols identify metrics rather than materials. Missing or
+excluded values break the affected curve; no artificial time-zero observation
+or interpolation is introduced. The selected layout and cell are persisted in
+the workspace, and the exports record the displayed selection and references.
 QA is metric-specific; unavailable metrics remain explicit empty grid cells.
 Lines break at missing grid cells. No pooled estimator or undocumented physical
 independence is inferred. The shared Y viewport can be adjusted without changing
