@@ -1,4 +1,5 @@
 "use client";
+import { figureFormulationLabel } from "../lib/figure-language";
 
 import { useRef, useState } from "react";
 import { useWorkspaceState, useWorkspaceSet } from "../lib/use-workspace-state";
@@ -98,7 +99,7 @@ function EncapsulationJVComparison({ dataset, pairs, selections, splitByRibbon }
   const diagnosticGroups = [...pairs.reduce((groups, item) => {
     const ribbon = recordedRibbon(item.sample);
     const key = JSON.stringify([item.sample.material_family, item.sample.material_raw, item.sample.batch_no_raw, item.sample.electrode, item.sample.recipe_uid, item.sample.recipe_raw, ...(splitByRibbon ? [ribbon] : [])]);
-    const group = groups.get(key) ?? { key, material: item.sample.material_raw || item.sample.material_family, batch: item.sample.batch_no_raw || "—", electrode: item.sample.electrode || "Unknown", recipeUid: item.sample.recipe_uid || null, ribbon: splitByRibbon ? ribbon : null, pairs: [] as EncapsulationCurvePair[] };
+    const group = groups.get(key) ?? { key, material: figureFormulationLabel(item.sample), batch: item.sample.batch_no_raw || "—", electrode: item.sample.electrode || "Unknown", recipeUid: item.sample.recipe_uid || null, ribbon: splitByRibbon ? ribbon : null, pairs: [] as EncapsulationCurvePair[] };
     group.pairs.push(item);
     groups.set(key, group);
     return groups;
@@ -113,8 +114,8 @@ function EncapsulationJVComparison({ dataset, pairs, selections, splitByRibbon }
     </div>
     <p role="status">{inspectUnresolved ? "Inspection mode includes curves with incomplete or inconsistent diagnostics." : "Displayed pairs pass automated branch and numerical-consistency screening. Instrument calibration and experimental validation remain to be documented."}</p>
     <div className="encapsulation-jv-controls">
-      <label>Physical cell<select value={pair.sample.sample_uid} onChange={(event) => setRequestedSampleUid(event.target.value)}>{pairs.map((item) => <option value={item.sample.sample_uid} key={item.sample.sample_uid}>{item.sample.material_raw || item.sample.material_family} · batch {item.sample.batch_no_raw || "—"} · {item.sample.sample_id_raw || item.sample.sample_uid}</option>)}</select></label>
-      <div><b>{pair.sample.material_raw || pair.sample.material_family}</b><span>Batch {pair.sample.batch_no_raw || "—"}{pair.sample.electrode && pair.sample.electrode !== "Cu" ? ` · ${pair.sample.electrode}` : ""}</span></div>
+      <label>Physical cell<select value={pair.sample.sample_uid} onChange={(event) => setRequestedSampleUid(event.target.value)}>{pairs.map((item) => <option value={item.sample.sample_uid} key={item.sample.sample_uid}>{figureFormulationLabel(item.sample)} · batch {item.sample.batch_no_raw || "—"} · {item.sample.sample_id_raw || item.sample.sample_uid}</option>)}</select></label>
+      <div><b>{figureFormulationLabel(pair.sample)}</b><span>Batch {pair.sample.batch_no_raw || "—"}{pair.sample.electrode && pair.sample.electrode !== "Cu" ? ` · ${pair.sample.electrode}` : ""}</span></div>
       <div><b>{formatDate(pair.beforeFile.measurement_date)} → {formatDate(pair.sample.encapsulation_date)} → {formatDate(pair.afterMeasurement.measurement_date)}</b><span>Before measurement · encapsulation · after measurement{postDays === null ? "" : ` · ${postDays} d after encapsulation`}</span></div>
     </div>
     <div className="chart-title encapsulation-jv-legend">{series.map((item) => <span key={item.id}><svg className="legend-stroke" viewBox="0 0 24 8" aria-hidden="true"><line x1="1" x2="23" y1="4" y2="4" stroke={item.color} strokeWidth="3" strokeDasharray={item.linePattern} /></svg>{item.label}</span>)}</div>
@@ -232,7 +233,7 @@ export function EncapsulationComparison({ dataset, selections, ribbonSampleIds, 
                     <text x={x} y={323} textAnchor="middle" fontSize={12}>{figureStageLabel(stage)}</text>
                   </g>;
                 })}
-                <text x={center} y={348} textAnchor="middle" fontSize={12} fontWeight="bold">{group.material.replace("_", " / ")}</text>
+                <text x={center} y={348} textAnchor="middle" fontSize={12} fontWeight="bold">{figureFormulationLabel({material_family:group.family,material_raw:group.material})}</text>
                 {groupLabel && <text x={center} y={369} textAnchor="middle" fontSize={11}>{groupLabel}</text>}
                 <text x={center} y={groupLabel ? 390 : 371} textAnchor="middle" fontSize={11}>{commonBatch ? "" : `Lot ${group.batch} · `}<tspan fontStyle="italic">n</tspan> = {group.pairs.length}{group.electrode === "Cu" ? "" : ` · ${group.electrode}`}</text>
                 {deltaSummary !== "none" && <text x={center} y={groupLabel ? 411 : 392} textAnchor="middle" fontSize={11} fill="#5f6875"><tspan>{deltaSummary === "mean" ? "Moyenne" : "Médiane"} ΔPCE</tspan><tspan baselineShift="sub" fontSize={8}>rel</tspan><tspan> = {relativeChange === null ? "—" : `${relativeChange < 0 ? "−" : relativeChange > 0 ? "+" : ""}${Math.abs(relativeChange).toFixed(1)} %`}{changes.relative.n === group.pairs.length ? "" : ` · n = ${changes.relative.n}`}</tspan></text>}

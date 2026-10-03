@@ -1,4 +1,20 @@
-import type { MetricKey } from "./iv-data";
+import type { MetricKey, Sample } from "./iv-data";
+import { sampleFormulation } from "./formulation";
+
+/** Publication wording only: never replace recorded identities or grouping keys. */
+export function figureFormulationLabel(sample: Pick<Sample, "material_family" | "material_raw">): string {
+  const family = sample.material_family;
+  const formulation = sampleFormulation(sample)?.trim();
+  if (!formulation || formulation === family) return family;
+  // These family labels already identify the numbered formulation and supplier.
+  const normalized = formulation.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const familyNormalized = family.toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (/^(POE|TPO)-\d+\s*\//.test(family) && (familyNormalized.endsWith(normalized)
+    || normalized === familyNormalized.replace("dnp", "")
+    || normalized === familyNormalized.replace(/^(poe|tpo)\d+/, "$1"))) return family;
+  if (formulation.toLowerCase().startsWith(family.toLowerCase())) return formulation;
+  return `${family} / ${formulation}`;
+}
 
 /** French wording for figures and their captions; analytical keys stay unchanged. */
 export function figureMetricLabel(metric: MetricKey): string {
