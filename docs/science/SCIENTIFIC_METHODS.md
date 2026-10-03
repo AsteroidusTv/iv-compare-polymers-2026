@@ -109,6 +109,18 @@ independence is inferred. The shared Y viewport can be adjusted without changing
 analytical rows; graph end is an analytical cutoff. Full-selection exports retain
 the traces beyond this cutoff.
 
+## Confirmed formulation aliases
+
+Confirmed formulation aliases are canonicalized for filters and grouping:
+TF4 / POE-2_TF4 refer to POE-2 / TF4; DNP/CVF, DNP-CVF 2Ssa,
+DNP-CVF(Lisa roll) and TPO-1_CVF refer to TPO-1 / DNP-CVF;
+TPO Lenzing, Lenzing and TPO-2_Lenzing refer to TPO-2 / Lenzing.
+This equivalence was confirmed by the owner/laboratory. Raw names remain
+unchanged for provenance. Unknown variants are not automatically merged;
+EVA 406 and EVA 806 remain distinct. Batch, electrode and process grouping
+rules remain unchanged, and legacy saved formulation filters resolve to the
+corresponding canonical name.
+
 ## Ribbon classification
 
 The optional ribbon filter and ribbon-based grouping classify the three

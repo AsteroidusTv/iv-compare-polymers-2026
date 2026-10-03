@@ -11,6 +11,33 @@ const samples: Sample[] = ["Silicone, 2nd", "Silicone, 3d", "Silicones, 5th"].ma
   electrode: i === 1 ? "Ag" : "Cu", recipe_uid: "R", initial_efficiency_pct: 17,
 }));
 
+test("confirmed TF4, CVF and Lenzing aliases share groups and legacy filters", () => {
+  const aliases = [
+    ["POE-2 / TF4", ["TF4", "POE-2_TF4"]],
+    ["TPO-1 / DNP-CVF", ["DNP/CVF", "DNP-CVF 2Ssa", "DNP-CVF(Lisa roll)", "TPO-1_CVF"]],
+    ["TPO-2 / Lenzing", ["TPO Lenzing", "Lenzing", "TPO-2_Lenzing"]],
+  ] as const;
+  for (const [family, names] of aliases) {
+    const rows = names.map((raw,i)=>({...samples[0],sample_uid:`alias${i}`,material_family:family,material_raw:raw,batch_no_raw:"A1"}));
+    const dataset = {samples:rows,observations:[]} as unknown as IVDataset;
+    assert.deepEqual(rows.map(sampleFormulation),names.map(()=>family));
+    assert.equal(analysisGroups(rows,"formulation").length,1);
+    assert.equal(analysisGroups(rows).length,1);
+    assert.equal(analysisGroups([rows[0],{...rows[1],electrode:"Ag"}]).length,2);
+    assert.equal(analysisGroups([rows[0],{...rows[1],batch_no_raw:"A2"}]).length,2);
+    for (const name of names) {
+      const config = {id:"a",material:family,formulation:name,stress:"DH",metric:"efficiency_pct" as const,electrode:"all",recipe:"all"};
+      assert.equal(normalizeSeriesConfig(dataset,config).formulation,family);
+      assert.equal(samplesForConfig(dataset,config).length,names.length);
+    }
+    const observations: Observation[] = rows.map(row=>({observation_uid:`o${row.sample_uid}`,sample_uid:row.sample_uid,test_type:"Unaged",efficiency_pct:16}));
+    assert.equal(encapsulationGroups(rows,observations,[family]).groups.length,1);
+    assert.deepEqual(rows.map(row=>row.material_raw),[...names]);
+    assert.equal(canonicalFormulation(family,"unconfirmed variant"),"unconfirmed variant");
+  }
+  assert.equal(analysisGroups(["EVA 406","EVA 806"].map(raw=>({...samples[0],material_family:"EVA",material_raw:raw})),"formulation").length,2);
+});
+
 test("confirmed silicone campaigns are one formulation; source labels remain intact", () => {
   assert.deepEqual(samples.map(sampleFormulation), Array(3).fill("Silicone / PDMS"));
   assert.equal(samples[0].material_raw, "Silicone, 2nd");

@@ -1,5 +1,6 @@
 "use client";
 import { figureFormulationLabel } from "../lib/figure-language";
+import { sampleFormulation } from "../lib/formulation";
 
 import { useRef, useState } from "react";
 import { useWorkspaceState, useWorkspaceSet } from "../lib/use-workspace-state";
@@ -98,7 +99,7 @@ function EncapsulationJVComparison({ dataset, pairs, selections, splitByRibbon }
   const postDays = elapsedDays(pair.sample.encapsulation_date, pair.afterMeasurement.measurement_date);
   const diagnosticGroups = [...pairs.reduce((groups, item) => {
     const ribbon = recordedRibbon(item.sample);
-    const key = JSON.stringify([item.sample.material_family, item.sample.material_raw, item.sample.batch_no_raw, item.sample.electrode, item.sample.recipe_uid, item.sample.recipe_raw, ...(splitByRibbon ? [ribbon] : [])]);
+    const key = JSON.stringify([item.sample.material_family, sampleFormulation(item.sample), item.sample.batch_no_raw, item.sample.electrode, item.sample.recipe_uid, item.sample.recipe_raw, ...(splitByRibbon ? [ribbon] : [])]);
     const group = groups.get(key) ?? { key, material: figureFormulationLabel(item.sample), batch: item.sample.batch_no_raw || "—", electrode: item.sample.electrode || "Unknown", recipeUid: item.sample.recipe_uid || null, ribbon: splitByRibbon ? ribbon : null, pairs: [] as EncapsulationCurvePair[] };
     group.pairs.push(item);
     groups.set(key, group);
