@@ -23,7 +23,6 @@ The application supports exploratory comparison after damp heat (DH), thermal cy
 - Each material has an independent sample filter. Checked specimens are drawn as individual trajectories by default, with the material colour, distinct line patterns, stable numbering, and Excel references. Mean or median mode replaces them with one aggregate trajectory calculated from the selected subset.
 - PNG and SVG exports group individual trajectories under one material legend entry without printing laboratory identifiers. Aggregate legends report the contributing `N`, or its minimum–maximum range when the cohort changes with time; exact counts remain in the figure data and manifest.
 - Each exportable chart also offers a separate `Report SVG` preset with serif typography, finer axes and muted material colours. It changes presentation only: data, QA exclusions, graph limits and line patterns are unchanged. The ordinary SVG and PNG exports remain available.
-- The former “best value” aggregation is intentionally unavailable because it stitched different specimens into an artificial trajectory.
 - Every QA-valid point remains visible. Statistical outliers are not hidden merely to improve chart scaling.
 - Outdoor PR, Pmpp, and irradiance are daily medians over measurements with irradiance ≥ 200 W/m². Electrical-only files without irradiance retain median positive Pmpp with an explicit QA flag.
 - Outdoor retention requires at least three valid days and uses the median of up to the first seven days. Sensitivity across 3-, 7-, and 14-day windows is reported when possible.
