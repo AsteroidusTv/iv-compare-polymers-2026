@@ -61,7 +61,7 @@ export function normalizeSeriesConfig(dataset: IVDataset, config: SeriesConfig):
   const electrode = config.electrode || "all";
   const recipe = config.recipe || "all";
   const stresses = stressesForConfig(dataset, { ...config, material, electrode, recipe });
-  const stress = stresses.includes(config.stress) ? config.stress : stresses[0] ?? "Unaged";
+  const stress = stresses.includes(config.stress) ? config.stress : stresses[0] ?? (config.stress || "Unaged");
   const metrics = metricOptionsFor(stress);
   const metric = metrics.includes(config.metric) ? config.metric : metrics[0];
   return { ...config, formulation: canonicalFormulation(material, config.formulation) ?? undefined, material, electrode, recipe, stress, metric };

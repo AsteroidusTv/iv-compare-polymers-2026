@@ -376,9 +376,10 @@ export function TrendChart({
   const maximumTime = Math.max(...sourceTimes);
   const displayedGraphEnd = graphEndInput === null ? String(maximumTime) : graphEndInput;
   const requestedGraphEnd = Number(displayedGraphEnd);
-  const graphEnd = displayedGraphEnd.trim() && Number.isFinite(requestedGraphEnd) && requestedGraphEnd >= minimumTime && requestedGraphEnd < maximumTime
+  const axisEnd = graphEndInput !== null && displayedGraphEnd.trim() && Number.isFinite(requestedGraphEnd) && requestedGraphEnd > 0 && requestedGraphEnd >= minimumTime
     ? requestedGraphEnd
     : null;
+  const graphEnd = axisEnd !== null && axisEnd < maximumTime ? axisEnd : null;
   const analyticalSeries = series
     .map((item) => ({ ...item, points: pointsThrough(item.points, graphEnd) }))
     .filter((item) => item.points.length);
@@ -389,9 +390,9 @@ export function TrendChart({
   const allTimes = all.map((point) => point.x);
   const allValues = trendDisplayValues(analyticalSeries.flatMap(item => item.points), showIntervals);
   const maximumPlottedTime = Math.max(...allTimes, 0);
-  const fullXStep = niceStep(graphEnd ?? maximumPlottedTime);
+  const fullXStep = niceStep(axisEnd ?? maximumPlottedTime);
   const fullXMin = 0;
-  const fullXMax = graphEnd ?? Math.max(fullXStep, Math.ceil(maximumPlottedTime / fullXStep) * fullXStep);
+  const fullXMax = axisEnd ?? Math.max(fullXStep, Math.ceil(maximumPlottedTime / fullXStep) * fullXStep);
   const [paddedYMin, paddedYMax] = extent(isRetention ? [...allValues, 100] : allValues);
   const autoYStep = niceStep(paddedYMax - paddedYMin);
   const manualYValid = manualY !== null && manualY.min.trim() !== "" && manualY.max.trim() !== "" && Number.isFinite(Number(manualY.min)) && Number.isFinite(Number(manualY.max)) && Number(manualY.min) < Number(manualY.max);
@@ -494,7 +495,7 @@ export function TrendChart({
         <output aria-live="polite">{Math.round(viewport.zoom * 100)}%</output>
         <button type="button" onClick={() => changeZoom(viewport.zoom * 1.5)} disabled={viewport.zoom === MAX_TREND_ZOOM} aria-label="Zoom in">+</button>
         <button type="button" className="chart-reset-button" onClick={() => setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 })} disabled={viewport.zoom === 1}>Reset</button>
-        <label className="chart-end-control"><FieldTitle help="Limits this figure to observations at or before the chosen time, without interpolation. Figure CSV follows this cutoff; Full selected dataset CSV retains the full selection. This does not alter the raw source.">Graph end</FieldTitle> <input type="number" min={minimumTime} max={maximumTime} step="1" inputMode="numeric" value={displayedGraphEnd} aria-label={`Graph end (${xUnit})`} onChange={(event) => { setGraphEndInput(event.target.value); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} /><span>{xUnit}</span></label>
+        <label className="chart-end-control"><FieldTitle help="Sets the end of the X axis. A value beyond the last observation adds empty space without extrapolation. A value before it limits this figure and its CSV to observed points at or before the cutoff; Full selected dataset CSV retains the full selection. This does not alter the raw source.">Graph end</FieldTitle> <input type="number" min={minimumTime} step="1" inputMode="numeric" value={displayedGraphEnd} aria-label={`Graph end (${xUnit})`} onChange={(event) => { setGraphEndInput(event.target.value); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} /><span>{xUnit}</span></label>
         <button type="button" className="chart-reset-button" onClick={() => { setGraphEndInput(null); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} disabled={graphEndInput === null}>Max</button>
         {xUnit === "h" && <label className="chart-density-control"><FieldTitle help="Display only: for each curve, keep the first measured point, then the first recorded point at least the chosen interval after the previous displayed point. Always keep the last point, even if closer. Times and values are unchanged: no averaging, smoothing or interpolation. Statistics, references and Y-axis scale use all eligible points. Figure exports follow this display; Full selected dataset CSV retains the full data.">Point spacing</FieldTitle><select aria-label="Displayed point spacing" value={pointInterval} onChange={event => setPointInterval(Number(event.target.value))}><option value={0}>All points</option>{[1, 2, 5, 10, 24].map(interval => <option key={interval} value={interval}>Every {interval} h</option>)}</select></label>}
         {displayInterval > 0 && <span role="status">{all.length}/{analyticalSeries.reduce((sum, item) => sum + item.points.length, 0)} points displayed · analysis unchanged</span>}
