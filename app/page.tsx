@@ -21,7 +21,7 @@ import {
   MetricKey,
 } from "./lib/iv-data";
 import { getJVDiagnostics, chooseSpecimenFirstMeasurement, type JVDiagnostic } from "./lib/jv-science";
-import { materialStyle, identityLinePattern, evaFormulationStyle, aggregateSeriesMarkers, markerPath } from "./lib/material-style";
+import { materialStyle, identityLinePattern, evaFormulationStyle, aggregateSeriesMarkers, markerPath, individualTrendPresentation } from "./lib/material-style";
 import { sampleFormulation } from "./lib/formulation";
 import { buildIdentity } from "./lib/build-identity";
 import { normalizationTraces } from "./lib/normalization-trace";
@@ -579,10 +579,8 @@ export default function Home() {
         label: `${String.fromCharCode(65 + parentIndex)}${sampleIndex + 1} · ${sample.sampleLabel}`,
         points,
         contextLabel: [series.config.stress, METRICS[series.config.metric].label, sample.sampleUid, `Excel ref. ${sample.sampleReference}`, describeGraphElectrode([sampleMap.get(sample.sampleUid)?.electrode])].filter(Boolean).join(" · "),
-        exportLabel: series.config.material,
-        exportLegendKey: series.id,
+        ...individualTrendPresentation(series.config.material, sampleMap.get(sample.sampleUid)?.material_raw, series.id, sample.sampleUid),
         parentSeriesId: series.id,
-        linePattern: identityLinePattern(sample.sampleUid),
       };
     })
   ));

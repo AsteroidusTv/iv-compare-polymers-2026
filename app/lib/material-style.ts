@@ -15,6 +15,15 @@ export function evaFormulationStyle(material: string, formulations: Array<string
   if (values[0] === "EVA 806") return { label: "EVA 806", linePattern: "14 7" };
   return null;
 }
+/** Keep known EVA formulations separate even in an individual-sample export legend. */
+export function individualTrendPresentation(material: string, formulation: string | null | undefined, seriesId: string, sampleUid: string) {
+  const style = evaFormulationStyle(material, [formulation]);
+  return {
+    exportLabel: style?.label ?? material,
+    exportLegendKey: style ? JSON.stringify([seriesId, style.label]) : seriesId,
+    linePattern: style?.linePattern ?? identityLinePattern(sampleUid),
+  };
+}
 /** SVG paths keep the same marker geometry in DOM, SVG and PNG exports. */
 export function markerPath(marker:MaterialStyle["marker"]="circle",x:number,y:number,r:number):string {
   if(marker==="cross")return `M${x-r/2} ${y-r*1.4}h${r}v${r*.9}h${r*.9}v${r}h${-r*.9}v${r*.9}h${-r}v${-r*.9}h${-r*.9}v${-r}h${r*.9}Z`;
