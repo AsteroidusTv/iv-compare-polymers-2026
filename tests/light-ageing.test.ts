@@ -6,10 +6,11 @@ import { gunzipSync } from "node:zlib";
 import XLSX from "xlsx";
 import { loadLightAgeing, parsePearlSummary } from "../scripts/light-ageing.mjs";
 import { normalizationTraces } from "../app/lib/normalization-trace";
+import { fullSelectionCsv } from "../app/lib/figure-export";
 import { metricOptionsFor } from "../app/lib/comparison";
 import { validateDataset, type IVDataset, type Observation, type MetricKey } from "../app/lib/iv-data";
 
-const forward = "light_pout_forward_mW_cm2", reverse = "light_pout_reverse_mW_cm2";
+const forward = "light_pout_forward_mW_cm2", reverse = "light_pout_reverse_mW_cm2", combined = "light_pout_mean_mW_cm2";
 const row = (id:string,time:number,f:number|null,r:number|null):Observation => ({observation_uid:id,sample_uid:"S1",test_type:"Light ageing",exposure_duration_numeric:time,[forward]:f,[reverse]:r});
 const traces = (observations:Observation[],metric:MetricKey=forward) => normalizationTraces({observations} as IVDataset,{sampleUids:["S1"],protocol:"Light ageing",metric,mode:"retention",includeQa:false,outdoorWindow:7,qaIssues:new Map()});
 
@@ -26,7 +27,7 @@ test("Pearl reproduces five raw summaries without duplicating TXT rows or changi
  const manifest=JSON.parse(await fs.readFile("data/decisions/light-ageing-pearl-v1.json","utf8"));
  const hash=createHash("sha256").update(JSON.stringify(dataset.observations.filter(r=>r.test_type==="Outdoor"))).digest("hex");
  assert.equal(hash,manifest.previousOutdoorObservationsSha256);
- assert.deepEqual(metricOptionsFor("Light ageing"),[forward,reverse]);
+ assert.deepEqual(metricOptionsFor("Light ageing"),[combined,forward,reverse]);
 });
 test("Pearl retention keeps the first recorded point and separates sweep directions",()=>{
  const observations=[{...row("U",0,99,99),test_type:"Unaged"},row("B",0.04,10,20),row("A",1,5,2),row("Z",2,0,0)];
@@ -57,10 +58,10 @@ test("Pearl parser rejects ambiguous times and preserves worksheet row provenanc
 });
 test("owner-confirmed different irradiation is excluded in both modes even with QA enabled",()=>{
  const observations=[{...row("H",0,15,30),data_quality_flag:"light_irradiance_changed"},row("B",1,10,20),row("A",2,8,10)];
- for(const mode of ["absolute","retention"] as const)for(const metric of [forward,reverse] as const){
+ for(const mode of ["absolute","retention"] as const)for(const metric of [forward,reverse,combined] as const){
   const result=normalizationTraces({observations} as IVDataset,{sampleUids:["S1"],protocol:"Light ageing",metric,mode,includeQa:true,outdoorWindow:7,qaIssues:new Map()});
   assert.equal(result[0].value,null);assert.ok(result[0].exclusions.includes("different_irradiance"));
-  assert.equal(result[1].value,mode==="retention"?100:metric===forward?10:20);
+  assert.equal(result[1].value,mode==="retention"?100:metric===forward?10:metric===reverse?20:15);
   if(mode==="retention")assert.equal(result[1].baseline?.observations[0].observation_uid,"B");
  }
 });
@@ -68,7 +69,7 @@ test("all five Pearl cells omit reviewed 1.5-sun peaks and recovery transitions,
  const dataset=validateDataset(JSON.parse(gunzipSync(await fs.readFile("public/data/iv-compare-dowsil.ivpack")).toString()));
  const observations=dataset.observations.filter(row=>row.test_type==="Light ageing");
  const sampleUids=[...new Set(observations.map(row=>row.sample_uid))];
- for(const metric of [forward,reverse] as const){
+ for(const metric of [forward,reverse,combined] as const){
   const result=normalizationTraces(dataset,{sampleUids,protocol:"Light ageing",metric,mode:"retention",includeQa:true,outdoorWindow:7,qaIssues:new Map()});
   const excluded=result.filter(t=>t.exclusions.includes("different_irradiance"));
   assert.equal(excluded.length,30);assert.equal(result.filter(t=>t.value!==null).length,1878);
@@ -76,5 +77,42 @@ test("all five Pearl cells omit reviewed 1.5-sun peaks and recovery transitions,
   assert.ok(result.filter(t=>[83,88].includes(t.observation.source_row!)).every(t=>t.value!==null));
   assert.ok(result.every(t=>t.baseline?.observations[0].source_row===7));
   assert.ok(result.filter(t=>t.observation.source_row===7).every(t=>t.value===100));
+ }
+});
+test("paired Pearl mean combines powers before retention and preserves source readings",()=>{
+ const observations=[row("B",0,10,20),row("A",1,5,2),row("Z",2,0,0)];
+ const original=JSON.stringify(observations);
+ const result=traces(observations,combined);
+ assert.deepEqual(result.map(t=>t.absoluteValue),[15,3.5,0]);
+ assert.equal(result[1].value,100*3.5/15);
+ assert.notEqual(result[1].value,(50+10)/2);
+ assert.equal(result[2].value,0);
+ assert.equal(result[1].observation.light_pout_forward_mW_cm2,5);
+ assert.equal(result[1].observation.light_pout_reverse_mW_cm2,2);
+ assert.match(result[1].observation.aggregation_protocol!,/same Pearl source row/);
+ const exported=fullSelectionCsv({analysisTrace:{a:result}});
+ assert.ok(exported.includes("light_pout_forward_mW_cm2"));
+ assert.ok(exported.includes("light_pout_reverse_mW_cm2"));
+ assert.ok(exported.includes("light_pout_mean_mW_cm2"));
+ assert.ok(exported.includes("same Pearl source row"));
+ assert.equal(JSON.stringify(observations),original);
+});
+test("paired Pearl mean requires both readings and never substitutes a later baseline",()=>{
+ for(const value of [null,-1,NaN,Infinity]){
+  const result=traces([row("B",0,10,value),row("A",1,5,10)],combined);
+  assert.equal(result[0].absoluteValue,null);
+  assert.equal(result[1].baseline?.status,"missing_baseline");
+  assert.equal(result[1].value,null);
+ }
+ const result=traces([row("B",0,10,20),row("A",1,null,10)],combined);
+ assert.equal(result[1].value,null);
+ assert.ok(result[1].exclusions.includes("non_numeric_metric"));
+});
+test("paired Pearl mean inherits QA from either direction",()=>{
+ for(const direction of [forward,reverse]){
+  const observations=[row("B",0,10,20),{...row("A",1,5,10),data_quality_flag:`non_numeric_metric:${direction}`}];
+  const result=traces(observations,combined);
+  assert.equal(result[1].value,null);
+  assert.ok(result[1].exclusions.includes("qa_metric"));
  }
 });

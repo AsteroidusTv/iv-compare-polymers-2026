@@ -1,4 +1,4 @@
-export type MetricKey = "efficiency_pct" | "jsc_mA_cm2" | "voc_V" | "ff_pct" | "outdoor_pr_pct" | "outdoor_pmpp_W" | "outdoor_irradiance_W_m2" | "light_pout_forward_mW_cm2" | "light_pout_reverse_mW_cm2";
+export type MetricKey = "efficiency_pct" | "jsc_mA_cm2" | "voc_V" | "ff_pct" | "outdoor_pr_pct" | "outdoor_pmpp_W" | "outdoor_irradiance_W_m2" | "light_pout_forward_mW_cm2" | "light_pout_reverse_mW_cm2" | "light_pout_mean_mW_cm2";
 export type Aggregation = "mean" | "median";
 
 export interface Sample {
@@ -45,6 +45,8 @@ export interface Observation {
   outdoor_irradiance_W_m2?: number | null;
   light_pout_forward_mW_cm2?: number | null;
   light_pout_reverse_mW_cm2?: number | null;
+  /** Derived arithmetic mean of the paired forward/reverse readings in this source row. */
+  light_pout_mean_mW_cm2?: number | null;
   action_or_status?: string | null;
   comments?: string | null;
   data_quality_flag?: string | null;
@@ -490,6 +492,7 @@ export async function importDatasetFiles(files: File[]): Promise<IVDataset> {
 }
 
 export const METRICS: Record<MetricKey, { label: string; unit: string; digits: number }> = {
+  light_pout_mean_mW_cm2: { label: "Light-ageing Pout — mean forward/reverse", unit: "mW/cm²", digits: 2 },
   efficiency_pct: { label: "Efficiency", unit: "%", digits: 2 },
   jsc_mA_cm2: { label: "Jsc", unit: "mA/cm²", digits: 2 },
   voc_V: { label: "Voc", unit: "V", digits: 3 },

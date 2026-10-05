@@ -10,6 +10,7 @@ export function lightIrradianceExcluded(flag: string | null | undefined): boolea
 }
 /** Only explicitly recognised metric-local flags are scoped. Irradiance absence and unknown flags remain global. */
 export function sourceQualityFlagApplies(flag: string | null | undefined, metric?: MetricKey): boolean {
+  if (metric === "light_pout_mean_mW_cm2") return sourceQualityFlagApplies(flag, "light_pout_forward_mW_cm2") || sourceQualityFlagApplies(flag, "light_pout_reverse_mW_cm2");
   if (!flag) return false;
   return flag.split(/[;,|]/).filter(part=>part.trim()).some(part=>{
     const value=part.trim(),match=/^non_numeric_metric:([\w]+)$/.exec(value);
