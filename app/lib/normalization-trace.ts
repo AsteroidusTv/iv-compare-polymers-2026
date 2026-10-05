@@ -27,6 +27,14 @@ export function normalizationTraces(dataset: IVDataset, options: {
   includeQa: boolean; outdoorWindow: 3 | 7 | 14; qaIssues: ReadonlyMap<string, string>;
 }): NormalizationTrace[] {
   const { metric, protocol } = options;
+  // Combine only paired readings from one source row, before normalization and cell aggregation.
+  const observationsForMetric = metric === "light_pout_mean_mW_cm2"
+    ? dataset.observations.map(row => {
+      if (row.test_type !== "Light ageing") return row;
+      const forward = row.light_pout_forward_mW_cm2, reverse = row.light_pout_reverse_mW_cm2;
+      return { ...row, light_pout_mean_mW_cm2: numeric(forward) && numeric(reverse) && forward >= 0 && reverse >= 0 ? forward / 2 + reverse / 2 : null,
+        aggregation_protocol: "Arithmetic mean (Pout_F + Pout_R) / 2 from the same Pearl source row; both finite non-negative readings required; no temporal interpolation" };
+    }) : dataset.observations;
   const ids = new Set(options.sampleUids), baselines = new Map<string, BaselineTrace>();
   const qaReasons = (row: Observation) => [...new Set([
     options.qaIssues.get(row.observation_uid),
@@ -35,12 +43,14 @@ export function normalizationTraces(dataset: IVDataset, options: {
   const baselineFor = (sampleUid: string): BaselineTrace => {
     const cached = baselines.get(sampleUid); if (cached) return cached;
     if (protocol === "Light ageing") {
-      const measured = dataset.observations.filter(row => row.sample_uid === sampleUid && row.test_type === protocol && !lightIrradianceExcluded(row.data_quality_flag) && numeric(row.exposure_duration_numeric)).sort((a,b) => a.exposure_duration_numeric! - b.exposure_duration_numeric!);
+      const measured = observationsForMetric.filter(row => row.sample_uid === sampleUid && row.test_type === protocol && !lightIrradianceExcluded(row.data_quality_flag) && numeric(row.exposure_duration_numeric)).sort((a,b) => a.exposure_duration_numeric! - b.exposure_duration_numeric!);
       const first = measured[0];
       const observations = first ? measured.filter(row => row.exposure_duration_numeric === first.exposure_duration_numeric) : [];
       const value = observations.length === 1 && numeric(first[metric]) && (options.includeQa || !qaReasons(first).length) ? first[metric] as number : null;
       const status = observations.length > 1 ? "ambiguous_baseline" : value === null ? "missing_baseline" : value === 0 ? "zero_baseline" : value < 0 ? "negative_baseline" : "valid";
-      const result: BaselineTrace = {status, value, observations, low:false, sensitivityPct:null, definition:"First recorded Pearl point of the same specimen and sweep direction after explicit owner-adjudicated different-irradiance exclusions; no Unaged substitution or automatic reference optimization"};
+      const result: BaselineTrace = {status, value, observations, low:false, sensitivityPct:null, definition: metric === "light_pout_mean_mW_cm2"
+        ? "Arithmetic mean of paired forward/reverse Pout at the first recorded Pearl point of the same specimen after explicit different-irradiance exclusions; no later-point substitution"
+        : "First recorded Pearl point of the same specimen and sweep direction after explicit owner-adjudicated different-irradiance exclusions; no Unaged substitution or automatic reference optimization"};
       baselines.set(sampleUid,result); return result;
     }
     const rows = dataset.observations.filter(row => row.sample_uid === sampleUid
@@ -56,7 +66,7 @@ export function normalizationTraces(dataset: IVDataset, options: {
       sensitivityPct: outdoor?.sensitivityPct ?? null };
     baselines.set(sampleUid, result); return result;
   };
-  const result: NormalizationTrace[] = dataset.observations.filter(row => ids.has(row.sample_uid) && row.test_type === protocol).map(observation => {
+  const result: NormalizationTrace[] = observationsForMetric.filter(row => ids.has(row.sample_uid) && row.test_type === protocol).map(observation => {
     const absoluteValue = numeric(observation[metric]) ? observation[metric] as number : null;
     const reasons = qaReasons(observation), exclusions: string[] = [];
     if (absoluteValue === null) exclusions.push("non_numeric_metric");

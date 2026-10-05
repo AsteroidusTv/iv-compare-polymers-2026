@@ -7,15 +7,15 @@ identities support provisional specimen links; these are not laboratory adjudica
 The mapping and SHA-256 hashes of all 649 archived files are in
 `data/decisions/light-ageing-pearl-v1.json`.
 
-Select **Light ageing** in the comparison protocol, then **Pout — forward**
-or **Pout — reverse**. Power density is in mW/cm² and elapsed time in hours,
+Select **Light ageing** in the comparison protocol, then **Pout — mean forward/reverse**
+(default), **Pout — forward** or **Pout — reverse**. Power density is in mW/cm² and elapsed time in hours,
 as documented by the source evolution plots. The owner clarified nominal conditions on 3 October 2026: 1 sun and 40 °C
 (see ../science/LAB_CLARIFICATIONS_2026-10-03.md). These declarations do not
 supply a calibration record or incident-power evidence per measurement.
-No PCE or equivalent illuminated-dose time is newly inferred. Directions are never pooled or selected by maximum performance.
+No PCE or equivalent illuminated-dose time is newly inferred. The combined metric uses equal weights for the paired directions; maximum performance never selects a direction.
 
-Retention is 100 × measured power / first recorded power of the same cell
-and direction after explicit different-irradiance exclusions. A missing, zero, negative,
+Retention is 100 × selected power metric / its first recorded value for the same cell
+after explicit different-irradiance exclusions. A missing, zero, negative,
 QA-excluded or duplicate initial reference prevents retention calculation;
 the reference never moves to a later, more convenient reading. Absolute zero
 remains a measured zero. No time interpolation is performed; aggregate
@@ -48,3 +48,17 @@ new main package.
 After `pnpm data:build`, `node scripts/bind-pearl-outdoor.mjs` can bind a
 rebuilt package while the pre-intake Outdoor digest and decision registry
 remain identical. It refuses changed Outdoor data or decisions.
+# Combined forward/reverse graphs
+
+The site offers `light_pout_mean_mW_cm2` as the default Light-ageing metric,
+alongside the separate forward and reverse readings. It derives `(Pout_F +
+Pout_R) / 2` from each individual source row before normalization or aggregation
+across cells. Both readings must be finite and non-negative; no single-direction
+fallback or time interpolation is used. QA from either direction applies to the
+combined metric. Different-irradiance exclusions remain mandatory.
+
+Retention is `100 * mean_at_time / mean_at_first_remaining_recorded_point`.
+An invalid first pair does not move the reference to a later row. This is not
+the mean of separately normalized forward/reverse retentions. Exports retain
+both original readings, the derived mean and its calculation rule. The source
+package is unchanged; this metric is calculated from its existing paired values.
