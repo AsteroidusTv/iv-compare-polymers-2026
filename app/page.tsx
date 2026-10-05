@@ -35,6 +35,7 @@ import { analysisGroups, cohortTimeline, type AnalysisGrouping } from "./lib/coh
 import { describeGraphElectrode } from "./lib/chart-export";
 import { figureAgeingContext, figureMetricLabel } from "./lib/figure-language";
 import { resolveSelectedSampleIds, toggleSelectedSampleId } from "./lib/sample-selection";
+import { arrangeTrendPanels, type TrendArrangement, type TrendColumns } from "./lib/trend-layout";
 import { ALL_RIBBONS, STANDARD_RIBBON, matchesRibbon, recordedRibbon, ribbonChoice, ribbonLabel, ribbonOptions, ribbonSelectionLabel } from "./lib/ribbon";
 import {
   measurementQualityReasons,
@@ -45,6 +46,7 @@ import {
 } from "./lib/science";
 import {
   createInitialSeries,
+  LIGHT_AGEING_METRICS,
   metricOptionsFor,
   normalizeSeriesConfig,
   SeriesConfig,
@@ -82,6 +84,7 @@ type ContextTrendSeries = TrendSeries & {
 
 
 const METRIC_HELP: Record<MetricKey, string> = {
+  light_pout_mean_mW_cm2: "Arithmetic mean (Pout forward + Pout reverse) / 2 for the same cell and recorded time, in mW/cm². Both readings must be available and non-negative. Retention divides this mean by the mean at the first remaining recorded point. QA from either direction applies; different-irradiance tests stay excluded. This combines the two directions without correcting hysteresis or averaging across times.",
   light_pout_forward_mW_cm2: "Pearl output power density from the forward sweep, in mW/cm², at the recorded elapsed time in hours. The laboratory confirms nominal Light ageing at 1 sun and 40 °C. This remains recorded Pout, not a newly reconstructed or calibrated PCE. Owner-identified different-irradiance tests are excluded; retention uses the first remaining point of this cell and direction.",
   light_pout_reverse_mW_cm2: "Pearl output power density from the reverse sweep, in mW/cm². Forward and reverse sweeps remain separate. Different-irradiance tests are excluded; retention uses the first remaining reverse-sweep point of this cell.",
   efficiency_pct: "Efficiency is maximum electrical power divided by incident light power. The laboratory selects the performance plateau reached after repeated JV measurements under light soaking. The laboratory recognizes the plateau when efficiency stops increasing; no numerical tolerance, minimum duration or scan count was supplied. The report will discuss measurement variability and this limitation.",
@@ -97,7 +100,7 @@ const HELP = {
   polymer: "Family is a navigation label, not proof that formulations, batches or processes are interchangeable. Analysis grouping and filters are explicit below.",
   addMaterial: "Adds another independent comparison series. The same encapsulant can be selected more than once with a different ageing protocol or metric.",
   ageing: "Laboratory-confirmed nominal conditions: DH at 85 °C / 85% relative humidity; TC from -40 to 85 °C; Light ageing at 1 sun / 40 °C. TC uses cycles, DH and Light ageing hours, Outdoor days. Ramps, dwell times and interruptions are not specified. Compare durations within the same protocol.",
-  retention: "Retention = same-cell value / reference × 100. DH/TC use unique Unaged; Light ageing uses the first recorded Pearl point of the same cell and sweep direction after the explicit different-irradiance exclusions. Outdoor uses the median of the first 3–7 valid days, with B3/B14 sensitivity.",
+  retention: "Retention = same-cell value / reference × 100. DH/TC use unique Unaged; Light ageing uses the first recorded Pearl point after different-irradiance exclusions, for the selected direction or the paired forward/reverse mean. The combined mode normalizes the mean powers, rather than averaging separately normalized directions. Outdoor uses the median of the first 3–7 valid days, with B3/B14 sensitivity.",
   labConvention: "The laboratory confirms one sample UID is one cell and all recorded material/electrode labels, including Ag/Cu. Shared substrates and batch independence remain unspecified. Counts describe cells, not proof of statistically independent replicates.",
   traceDisplay: "Individual samples draws one separate trajectory for every checked patch, using the same material colour and different line patterns. Mean or Median replaces those trajectories with one aggregate curve per material.",
   matching: "Matching links each IV file to an inventory sample using its metadata. “To resolve” contains only genuinely ambiguous or unidentified files. Reference cells and files already placed in laboratory Trash folders are retained separately for audit and do not participate in polymer comparisons.",
@@ -161,6 +164,8 @@ export default function Home() {
   const [outdoorWindow, setOutdoorWindow] = useWorkspaceState<3 | 7 | 14>("outdoorWindow", 7, value => [3,7,14].includes(value as never));
   const [inspectUnsafeJV, setInspectUnsafeJV] = useWorkspaceState("inspectUnsafeJV", false);
   const [trendDisplay, setTrendDisplay] = useWorkspaceState<TrendDisplay>("trendDisplay", "samples", value => ["aggregate","samples"].includes(value as never));
+  const [trendArrangement, setTrendArrangement] = useWorkspaceState<TrendArrangement>("trendArrangement", "metric", value => ["metric","material","series"].includes(value as never));
+  const [trendColumns, setTrendColumns] = useWorkspaceState<TrendColumns>("trendColumns", "auto", value => ["auto","one","two"].includes(value as never));
   const [includeQa, setIncludeQa] = useWorkspaceState("includeQa", false);
   const [curveTime, setCurveTime] = useWorkspaceState<number | null>("curveTime", null, value => value === null || typeof value === "number" && Number.isFinite(value));
   const [curveComparison, setCurveComparison] = useWorkspaceState<CurveComparison>("curveComparison", "ageing", value => ["ageing","materials"].includes(value as never));
@@ -605,9 +610,17 @@ export default function Home() {
       };
     })
   ));
-  const displayedTrendSeries: ContextTrendSeries[] = trendDisplay === "samples"
+  const baseDisplayedTrendSeries: ContextTrendSeries[] = trendDisplay === "samples"
     ? sampleTrendSeries
     : selectedTrendSeries;
+  const displayedTrendSeries = baseDisplayedTrendSeries.map(series => {
+    if (trendArrangement !== "material" || !LIGHT_AGEING_METRICS.includes(series.config.metric)) return series;
+    const direction = series.config.metric === "light_pout_forward_mW_cm2" ? "aller"
+      : series.config.metric === "light_pout_reverse_mW_cm2" ? "retour" : "moyenne aller/retour";
+    return { ...series, label: `${series.label} · ${direction}`, exportLabel: `${series.exportLabel ?? series.config.material} · ${direction}`,
+      marker: series.config.metric === "light_pout_reverse_mW_cm2" ? "circle" as const
+        : series.config.metric === "light_pout_mean_mW_cm2" ? "diamond" as const : series.marker };
+  });
   const visibleCurveSeries = curveSeries.filter((series) => !hiddenSeries.has(series.id));
   const visibleCurveSelections = curveSelections.filter((selection) => !hiddenSeries.has(selection.seriesId));
   const curveAudit = visibleCurveSelections.reduce((summary, selection) => {
@@ -649,9 +662,7 @@ export default function Home() {
   const sharedXUnit = trendSeries.length && trendSeries.every((series) => series.xUnit === trendSeries[0].xUnit) ? trendSeries[0].xUnit : null;
   const sharedMetric = seriesConfigs.length && seriesConfigs.every((config) => config.metric === seriesConfigs[0].metric) ? seriesConfigs[0].metric : null;
   const overlayCompatible = Boolean(sharedXUnit && sharedMetric && seriesConfigs.every((config) => config.stress === seriesConfigs[0].stress));
-  const trendPanels = overlayCompatible
-    ? [displayedTrendSeries]
-    : trendSeries.map((parent) => displayedTrendSeries.filter((series) => series.parentSeriesId === parent.id));
+  const trendPanels = arrangeTrendPanels(displayedTrendSeries, trendArrangement);
 
   const trendInsight = (() => {
     if (trendDisplay === "samples") return {
@@ -662,8 +673,8 @@ export default function Home() {
     };
     if (selectedTrendSeries.length < 2) return null;
     if (!overlayCompatible || !sharedXUnit) return {
-      title: "Separate scales required",
-      detail: "The selected series use different time units or absolute metrics. They are shown in separate panels to avoid a misleading shared axis.",
+      title: "Compare within each graph",
+      detail: "Series are arranged using Graph layout. Compare compatible metrics within a panel; each graph has its own scale.",
       time: null,
       count: selectedTrendSeries.reduce((total, series) => total + series.points.reduce((sum, point) => sum + point.n, 0), 0),
     };
@@ -735,9 +746,10 @@ export default function Home() {
     missingness: view==="curves"?undefined:missingness,
     hiddenSeries: [...hiddenSeries],
     analyticalTrendSeries: view==="curves"?undefined:displayedTrendSeries,
+    chartLayout: view === "trend" ? { arrangement: trendArrangement, columns: trendColumns, panels: trendPanels.map(panel => ({ key: panel.key, seriesIds: panel.series.map(series => series.id) })) } : undefined,
     analyticalCurveSeries: view==="curves"?curveSeries:undefined,
     jvSelection: view==="curves"&&dataset?jvSelectionLedger(dataset,fullJVMeasurementIds(dataset,seriesConfigs,curveComparison,resolvedAgeingSample?.sampleUid??null,ribbonSampleIds),curveSelections.map(selection=>selection.measurement.measurement_uid),curveSelections.map(selection=>selection.actualTime),includeQa,inspectUnsafeJV):undefined,
-    methodCaption: `${ribbonSelectionLabel(ribbonSelection)}. ${splitByRibbon && view === "trend" && trendDisplay === "aggregate" ? "Groupes séparés par type de ruban. " : ""}${view==="curves"?`${curveComparison==="ageing"?"Même cellule à plusieurs temps de vieillissement":"Cellules choisies au même protocole et au même temps"} ; les balayages ne sont pas regroupés. ${inspectUnsafeJV?"Inspection non résolue : ne constitue pas une validation quantitative.":"Balayages avec branche exploitable et cohérence numérique automatique ; validation instrumentale encore à confirmer."}`:`${seriesConfigs.map(config=>`${config.stress} / ${figureMetricLabel(config.metric)}`).join("; ")}. ${mode==="retention"?`Normalisation par cellule × 100 ; référence Unaged unique pour DH/TC, premier point Pearl de la même cellule et du même sens de balayage pour Light ageing, B${outdoorWindow} pour l'extérieur (minimum 3 jours valides).`:"Valeurs absolues mesurées."} ${trendDisplay==="samples"?"Trajectoires individuelles, sans regroupement":`Agrégation : ${aggregation} ; regroupement : ${grouping} ; cohorte : ${cohortMode}`}. Données signalées par le contrôle qualité ${includeQa?"incluses explicitement pour examen":"exclues"}.`}`,
+    methodCaption: `${ribbonSelectionLabel(ribbonSelection)}. ${splitByRibbon && view === "trend" && trendDisplay === "aggregate" ? "Groupes séparés par type de ruban. " : ""}${view==="curves"?`${curveComparison==="ageing"?"Même cellule à plusieurs temps de vieillissement":"Cellules choisies au même protocole et au même temps"} ; les balayages ne sont pas regroupés. ${inspectUnsafeJV?"Inspection non résolue : ne constitue pas une validation quantitative.":"Balayages avec branche exploitable et cohérence numérique automatique ; validation instrumentale encore à confirmer."}`:`${seriesConfigs.map(config=>`${config.stress} / ${figureMetricLabel(config.metric)}`).join("; ")}. ${seriesConfigs.some(config=>config.metric==="light_pout_mean_mW_cm2")?"Pout combiné = (F + R) / 2 sur la même ligne source, avant normalisation ; les deux lectures sont requises. ":""} ${mode==="retention"?`Normalisation par cellule × 100 ; référence Unaged unique pour DH/TC, premier point Pearl de la même cellule pour la métrique choisie (sens individuel ou moyenne aller/retour) pour Light ageing, B${outdoorWindow} pour l'extérieur (minimum 3 jours valides).`:"Valeurs absolues mesurées."} ${trendDisplay==="samples"?"Trajectoires individuelles, sans regroupement":`Agrégation : ${aggregation} ; regroupement : ${grouping} ; cohorte : ${cohortMode}`}. Données signalées par le contrôle qualité ${includeQa?"incluses explicitement pour examen":"exclues"}.`}`,
     qa: { includeFlagged: includeQa, inspectUnsafeJV },
     normalization: { mode, outdoorBaselineDays: outdoorWindow },
     aggregation: { method: aggregation, grouping, splitByRibbon },
@@ -874,31 +886,45 @@ export default function Home() {
         {view === "encapsulation" ? <EncapsulationComparison dataset={dataset} selections={seriesConfigs.map((config) => ({ material: config.material, color: materialStyle(config.material).color }))} ribbonSampleIds={ribbonSampleIds} ribbonSelection={ribbonSelection} splitByRibbon={splitByRibbon} /> : view === "trend" ? (
           <div className="chart-layout">
             <section className="chart-card">
+              <div className="graph-layout-controls" aria-label="Graph layout">
+                <div className="graph-layout-heading"><strong>Graph layout</strong><span>Choose what to compare together</span></div>
+                <label>Group graphs<select aria-label="Group graphs" value={trendArrangement} onChange={event => setTrendArrangement(event.target.value as TrendArrangement)}>
+                  <option value="metric">By metric · compare materials</option>
+                  <option value="material">By material · compare sweeps</option>
+                  <option value="series">One graph per series</option>
+                </select></label>
+                <label>Arrange<select aria-label="Graph columns" value={trendColumns} onChange={event => setTrendColumns(event.target.value as TrendColumns)}>
+                  <option value="auto">Auto</option><option value="one">Stacked</option><option value="two">Side by side</option>
+                </select></label>
+                <span className="graph-layout-count" role="status">{trendPanels.length} {trendPanels.length === 1 ? "graph" : "graphs"}<InfoTip text="By metric overlays materials with the same metric and protocol: forward and reverse Pearl sweeps become two graphs. By material overlays Pearl sweep directions within each material. One graph per series keeps comparison cards separate. Different protocols or incompatible axes always stay separate. This changes the display, not cell selection, normalization or aggregation. Side-by-side graphs stack on narrow screens." align="right" /></span>
+              </div>
               <div className="chart-title">
                 {displayedTrendSeries.map((series) => {
                   const hidden = hiddenSeries.has(series.id);
                   return <button type="button" className={`legend-toggle ${hidden ? "hidden" : ""}`} key={series.id} aria-pressed={!hidden} onClick={() => toggleSeries(series.id)} title={`${hidden ? "Show" : "Hide"} ${series.label} · ${series.contextLabel} — calculations remain unchanged`}><svg className="legend-stroke" viewBox="0 0 24 8" aria-hidden="true"><line x1="1" x2="23" y1="4" y2="4" stroke={series.color} strokeWidth="3" strokeDasharray={series.linePattern} /><path d={markerPath(series.marker,12,4,2.5)} fill="white" stroke={series.color} strokeWidth="1.4" /></svg>{series.label}</button>;
                 })}
-                <span>{overlayCompatible ? "Shared scale" : "Separate scales"} <InfoTip text={overlayCompatible ? "The selected series share compatible axes and can be overlaid directly." : "Different time units or absolute metrics are displayed in separate panels to prevent a misleading comparison."} align="right" /></span>
+                <span>{trendPanels.length === 1 ? "Shared scale" : "Independent scale per graph"}</span>
               </div>
-              <div className={`trend-panels ${overlayCompatible ? "overlay" : "split"}`}>
-                {trendPanels.map((panel) => {
+              <div className={`trend-panels layout-${trendColumns} ${trendPanels.length > 1 ? "multiple" : "single"}`}>
+                {trendPanels.map(({ key: panelKey, series: panel }) => {
                   const first = panel[0];
                   if (!first) return null;
                   const visiblePanel = panel.filter((series) => !hiddenSeries.has(series.id));
                   const parent = trendSeries.find((series) => series.id === first.parentSeriesId);
-                  const panelTitle = overlayCompatible ? (sharedMetric ? figureMetricLabel(sharedMetric) : "Rétention normalisée") : `${parent?.label ?? first.label} · ${figureMetricLabel(first.config.metric)}`;
-                  const helpMetric = panel.length === 1 || sharedMetric ? (sharedMetric ?? first.config.metric) : null;
-                  const reportMetric = figureMetricLabel(first.config.metric);
+                  const panelMetric = panel.every(series => series.config.metric === first.config.metric) ? first.config.metric : null;
+                  const reportMetric = panelMetric ? figureMetricLabel(panelMetric) : "Pout (balayages aller/retour)";
+                  const panelTitle = trendArrangement === "metric" ? `${reportMetric} · ${first.config.stress}`
+                    : trendArrangement === "material" ? `${first.config.material} · ${reportMetric} · ${first.config.stress}`
+                    : `${parent?.label ?? first.label} · ${reportMetric}`;
+                  const helpMetric = panelMetric;
                   const reportTitle = first.config.stress === "Unaged"
                     ? `${reportMetric} à l’état initial`
                     : `${mode === "retention" ? "Rétention de " : ""}${reportMetric} ${figureAgeingContext(first.config.stress)}`;
                   const reportReference = first.config.stress === "Outdoor" ? "la référence" : "la valeur initiale";
                   const reportYAxisLabel = mode === "retention" ? `Rétention de ${reportMetric} (% de ${reportReference})` : `${reportMetric} (${first.yUnit})`;
-                  const panelKey = overlayCompatible ? `shared-${first.xUnit}` : `series-${first.parentSeriesId ?? first.id}-${first.xUnit}`;
                   return <section className="trend-panel" key={panelKey}>
                     <div className="trend-panel-head"><div><span className="trend-panel-title"><strong>{panelTitle}</strong>{helpMetric ? <InfoTip text={METRIC_HELP[helpMetric]} align="left" /> : null}</span><span className="trend-panel-context">{trendDisplay === "samples" ? `${panel.length} individual sample trajectories · ${first.xUnit}` : panel.length > 1 ? `${panel.length} compatible series · ${first.xUnit}` : first.contextLabel}</span></div></div>
-                    <TrendChart series={visiblePanel} xUnit={first.xUnit} yUnit={first.yUnit} reportTitle={reportTitle} reportYAxisLabel={reportYAxisLabel} exportContext={{...figureContext,analyticalTrendSeries:panel}} />
+                    <TrendChart series={visiblePanel} xUnit={first.xUnit} yUnit={first.yUnit} reportTitle={reportTitle} reportYAxisLabel={reportYAxisLabel} exportContext={{...figureContext,analyticalTrendSeries:panel, panel:{title:panelTitle,seriesIds:panel.map(series=>series.id)}}} />
                   </section>;
                 })}
               </div>
@@ -915,7 +941,7 @@ export default function Home() {
               </dl>
               {outdoorIssueExample ? <div className="quality-alert" role="status"><strong>{relevantOutdoorIssues.length} outdoor anomal{relevantOutdoorIssues.length > 1 ? "ies" : "y"} {includeQa ? "included for review" : "excluded from analysis"}</strong><span>{outdoorIssueSample?.material_family ?? outdoorIssueExample.sampleUid}{numeric(outdoorIssueExample.time) ? ` · day ${fr.format(outdoorIssueExample.time)}` : ""}: {outdoorIssueExample.reason}{relevantOutdoorIssues.length > 1 ? ` ${relevantOutdoorIssues.length - 1} additional flagged value${relevantOutdoorIssues.length > 2 ? "s" : ""}.` : ""}</span></div> : null}
               {selectedTrendSeries.some((series) => series.sampleSetChanges || series.baselineWarnings.length) ? <p className="caution">{selectedTrendSeries.some((series) => series.sampleSetChanges) ? "The contributing sample set changes between some durations. " : ""}{selectedTrendSeries.flatMap((series) => series.baselineWarnings).slice(0, 2).join(" · ")}</p> : null}
-              {seriesConfigs.some(config => config.stress === "Light ageing") ? <p className="caution">Pearl : Pout en mW/cm², temps écoulé en heures. Les lectures à 1,5 sun et leurs transitions sont exclues (30 lignes dans les cinq cellules). La rétention utilise le premier point restant de chaque cellule et sens de balayage. Les liens avec l’inventaire sont provisoires. Aucune interpolation n’est appliquée.</p> : null}
+              {seriesConfigs.some(config => config.stress === "Light ageing") ? <p className="caution">Pearl : Pout en mW/cm², temps écoulé en heures. Moyenne aller/retour : (Pout F + Pout R) / 2 au même instant, avec les deux lectures disponibles. La rétention utilise la valeur de la métrique choisie au premier point restant de chaque cellule. Les lectures à 1,5 sun et leurs transitions sont exclues (30 lignes dans les cinq cellules). Les liens avec l’inventaire sont provisoires. Aucune interpolation n’est appliquée.</p> : null}
               {trendDisplay!=="samples" && cohortDiagnostics.some(group=>group.timeline.some(point=>point.apparentRecoveryRisk)) && <p className="caution" role="status">Apparent recovery may be affected by changing cohort composition. Inspect the contributing specimens below.</p>}
             </aside>
             <section className="data-table-card">

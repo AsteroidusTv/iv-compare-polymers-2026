@@ -19,6 +19,7 @@ export function figureFormulationLabel(sample: Pick<Sample, "material_family" | 
 /** French wording for figures and their captions; analytical keys stay unchanged. */
 export function figureMetricLabel(metric: MetricKey): string {
   const labels: Record<MetricKey, string> = {
+    light_pout_mean_mW_cm2: "Pout (moyenne aller/retour)",
     efficiency_pct: "PCE",
     jsc_mA_cm2: "Jsc",
     voc_V: "Voc",
