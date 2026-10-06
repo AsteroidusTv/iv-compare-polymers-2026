@@ -97,11 +97,29 @@ interpolation is performed. All stage counts and missing reasons are exported.
 Ageing retention is 100 × aged/post, not post/before.
 
 The synchronized diagnostic uses identical specimen/time grids in four panels.
+Its optional single-cell overlay shows PCE, Jsc, Voc and FF on one retention
+axis, each normalized to that cell's own unique Unaged reference. Colours,
+line patterns and symbols identify metrics rather than materials. Missing or
+excluded values break the affected curve; no artificial time-zero observation
+or interpolation is introduced. The selected layout and cell are persisted in
+the workspace, and the exports record the displayed selection and references.
 QA is metric-specific; unavailable metrics remain explicit empty grid cells.
 Lines break at missing grid cells. No pooled estimator or undocumented physical
 independence is inferred. The shared Y viewport can be adjusted without changing
 analytical rows; graph end is an analytical cutoff. Full-selection exports retain
 the traces beyond this cutoff.
+
+## Confirmed formulation aliases
+
+Confirmed formulation aliases are canonicalized for filters and grouping:
+TF4 / POE-2_TF4 refer to POE-2 / TF4; DNP/CVF, DNP-CVF 2Ssa,
+DNP-CVF(Lisa roll) and TPO-1_CVF refer to TPO-1 / DNP-CVF;
+TPO Lenzing, Lenzing and TPO-2_Lenzing refer to TPO-2 / Lenzing.
+This equivalence was confirmed by the owner/laboratory. Raw names remain
+unchanged for provenance. Unknown variants are not automatically merged;
+EVA 406 and EVA 806 remain distinct. Batch, electrode and process grouping
+rules remain unchanged, and legacy saved formulation filters resolve to the
+corresponding canonical name.
 
 ## Ribbon classification
 

@@ -38,7 +38,8 @@ async function walk(directory) {
   for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
     const absolute = path.join(directory, entry.name);
     if (entry.isDirectory()) files.push(...await walk(absolute));
-    else if (entry.isFile()) files.push(absolute);
+    // Excel owner-lock files are ignored working files, not experimental sources.
+    else if (entry.isFile() && !entry.name.startsWith("~$")) files.push(absolute);
   }
   return files;
 }

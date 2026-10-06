@@ -34,5 +34,6 @@ test("formulation, batch, recipe and electrode are real filters and remain selec
   assert.equal(normalized.recipe, "R2");
   assert.equal(normalized.formulation, "806");
   assert.equal(normalized.batch, "A2");
+  assert.equal(normalized.stress, "DH", "an empty selection must not silently switch protocol");
   assert.equal(samplesForConfig(dataset, { ...config, batch: "unknown" }).length, 0);
 });

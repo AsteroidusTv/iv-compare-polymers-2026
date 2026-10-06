@@ -1,6 +1,8 @@
 "use client";
+import { figureFormulationLabel } from "../lib/figure-language";
 import { ExportMenu, CopyCaption } from "./ExportMenu";
 import { useRef, useState } from "react";
+import { useWorkspaceState } from "../lib/use-workspace-state";
 import { datasetPackageHash, type IVDataset } from "../lib/iv-data";
 import { stagedAgeing, stagedDisplayGroups } from "../lib/staged-ageing";
 import { materialStyle } from "../lib/material-style";
@@ -13,14 +15,14 @@ import { figureStageLabel, figureTimeUnit } from "../lib/figure-language";
 import { ALL_RIBBONS, recordedRibbon, ribbonLabel, ribbonSelectionLabel } from "../lib/ribbon";
 
 export function StagedAgeing({dataset,materials,ribbonSampleIds,ribbonSelection,splitByRibbon}:{dataset:IVDataset;materials:string[];ribbonSampleIds:ReadonlySet<string>;ribbonSelection:string;splitByRibbon:boolean}) {
-  const [protocol,setProtocol]=useState<"DH"|"TC">("DH");
-  const [timeMode,setTimeMode]=useState<"exact"|"last-common">("exact");
-  const [requestedTime,setRequestedTime]=useState<number|null>(null);
-  const [retention,setRetention]=useState(false);
-  const [showConnections,setShowConnections]=useState(false);
-  const [groupUnknownMetadata,setGroupUnknownMetadata]=useState(false);
-  const [aggregateAcrossBatches,setAggregateAcrossBatches]=useState(false);
-  const [hidden,setHidden]=useState<string[]>([]),[excluded,setExcluded]=useState<string[]>([]);
+  const [protocol,setProtocol]=useWorkspaceState<"DH"|"TC">("staged:protocol", "DH", value => value === "DH" || value === "TC");
+  const [timeMode,setTimeMode]=useWorkspaceState<"exact"|"last-common">("staged:timeMode", "exact", value => value === "exact" || value === "last-common");
+  const [requestedTime,setRequestedTime]=useWorkspaceState<number|null>("staged:time", null, value => value === null || typeof value === "number" && Number.isFinite(value));
+  const [retention,setRetention]=useWorkspaceState("staged:retention", false);
+  const [showConnections,setShowConnections]=useWorkspaceState("staged:connections", false);
+  const [groupUnknownMetadata,setGroupUnknownMetadata]=useWorkspaceState("staged:unknown", false);
+  const [aggregateAcrossBatches,setAggregateAcrossBatches]=useWorkspaceState("staged:pool", false);
+  const [hidden,setHidden]=useWorkspaceState<string[]>("staged:hidden", []),[excluded,setExcluded]=useWorkspaceState<string[]>("staged:excluded", []);
   const [error,setError]=useState<string|null>(null);
   const svg=useRef<SVGSVGElement>(null);
   const samples=dataset.samples.filter(sample=>ribbonSampleIds.has(sample.sample_uid) && materials.includes(sample.material_family) && (sample.assigned_test===protocol || dataset.observations.some(row=>row.sample_uid===sample.sample_uid && row.test_type===protocol)));
@@ -80,7 +82,7 @@ export function StagedAgeing({dataset,materials,ribbonSampleIds,ribbonSelection,
         </g>;})}
         {rows.map((row,ri)=>{const offset=(ri-(rows.length-1)/2)*Math.min(4,28/Math.max(1,rows.length-1));return <g key={row.sampleUid}>{showConnections&&stages.slice(1).map((stage,i)=>{const left=value(row,stages[i]),right=value(row,stage);return left!==null&&right!==null?<line key={stage} x1={x(i)+offset} x2={x(i+1)+offset} y1={y(left)} y2={y(right)} stroke={color} opacity={.45}/>:null;})}{stages.map((stage,i)=>{const v=value(row,stage);return v!==null?<circle key={stage} cx={x(i)+offset} cy={y(v)} r={3.5} stroke={color} fill={stage==="before"?"white":color}><title>{row.sampleUid} · {stage}: {v.toFixed(3)}</title></circle>:<text key={stage} x={x(i)+offset} y={359} fill={color} textAnchor="middle" fontSize={10}><title>{row.sampleUid}: {row[stage].reasons.join(", ")||"No valid denominator"}</title>×</text>;})}</g>;})}
         {stages.map((stage,i)=><g key={stage}><text x={x(i)} y={380} textAnchor="middle" fontSize={12}>{figureStageLabel(stage)}</text><text x={x(i)} y={397} textAnchor="middle" fontSize={11}>n = {rows.filter(row=>value(row,stage)!==null).length}</text></g>)}
-        <text x={center} y={421} textAnchor="middle" fontSize={12}>{aggregateAcrossBatches?group.materialFamily:sample.material_raw||sample.material_family}</text><text x={center} y={441} textAnchor="middle" fontSize={11}>{aggregateAcrossBatches?`${group.sourceGroupKeys.length} groupes réunis`:`Lot ${sample.batch_no_raw||"inconnu"}${subgroupLabels.get(group.key)?` · ${subgroupLabels.get(group.key)}`:""}`}</text><text x={center} y={459} textAnchor="middle" fontSize={11}>{aggregateAcrossBatches?`${splitByRibbon?`${ribbonLabel(recordedRibbon(sample))} · `:""}n = ${rows.length} cellules`:`${splitByRibbon?`${ribbonLabel(recordedRibbon(sample))} · `:""}${sample.electrode||"électrode inconnue"}`}</text>
+        <text x={center} y={421} textAnchor="middle" fontSize={12}>{aggregateAcrossBatches?group.materialFamily:figureFormulationLabel(sample)}</text><text x={center} y={441} textAnchor="middle" fontSize={11}>{aggregateAcrossBatches?`${group.sourceGroupKeys.length} groupes réunis`:`Lot ${sample.batch_no_raw||"inconnu"}${subgroupLabels.get(group.key)?` · ${subgroupLabels.get(group.key)}`:""}`}</text><text x={center} y={459} textAnchor="middle" fontSize={11}>{aggregateAcrossBatches?`${splitByRibbon?`${ribbonLabel(recordedRibbon(sample))} · `:""}n = ${rows.length} cellules`:`${splitByRibbon?`${ribbonLabel(recordedRibbon(sample))} · `:""}${sample.electrode||"électrode inconnue"}`}</text>
       </g>;})}
     </svg></div>
     <details><summary>Values, missingness and source observations</summary><table><thead><tr><th>Specimen</th><th>Before</th><th>Post</th><th>Aged</th><th>Aged / post (%)</th><th>Reasons</th></tr></thead><tbody>{analysis.rows.map(row=><tr key={row.sampleUid}><td>{row.sampleUid}</td><td>{row.before.value??"—"}</td><td>{row.post.value??"—"}</td><td>{row.aged.value??"—"}</td><td>{row.retention?.toFixed(2)??"—"}</td><td>{[...row.exclusionReasons,...row.before.reasons,...row.post.reasons,...row.aged.reasons].join("; ")||"observed"}</td></tr>)}</tbody></table></details>

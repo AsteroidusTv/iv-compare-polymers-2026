@@ -2,7 +2,8 @@
 import { ExportMenu, CopyCaption } from "./ExportMenu";
 
 import { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent, useEffect, useId, useRef, useState } from "react";
-import { axisNumberFormat } from '../lib/chart-number-format';
+import { useWorkspaceState } from "../lib/use-workspace-state";
+import { axisNumberFormat } from "../lib/chart-number-format";
 
 import { legendElectrodesByKey, legendSelectionsByKey, pointsThrough, showTrendMarkers, trendDisplayValues, trendExportScaleWarning, trendIntervalVisible, uniqueLegendEntries } from "../lib/chart-export";
 import { figureCsv, figureManifest, jvMethodCaption, type FigureExportContext, type FigureManifest } from "../lib/figure-export";
@@ -93,6 +94,7 @@ const EXPORT_STYLES = `
 `;
 
 type ExportSeries = Pick<TrendSeries | CurveSeries, "label" | "color"> & {
+  marker?: MaterialStyle["marker"];
   exportDetail?: string;
   exportLabel?: string;
   exportLegendKey?: string;
@@ -176,6 +178,14 @@ function serialiseChart(
     const pattern = item.linePattern;
     if (pattern) marker.setAttribute("stroke-dasharray", pattern);
     legend.appendChild(marker);
+    if (item.marker) {
+      const symbol = document.createElementNS(SVG_NAMESPACE, "path");
+      symbol.setAttribute("d", markerPath(item.marker, x + 8, y - 3, 2.5));
+      symbol.setAttribute("fill", "white");
+      symbol.setAttribute("stroke", item.color);
+      symbol.setAttribute("stroke-width", "1.4");
+      legend.appendChild(symbol);
+    }
     appendSvgText(legend, item.exportLabel ?? item.label, x + 22, y, "export-legend");
     if (item.exportDetail) appendSvgText(legend, item.exportDetail.slice(0, 48), x + 22, y + 11, "export-subtitle");
     if (item.exportSelection) appendSvgText(legend, item.exportSelection.slice(0, 48), x + 22, y + (item.exportDetail ? 22 : 11), "export-subtitle");
@@ -313,10 +323,11 @@ export function TrendChart({
   exportContext?: FigureExportContext;
 }) {
   const [viewport, setViewport] = useState<TrendViewport>({ zoom: 1, centreX: 0.5, centreY: 0.5 });
-  const [graphEndInput, setGraphEndInput] = useState<string | null>(null);
-  const [pointInterval, setPointInterval] = useState(0);
-  const [manualY, setManualY] = useState<{ min: string; max: string } | null>(null);
-  const [showIntervals, setShowIntervals] = useState(true);
+  const storageKey = `trend:${xUnit}:${yUnit}:${reportYAxisLabel ?? ""}:${[...new Set(series.map(item => item.id.split(":")[0]))].sort().join(",")}`;
+  const [graphEndInput, setGraphEndInput] = useWorkspaceState<string | null>(`${storageKey}:end`, null, value => value === null || typeof value === "string");
+  const [pointInterval, setPointInterval] = useWorkspaceState(`${storageKey}:spacing`, 0, value => typeof value === "number" && Number.isFinite(value) && value >= 0);
+  const [manualY, setManualY] = useWorkspaceState<{ min: string; max: string } | null>(`${storageKey}:y`, null, value => value === null || !!value && typeof value === "object" && "min" in value && "max" in value && typeof value.min === "string" && typeof value.max === "string");
+  const [showIntervals, setShowIntervals] = useWorkspaceState(`${storageKey}:intervals`, true);
   const dragRef = useRef<{ clientX: number; clientY: number; centreX: number; centreY: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const clipId = `plot-${useId().replace(/:/g, '')}`;
@@ -368,9 +379,10 @@ export function TrendChart({
   const maximumTime = Math.max(...sourceTimes);
   const displayedGraphEnd = graphEndInput === null ? String(maximumTime) : graphEndInput;
   const requestedGraphEnd = Number(displayedGraphEnd);
-  const graphEnd = displayedGraphEnd.trim() && Number.isFinite(requestedGraphEnd) && requestedGraphEnd >= minimumTime && requestedGraphEnd < maximumTime
+  const axisEnd = graphEndInput !== null && displayedGraphEnd.trim() && Number.isFinite(requestedGraphEnd) && requestedGraphEnd > 0 && requestedGraphEnd >= minimumTime
     ? requestedGraphEnd
     : null;
+  const graphEnd = axisEnd !== null && axisEnd < maximumTime ? axisEnd : null;
   const analyticalSeries = series
     .map((item) => ({ ...item, points: pointsThrough(item.points, graphEnd) }))
     .filter((item) => item.points.length);
@@ -381,9 +393,9 @@ export function TrendChart({
   const allTimes = all.map((point) => point.x);
   const allValues = trendDisplayValues(analyticalSeries.flatMap(item => item.points), showIntervals);
   const maximumPlottedTime = Math.max(...allTimes, 0);
-  const fullXStep = niceStep(graphEnd ?? maximumPlottedTime);
+  const fullXStep = niceStep(axisEnd ?? maximumPlottedTime);
   const fullXMin = 0;
-  const fullXMax = graphEnd ?? Math.max(fullXStep, Math.ceil(maximumPlottedTime / fullXStep) * fullXStep);
+  const fullXMax = axisEnd ?? Math.max(fullXStep, Math.ceil(maximumPlottedTime / fullXStep) * fullXStep);
   const [paddedYMin, paddedYMax] = extent(isRetention ? [...allValues, 100] : allValues);
   const autoYStep = niceStep(paddedYMax - paddedYMin);
   const manualYValid = manualY !== null && manualY.min.trim() !== "" && manualY.max.trim() !== "" && Number.isFinite(Number(manualY.min)) && Number.isFinite(Number(manualY.max)) && Number(manualY.min) < Number(manualY.max);
@@ -487,7 +499,7 @@ export function TrendChart({
         <output aria-live="polite">{Math.round(viewport.zoom * 100)}%</output>
         <button type="button" onClick={() => changeZoom(viewport.zoom * 1.5)} disabled={viewport.zoom === MAX_TREND_ZOOM} aria-label="Zoom in">+</button>
         <button type="button" className="chart-reset-button" onClick={() => setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 })} disabled={viewport.zoom === 1}>Reset</button>
-        <label className="chart-end-control"><FieldTitle help="Limits this figure to observations at or before the chosen time, without interpolation. Figure CSV follows this cutoff; Full selected dataset CSV retains the full selection. This does not alter the raw source.">Graph end</FieldTitle> <input type="number" min={minimumTime} max={maximumTime} step="1" inputMode="numeric" value={displayedGraphEnd} aria-label={`Graph end (${xUnit})`} onChange={(event) => { setGraphEndInput(event.target.value); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} /><span>{xUnit}</span></label>
+        <label className="chart-end-control"><FieldTitle help="Sets the end of the X axis. A value beyond the last observation adds empty space without extrapolation. A value before it limits this figure and its CSV to observed points at or before the cutoff; Full selected dataset CSV retains the full selection. This does not alter the raw source.">Graph end</FieldTitle> <input type="number" min={minimumTime} step="1" inputMode="numeric" value={displayedGraphEnd} aria-label={`Graph end (${xUnit})`} onChange={(event) => { setGraphEndInput(event.target.value); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} /><span>{xUnit}</span></label>
         <button type="button" className="chart-reset-button" onClick={() => { setGraphEndInput(null); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} disabled={graphEndInput === null}>Full duration</button>
         {xUnit === "h" && sourcePoints.length > 30 && <label className="chart-density-control"><FieldTitle help="Display only: for each curve, keep the first measured point, then the first recorded point at least the chosen interval after the previous displayed point. Always keep the last point, even if closer. Times and values are unchanged: no averaging, smoothing or interpolation. Statistics, references and Y-axis scale use all eligible points. Figure exports follow this display; Full selected dataset CSV retains the full data.">Point spacing</FieldTitle><select aria-label="Displayed point spacing" value={pointInterval} onChange={event => setPointInterval(Number(event.target.value))}><option value={0}>All points</option>{[1, 2, 5, 10, 24].map(interval => <option key={interval} value={interval}>Every {interval} h</option>)}</select></label>}
         {displayInterval > 0 && <span role="status">{all.length}/{analyticalSeries.reduce((sum, item) => sum + item.points.length, 0)} points displayed · analysis unchanged</span>}

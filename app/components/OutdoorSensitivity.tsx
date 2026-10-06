@@ -1,7 +1,9 @@
 "use client";
+import { figureFormulationLabel } from "../lib/figure-language";
 import { ExportMenu, CopyCaption } from "./ExportMenu";
 import { specimenLabel } from "../lib/public-labels";
 import { useEffect, useRef, useState } from "react";
+import { useWorkspaceState } from "../lib/use-workspace-state";
 import { datasetPackageHash, type IVDataset } from "../lib/iv-data";
 import { loadOutdoorBundle, type OutdoorSensitivityBundle } from "../lib/outdoor-sensitivity-data";
 import { materialStyle } from "../lib/material-style";
@@ -17,8 +19,8 @@ const dash:Record<number,string>={100:"3 3",200:"",300:"9 3"};
 const number=(value:number|null)=>value===null?"—":value.toFixed(2);
 export function OutdoorSensitivity({dataset,materials,ribbonSampleIds,ribbonSelection}:{dataset:IVDataset;materials:string[];ribbonSampleIds:ReadonlySet<string>;ribbonSelection:string}) {
  const [loaded,setLoaded]=useState<OutdoorSensitivityBundle|null>(null),[loadError,setLoadError]=useState<string|null>(null);
- const [sampleId,setSampleId]=useState(""),[metric,setMetric]=useState<"pr"|"pmpp">("pr"),[window,setWindow]=useState<3|7|14>(7);
- const [mode,setMode]=useState<"retention"|"absolute">("retention"),[graphEnd,setGraphEnd]=useState<number|null>(null),[hidden,setHidden]=useState<number[]>([]);
+ const [sampleId,setSampleId]=useWorkspaceState("sensitivity:sample", ""),[metric,setMetric]=useWorkspaceState<"pr"|"pmpp">("sensitivity:metric", "pr", value => value === "pr" || value === "pmpp"),[window,setWindow]=useWorkspaceState<3|7|14>("sensitivity:window", 7, value => [3,7,14].includes(value as never));
+ const [mode,setMode]=useWorkspaceState<"retention"|"absolute">("sensitivity:mode", "retention", value => value === "retention" || value === "absolute"),[graphEnd,setGraphEnd]=useWorkspaceState<number|null>("sensitivity:end", null, value => value === null || typeof value === "number" && Number.isFinite(value)),[hidden,setHidden]=useWorkspaceState<number[]>("sensitivity:hidden", [], value => Array.isArray(value) && value.every(item => [100,200,300].includes(item)));
  const [exportError,setExportError]=useState<string|null>(null);
  const svg=useRef<SVGSVGElement>(null),hash=datasetPackageHash(dataset);
  useEffect(()=>{const controller=new AbortController();loadOutdoorBundle(hash,controller.signal).then(result=>{setLoaded(result);setLoadError(null);}).catch(error=>{if(!controller.signal.aborted)setLoadError(String(error));});return()=>controller.abort();},[hash]);
@@ -35,9 +37,9 @@ export function OutdoorSensitivity({dataset,materials,ribbonSampleIds,ribbonSele
  const low=values.length?Math.min(...values):0,high=values.length?Math.max(...values):100,padding=Math.max((high-low)*.08,Math.abs(high)*.03,.01);
  const min=low-padding,max=high+padding,width=1180,height=570,left=85,right=1110,top=85,bottom=470;
  const x=(time:number)=>left+time/Math.max(1,end)*(right-left),y=(value:number)=>bottom-(value-min)/(max-min)*(bottom-top),color=materialStyle(sample.material_family).color;
- const title=`Outdoor sensitivity · ${sample.material_raw||sample.material_family} · ${sample.sample_uid}`;
+ const title=`Sensibilité en extérieur · ${specimenLabel(sample)}`;
  const unit=mode==="retention"?"Rétention (%)":metric==="pr"?"PR du capteur (%)":"Pmpp (W)";
- const caption=`Exposition extérieure, ${metric.toUpperCase()} ; cellule ${sample.sample_uid}, ${sample.material_raw}, lot ${sample.batch_no_raw??"inconnu"}. ${ribbonSelection!==ALL_RIBBONS?`Filtre : ${ribbonSelectionLabel(ribbonSelection)}. `:""}Médianes journalières recalculées à partir des mesures brutes pour une irradiance ≥100, ≥200 et ≥300 W/m² ; convention principale ≥200 W/m² / B7. ${mode==="retention"?`Chaque scénario est normalisé par ses ${window} premiers jours valides au maximum (minimum 3), puis multiplié par 100.`:"Valeurs journalières absolues."} Trajectoire individuelle, sans regroupement ; exclusions propres à la grandeur ; jusqu'au jour ${end}, sans interpolation. Les dates manquantes interrompent les courbes. Le tableau de sensibilité final utilise la dernière date valide propre à chaque scénario : il ne constitue pas une comparaison à temps commun. La définition du PR du capteur reste à confirmer.`;
+ const caption=`Exposition extérieure, ${metric.toUpperCase()} ; cellule ${sample.sample_uid}, ${figureFormulationLabel(sample)}, lot ${sample.batch_no_raw??"inconnu"}. ${ribbonSelection!==ALL_RIBBONS?`Filtre : ${ribbonSelectionLabel(ribbonSelection)}. `:""}Médianes journalières recalculées à partir des mesures brutes pour une irradiance ≥100, ≥200 et ≥300 W/m² ; convention principale ≥200 W/m² / B7. ${mode==="retention"?`Chaque scénario est normalisé par ses ${window} premiers jours valides au maximum (minimum 3), puis multiplié par 100.`:"Valeurs journalières absolues."} Trajectoire individuelle, sans regroupement ; exclusions propres à la grandeur ; jusqu'au jour ${end}, sans interpolation. Les dates manquantes interrompent les courbes. Le tableau de sensibilité final utilise la dernière date valide propre à chaque scénario : il ne constitue pas une comparaison à temps commun. La définition du PR du capteur reste à confirmer.`;
  const analyticalRows=displayed.filter(row=>!hidden.includes(row.threshold)).flatMap(row=>row.daily.filter(day=>day.time<=end&&!day.qa&&(mode==="absolute"?day.value:day.retention)!==null).map(day=>({sample_uid:sample.sample_uid,threshold:row.threshold,baselineWindow:window,baseline:row.baseline,baselineDates:row.baselineDates,metric,mode,...day,plottedValue:mode==="absolute"?day.value:day.retention,sourceRows:allDaily.find(raw=>raw.threshold===row.threshold&&raw.date===day.date&&raw.source===day.source)?.retainedSourceRows})));
  const actualContributors=displayed.some(row=>row.daily.some(day=>!outdoorFigureExclusions(day,row.baseline,mode,end).length))?[sample.sample_uid]:[];
  const exclusions=displayed.flatMap(row=>row.daily.flatMap(day=>{

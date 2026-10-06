@@ -27,6 +27,8 @@ export function downloadFigureFile(contents: BlobPart, name: string, type: strin
 export async function downloadScientificGraphic(svg: SVGSVGElement, width: number, height: number, manifest: unknown, stem: string, format: "svg" | "png", preset: "default" | "report" = "default") {
   const clone = svg.cloneNode(true) as SVGSVGElement;
   clone.setAttribute("xmlns", "http://www.w3.org/2000/svg"); clone.setAttribute("width",String(width)); clone.setAttribute("height",String(height));
+  // Export dimensions are fixed even when the on-screen SVG is responsive.
+  clone.style.removeProperty("width"); clone.style.removeProperty("height");
   clone.style.background = "white"; clone.style.fontFamily = "Arial, sans-serif";
   const metadata = document.createElementNS("http://www.w3.org/2000/svg", "metadata"); metadata.textContent = JSON.stringify(manifest); clone.appendChild(metadata);
   if (preset === "report") applyReportSvgStyle(clone);

@@ -86,7 +86,7 @@ test("supplied package has 46 eligible encapsulation pairs after the A4 intake",
   const result = encapsulationGroups(dataset.samples, dataset.observations, dataset.samples.map((sample) => sample.material_family));
   assert.equal(result.groups.reduce((count, group) => count + group.pairs.length, 0), 46);
   assert.ok(result.groups.every((group) => group.pairs.length > 0));
-  const lenzingA3 = result.groups.filter((group) => group.material === "TPO-2_Lenzing" && group.batch === "A3");
+  const lenzingA3 = result.groups.filter((group) => group.material === "TPO-2 / Lenzing" && group.batch === "A3");
   assert.deepEqual(lenzingA3.map((group) => group.pairs.length).sort(), [4, 4]);
   const labels = encapsulationDisplayLabels(lenzingA3, dataset.recipes);
   assert.equal(labels.get(lenzingA3.find((group) => group.recipe === "CVF")!.key), "Lamineuse standard");

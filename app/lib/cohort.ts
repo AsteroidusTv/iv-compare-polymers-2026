@@ -1,6 +1,7 @@
 import type { Aggregation, Sample } from "./iv-data";
 import { numeric, summarise } from "./science";
 import { recordedRibbon, ribbonLabel } from "./ribbon";
+import { sampleFormulation } from "./formulation";
 
 export type AnalysisGrouping = "conservative" | "material" | "formulation" | "batch" | "recipe" | "electrode";
 export interface AnalysisGroup { key: string; label: string; samples: Sample[] }
@@ -8,7 +9,7 @@ export interface AnalysisGroup { key: string; label: string; samples: Sample[] }
 export function analysisGroups(samples: Sample[], mode: AnalysisGrouping = "conservative", groupUnknownMetadata = false, splitByRibbon = false): AnalysisGroup[] {
   const groups = new Map<string, AnalysisGroup>();
   for (const sample of samples) {
-    const fields = { material: sample.material_family, formulation: sample.material_raw ?? null, batch: sample.batch_no_raw ?? null, recipe: sample.recipe_uid ?? sample.recipe_raw ?? null, electrode: sample.electrode ?? null };
+    const fields = { material: sample.material_family, formulation: sampleFormulation(sample), batch: sample.batch_no_raw ?? null, recipe: sample.recipe_uid ?? sample.recipe_raw ?? null, electrode: sample.electrode ?? null };
     const levels = mode === "conservative" ? ["formulation", "batch", "recipe", "electrode"] as const : mode === "material" ? [] : [mode];
     const ribbon = recordedRibbon(sample);
     const values = [fields.material, ...levels.map((level) => fields[level]), ...(splitByRibbon ? [ribbon] : [])];

@@ -7,7 +7,7 @@ du responsable de l'étude dans cette conversation. Voir les
 
 Confirmé : un UID correspond à une cellule ; valeur retenue au plateau de
 light soaking lorsque le rendement cesse d'augmenter ; DH 85 °C / 85 % HR ;
-TC −40 à 80 °C ; Light ageing 1 sun / 40 °C ; arrêt de suivi dû à une panne ;
+TC −40 à 85 °C ; Light ageing 1 sun / 40 °C ; arrêt de suivi dû à une panne ;
 stockage dans le noir sous azote avec durée variable ; tous les labels
 confirmés ; PR déclaré standard ; surface active Outdoor de 1 cm².
 
