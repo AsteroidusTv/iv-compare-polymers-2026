@@ -74,7 +74,7 @@ export function InfoTip({ text, align = "center", label = "Explain this choice" 
       onMouseLeave={hide}
       onFocus={show}
       onBlur={hide}
-      onClick={show}
+      onClick={(event) => { event.preventDefault(); event.stopPropagation(); show(); }}
       onKeyDown={(event) => {
         if (event.key === "Escape") {
           setOpen(false);

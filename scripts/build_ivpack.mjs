@@ -256,6 +256,7 @@ async function main() {
       if (!existing.equals(bytes)) throw new Error(`${path.relative(root, output)} is stale; run pnpm data:build.`);
     }
   } else {
+    await fs.writeFile(path.join(processed, 'Light_ageing_Pearl.json'), JSON.stringify(payload.observations.filter(row => row.test_type === 'Light ageing'), null, 2) + '\n');
     for (const output of outputs) {
       await fs.mkdir(path.dirname(output), { recursive: true });
       await fs.writeFile(output, bytes);

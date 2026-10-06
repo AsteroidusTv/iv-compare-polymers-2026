@@ -116,6 +116,12 @@ button, a, label { -webkit-tap-highlight-color: transparent; }
 .chart-layout { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 18px; }
 .chart-card, .insight-card, .data-table-card, .measurement-card { border: 1px solid var(--line); border-radius: 18px; background: white; }
 .chart-card { min-width: 0; padding: 20px; }
+.light-overlay-section { margin-top: 20px; }
+.light-overlay-section > details > summary { cursor: pointer; font-size: 13px; font-weight: 700; color: var(--ink); }
+.light-overlay-cell { padding-top: 20px; margin-top: 20px; border-top: 1px solid var(--line); }
+.light-overlay-svg { display: block; width: 100%; height: auto; }
+.light-overlay-cell > details { margin-top: 12px; font-size: 12px; }
+.light-overlay-section .graph-layout-controls input[type=number] { width: 145px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; }
 .chart-title { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; font-size: 12px; font-weight: 700; }
 .chart-title > span { margin-left: auto; color: var(--muted); font-weight: 500; }
 .trend-panels { margin-top: 12px; display: grid; gap: 14px; }
@@ -555,3 +561,59 @@ footer { font-size: 11px; gap: 16px; line-height: 1.5; }
 }
 /* Information buttons retain their size inside dense chart toolbars. */
 .chart-zoom-controls .info-tip { width: 20px; height: 20px; min-width: 20px; padding: 0; border-radius: 50%; font-size: 11px; letter-spacing: 0; background: white; }
+
+/* Public-facing hierarchy: choose, inspect, export; secondary detail is opt-in. */
+button:not(:disabled), summary { cursor: pointer; }
+button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visible { outline: 3px solid #3469d4; outline-offset: 3px; }
+.workspace-intro { padding: 28px 0 18px; gap: 24px; }
+.workspace-intro h2 { font-size: clamp(26px, 3vw, 38px); margin: 10px 0; }
+.dataset-toolbar { padding: 12px 0 22px; gap: 18px; align-items: start; }
+.dataset-stats { padding-top: 10px; }
+.disclosure { padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.disclosure > summary { color: var(--ink); font-size: 12px; font-weight: 700; line-height: 1.5; }
+.disclosure > summary small { margin-left: 12px; font-weight: 400; color: var(--muted); }
+.disclosure-content { margin-top: 16px; }
+.dataset-tools { max-width: 430px; }
+.dataset-tools .disclosure-content { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.dataset-tools p { margin: 0 0 4px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.dataset-tools .compact-import { width: 100%; margin-top: 8px; flex-wrap: wrap; }
+.material-selectors { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); overflow: visible; align-items: start; gap: 12px; }
+.material-selector { min-width: 0; width: 100%; }
+.series-panel-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 12px; letter-spacing: 0; text-transform: none; }
+.add-material-wrap { width: auto; min-width: 0; min-height: 0; padding: 0 9px; align-self: center; border-style: solid; border-radius: 8px; }
+.add-material { padding: 7px 0; }
+.cell-selection-panel { margin: 16px 0; }
+.sample-selection-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr)); gap: 12px; }
+.sample-selection-grid .sample-filter { min-width: 0; width: 100%; }
+.supplementary-analysis { margin-top: 20px; }
+.data-table-card > .disclosure { border: 0; padding: 0; }
+.data-table-card .table-scroll { max-height: 460px; }
+.table-scroll { overflow: auto; }
+.export-menu { margin-left: auto; position: relative; font-size: 12px; }
+.export-menu > summary { list-style: none; padding: 10px 14px; border: 1px solid #c2d3e3; border-radius: 9px; background: #f5f9fc; color: #214f76; font-weight: 700; white-space: nowrap; }
+.export-menu > summary::-webkit-details-marker { display: none; }
+.export-menu > summary span { margin-left: 10px; }
+.export-options { position: absolute; z-index: 50; top: calc(100% + 8px); right: 0; width: min(380px, calc(100vw - 48px)); padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: white; box-shadow: 0 12px 32px #17243f22; text-align: left; }
+.export-options p { margin: 0 0 12px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.export-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.export-actions button { border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; background: #f8fafc; color: var(--ink); font-size: 11px; font-weight: 650; min-height: 36px; }
+.export-actions > span { font-size: 11px; color: var(--muted); line-height: 1.5; }
+.copy-status { width: 100%; color: #35634a !important; }
+.light-overlay-cell > .export-menu { width: max-content; margin: 12px 0 12px auto; }
+.encapsulation-summary > .export-menu { width: max-content; margin: 12px 0 12px auto; }
+.disclosure-content > .chart-card { border: 0; padding: 0; }
+.chart-zoom-controls .export-menu { margin-left: auto; }
+.chart-zoom-controls .export-actions .chart-export-button { width: auto; }
+.export-menu[open] > summary { background: #eaf2f8; }
+.protocol-summary { margin: 16px 0 0; font-size: 12px; color: var(--muted); line-height: 1.6; }
+@media (max-width: 700px) {
+  .dataset-toolbar { flex-direction: column; }
+  .dataset-tools { width: 100%; max-width: none; }
+  .disclosure > summary small { display: block; margin: 4px 0 0 15px; }
+  .export-menu { grid-column: 1 / -1; justify-self: stretch; width: 100%; margin-left: 0; }
+  .export-menu > summary { text-align: center; }
+  .export-options { position: static; width: 100%; margin-top: 8px; box-shadow: none; }
+  .chart-zoom-controls .export-menu { margin-left: 0; }
+  .light-overlay-cell > .export-menu, .encapsulation-summary > .export-menu { width: 100%; }
+  .workspace-intro { padding-top: 22px; }
+}

@@ -22,7 +22,7 @@ public distribution**; see [publication preparation](docs/PUBLICATION.md).
 
 ## Import your own data
 
-Select **Import IV data** and choose either:
+Open **Dataset & downloads**, select **Import data**, and choose either:
 
 - one `.ivpack` package (JSON, optionally gzip-compressed); or
 - a normalized `.xlsx` workbook **and** its curve-point `.tsv`, together.
@@ -36,7 +36,7 @@ The example contains invented values, not experimental findings.
 
 Choose material, protocol and metric per series; refine the formulation, batch,
 electrode and sample selection as needed. Explore individual trajectories or
-aggregates, then export PNG/SVG or the sober **Report SVG** preset.
+aggregates, then open **Export figure** for PNG/SVG or the **Report-ready SVG** preset.
 Companion CSV, JSON manifests and captions describe the selected figure.
 
 Open **Guide & methods** in the application for the interactive walkthrough.
@@ -65,6 +65,7 @@ A QA flag is a review signal, not proof of an instrument fault.
 - [Methods](docs/METHODS.md)
 - [Generic deployment](DEPLOYMENT.md)
 - [Publication checklist](docs/PUBLICATION.md)
+- [Public interface review](docs/PUBLIC_INTERFACE_REVIEW.md)
 - [Existing research case study and audit records](docs/study/README.md)
 
 ## Licensing

@@ -14,7 +14,7 @@ const forward = "light_pout_forward_mW_cm2", reverse = "light_pout_reverse_mW_cm
 const row = (id:string,time:number,f:number|null,r:number|null):Observation => ({observation_uid:id,sample_uid:"S1",test_type:"Light ageing",exposure_duration_numeric:time,[forward]:f,[reverse]:r});
 const traces = (observations:Observation[],metric:MetricKey=forward) => normalizationTraces({observations} as IVDataset,{sampleUids:["S1"],protocol:"Light ageing",metric,mode:"retention",includeQa:false,outdoorWindow:7,qaIssues:new Map()});
 
-test("Pearl reproduces five raw summaries without duplicating TXT rows or changing Outdoor",async()=>{
+test("light-ageing reproduces five raw summaries without duplicating TXT rows or changing Outdoor",async()=>{
  const bytes=await fs.readFile("public/data/iv-compare-dowsil.ivpack");
  const dataset=validateDataset(JSON.parse(gunzipSync(bytes).toString()));
  const light=await loadLightAgeing(process.cwd(),dataset.samples);
@@ -27,15 +27,16 @@ test("Pearl reproduces five raw summaries without duplicating TXT rows or changi
  const manifest=JSON.parse(await fs.readFile("data/decisions/light-ageing-pearl-v1.json","utf8"));
  const hash=createHash("sha256").update(JSON.stringify(dataset.observations.filter(r=>r.test_type==="Outdoor"))).digest("hex");
  assert.equal(hash,manifest.previousOutdoorObservationsSha256);
- assert.deepEqual(metricOptionsFor("Light ageing"),[combined,forward,reverse]);
+ assert.deepEqual(metricOptionsFor("Light ageing").slice(0,3),[combined,forward,reverse]);
+ assert.equal(metricOptionsFor("Light ageing").length,26);
 });
-test("Pearl retention keeps the first recorded point and separates sweep directions",()=>{
+test("light-ageing retention keeps the first recorded point and separates sweep directions",()=>{
  const observations=[{...row("U",0,99,99),test_type:"Unaged"},row("B",0.04,10,20),row("A",1,5,2),row("Z",2,0,0)];
  assert.deepEqual(traces(observations).map(t=>t.value),[100,50,0]);
  assert.deepEqual(traces(observations,reverse).map(t=>t.value),[100,10,0]);
  assert.equal(traces(observations)[1].baseline?.observations[0].observation_uid,"B");
 });
-test("Pearl invalid initial reference never slides to a later point; QA is metric-local",()=>{
+test("light-ageing invalid initial reference never slides to a later point; QA is metric-local",()=>{
  for(const [initial,status] of [[null,"missing_baseline"],[0,"zero_baseline"],[-1,"negative_baseline"]] as const){
   const result=traces([row("B",0,initial,20),row("A",1,5,10)]);
   assert.equal(result[1].baseline?.status,status);assert.equal(result[1].value,null);
@@ -45,7 +46,7 @@ test("Pearl invalid initial reference never slides to a later point; QA is metri
  assert.equal(traces([flagged,row("A",1,5,10)])[1].value,50);
  assert.equal(traces([flagged,row("A",1,5,10)],reverse)[1].value,null);
 });
-test("Pearl parser rejects ambiguous times and preserves worksheet row provenance",()=>{
+test("light-ageing parser rejects ambiguous times and preserves worksheet row provenance",()=>{
  const entry={substrate:"A4-len1",cell:"C337",sample_uid:"S1",source:"test.xlsx"};
  const bytes=(times:(number|null)[])=>{
   const book=XLSX.utils.book_new();
@@ -65,7 +66,7 @@ test("owner-confirmed different irradiation is excluded in both modes even with 
   if(mode==="retention")assert.equal(result[1].baseline?.observations[0].observation_uid,"B");
  }
 });
-test("all five Pearl cells omit reviewed 1.5-sun peaks and recovery transitions, keeping row 7 as reference",async()=>{
+test("all five light-ageing cells omit reviewed 1.5-sun peaks and recovery transitions, keeping row 7 as reference",async()=>{
  const dataset=validateDataset(JSON.parse(gunzipSync(await fs.readFile("public/data/iv-compare-dowsil.ivpack")).toString()));
  const observations=dataset.observations.filter(row=>row.test_type==="Light ageing");
  const sampleUids=[...new Set(observations.map(row=>row.sample_uid))];
@@ -79,7 +80,7 @@ test("all five Pearl cells omit reviewed 1.5-sun peaks and recovery transitions,
   assert.ok(result.filter(t=>t.observation.source_row===7).every(t=>t.value===100));
  }
 });
-test("paired Pearl mean combines powers before retention and preserves source readings",()=>{
+test("paired light-ageing mean combines powers before retention and preserves source readings",()=>{
  const observations=[row("B",0,10,20),row("A",1,5,2),row("Z",2,0,0)];
  const original=JSON.stringify(observations);
  const result=traces(observations,combined);
@@ -89,15 +90,15 @@ test("paired Pearl mean combines powers before retention and preserves source re
  assert.equal(result[2].value,0);
  assert.equal(result[1].observation.light_pout_forward_mW_cm2,5);
  assert.equal(result[1].observation.light_pout_reverse_mW_cm2,2);
- assert.match(result[1].observation.aggregation_protocol!,/same Pearl source row/);
+ assert.match(result[1].observation.aggregation_protocol!,/same light-ageing source row/);
  const exported=fullSelectionCsv({analysisTrace:{a:result}});
  assert.ok(exported.includes("light_pout_forward_mW_cm2"));
  assert.ok(exported.includes("light_pout_reverse_mW_cm2"));
  assert.ok(exported.includes("light_pout_mean_mW_cm2"));
- assert.ok(exported.includes("same Pearl source row"));
+ assert.ok(exported.includes("same light-ageing source row"));
  assert.equal(JSON.stringify(observations),original);
 });
-test("paired Pearl mean requires both readings and never substitutes a later baseline",()=>{
+test("paired light-ageing mean requires both readings and never substitutes a later baseline",()=>{
  for(const value of [null,-1,NaN,Infinity]){
   const result=traces([row("B",0,10,value),row("A",1,5,10)],combined);
   assert.equal(result[0].absoluteValue,null);
@@ -108,7 +109,7 @@ test("paired Pearl mean requires both readings and never substitutes a later bas
  assert.equal(result[1].value,null);
  assert.ok(result[1].exclusions.includes("non_numeric_metric"));
 });
-test("paired Pearl mean inherits QA from either direction",()=>{
+test("paired light-ageing mean inherits QA from either direction",()=>{
  for(const direction of [forward,reverse]){
   const observations=[row("B",0,10,20),{...row("A",1,5,10),data_quality_flag:`non_numeric_metric:${direction}`}];
   const result=traces(observations,combined);

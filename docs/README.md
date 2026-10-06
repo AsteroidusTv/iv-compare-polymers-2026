@@ -13,6 +13,8 @@ The application's **Guide & methods** page provides the interactive walkthrough.
 ## For maintainers
 
 - [Publication preparation](PUBLICATION.md)
+- [Public interface review](PUBLIC_INTERFACE_REVIEW.md)
+- [Light-ageing electrical trends and first-point retention](data/LIGHT_AGEING_PEARL.md)
 - [Existing research case study](study/README.md): provenance, laboratory
   clarifications and historical audits, not prerequisites for importing your data.
 

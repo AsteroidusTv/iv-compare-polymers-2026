@@ -16,12 +16,17 @@ test("server-renders the IV Compare application shell", async () => {
   assert.match(html, /<html lang="en">/i);
   assert.match(html, /<title>IV Compare — Polymers &amp; ageing<\/title>/i);
   assert.match(html, /Comparison workspace/i);
-  assert.match(html, /Import data/i);
+  assert.match(html, /Dataset &amp; downloads/i);
   assert.match(html, /aria-busy="true"/i);
   assert.doesNotMatch(html, /Your site is taking shape|Building your site/i);
   assert.match(html, /href="\/guide"/);
   assert.match(html, /Scientific settings/);
   assert.match(html, /Current method/);
+  assert.doesNotMatch(html, /\bPearl\b/i);
+  assert.doesNotMatch(html, /Internal tool|within each patch|TM publication/i);
+  assert.match(html, /Photovoltaic encapsulant study/);
+  assert.match(html, /Choose cells/);
+  assert.match(html, /Data, references &amp; exclusions/);
 });
 
 test("guide renders without a dataset and its chapter links resolve to real sections", async () => {
@@ -36,4 +41,7 @@ test("guide renders without a dataset and its chapter links resolve to real sect
   for (const anchor of chapterLinks) assert.ok(html.includes(`id="${anchor}"`), `Missing guide target: ${anchor}`);
   assert.match(html, /href="\/"/);
   assert.doesNotMatch(html, /Loading dataset/);
+  assert.doesNotMatch(html, /\bPearl\b/i);
+  assert.doesNotMatch(html, /Internal tool|laboratory Trash/i);
+  assert.match(html, /Export figure/);
 });

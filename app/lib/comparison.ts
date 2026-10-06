@@ -1,5 +1,6 @@
 import { IVDataset, MetricKey, Sample } from "./iv-data";
 import { canonicalFormulation, sampleFormulation } from "./formulation";
+import { LIGHT_METRIC_KEYS } from './light-ageing-metrics';
 
 export interface SeriesConfig {
   id: string;
@@ -14,7 +15,7 @@ export interface SeriesConfig {
 
 export const IV_METRICS: MetricKey[] = ["efficiency_pct", "jsc_mA_cm2", "voc_V", "ff_pct"];
 export const OUTDOOR_METRICS: MetricKey[] = ["outdoor_pr_pct", "outdoor_pmpp_W", "outdoor_irradiance_W_m2"];
-export const LIGHT_AGEING_METRICS: MetricKey[] = ["light_pout_mean_mW_cm2", "light_pout_forward_mW_cm2", "light_pout_reverse_mW_cm2"];
+export const LIGHT_AGEING_METRICS: MetricKey[] = LIGHT_METRIC_KEYS;
 const STRESS_ORDER = ["DH", "TC", "Outdoor", "Light ageing", "Unaged", "DH+TC"];
 
 function unique(values: Array<string | null | undefined>): string[] {

@@ -1,4 +1,4 @@
-# Pearl light ageing — 1 October 2026
+# Light ageing — 1 October 2026
 
 The five XLSX `Summary` sheets supply 1,908 observations over approximately
 167 elapsed hours: two A4 TPO-2 / Lenzing cells (383 and 382 rows) and three
@@ -8,18 +8,32 @@ The mapping and SHA-256 hashes of all 649 archived files are in
 `data/decisions/light-ageing-pearl-v1.json`.
 
 Select **Light ageing** in the comparison protocol, then **Pout — mean forward/reverse**
-(default), **Pout — forward** or **Pout — reverse**. Power density is in mW/cm² and elapsed time in hours,
+(default), **Pout — forward** or **Pout — reverse**. Voc, Jsc, FF, Vmpp and Impp
+also offer each direction and its paired arithmetic mean. The metric menu groups these
+quantities separately. Power density is in mW/cm² and elapsed time in hours,
 as documented by the source evolution plots. The owner clarified nominal conditions on 3 October 2026: 1 sun and 40 °C
 (see ../science/LAB_CLARIFICATIONS_2026-10-03.md). These declarations do not
 supply a calibration record or incident-power evidence per measurement.
 No PCE or equivalent illuminated-dose time is newly inferred. The combined metric uses equal weights for the paired directions; maximum performance never selects a direction.
 
-Retention is 100 × selected power metric / its first recorded value for the same cell
+Retention is 100 × selected electrical metric / its first recorded value for the same cell
 after explicit different-irradiance exclusions. A missing, zero, negative,
 QA-excluded or duplicate initial reference prevents retention calculation;
 the reference never moves to a later, more convenient reading. Absolute zero
 remains a measured zero. No time interpolation is performed; aggregate
 curves use only exact recorded times, which differ between cells.
+
+All additional columns are imported from each Summary row: Voc/Vmpp in V,
+Jsc in mA/cm² and FF in % (source fraction × 100). Impp retains signed A values;
+its nonzero negative reference is valid, with retention computed as the signed ratio.
+Temp_1–Temp_4 are retained in °C and Photo_1–Photo_4 as signed raw signals
+with undocumented units. These context channels are always absolute, even when
+the global retention control is selected. No irradiance calibration is invented.
+
+Source columns and row provenance remain available in CSV exports. Paired means
+require both readings and inherit QA only from the two directions of that quantity.
+Different quantities (e.g. Voc and Vmpp) never share an axis simply because their
+units match. Irradiance exclusions apply unchanged to all displayed series.
 
 The owner identified the synchronized high-power spikes as a 1.5-sun test.
 Worksheet rows 5 and 84 in all five summaries, plus the elevated startup
@@ -50,6 +64,18 @@ rebuilt package while the pre-intake Outdoor digest and decision registry
 remain identical. It refuses changed Outdoor data or decisions.
 # Combined forward/reverse graphs
 
+The ageing workspace also offers **Compare Pout, Jsc, Voc and FF**, with one
+four-parameter retention overlay per selected cell. The common sweep selector
+uses forward, reverse or the paired mean for every quantity. Each quantity keeps
+its own first recorded reference after irradiation exclusions; invalid initial
+values never fall back to later readings. QA is always excluded in this diagnostic.
+Source times are kept separately per cell, missing values break lines, and no
+interpolation or cross-cell aggregation is performed. Graph-end and manual Y
+limits affect presentation only. Each cell exports SVG, PNG, report SVG, CSV,
+caption and a provenance manifest with full selected traces. Decorative markers
+are spaced for readability; every source point remains in the connected curves
+and export ledger. Pout is labelled as Pout, not inferred PCE.
+
 The site offers `light_pout_mean_mW_cm2` as the default Light-ageing metric,
 alongside the separate forward and reverse readings. It derives `(Pout_F +
 Pout_R) / 2` from each individual source row before normalization or aggregation
@@ -61,4 +87,5 @@ Retention is `100 * mean_at_time / mean_at_first_remaining_recorded_point`.
 An invalid first pair does not move the reference to a later row. This is not
 the mean of separately normalized forward/reverse retentions. Exports retain
 both original readings, the derived mean and its calculation rule. The source
-package is unchanged; this metric is calculated from its existing paired values.
+Excel files are unchanged. The package now retains all electrical and context
+columns; mean metrics are derived at graph time from their paired source readings.
