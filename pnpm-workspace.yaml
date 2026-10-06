@@ -1,2 +1,8 @@
 allowBuilds:
   esbuild: true
+
+# Keep transitive build dependencies above their security-fix versions.
+# GHSA-hrr3-gc8f-f4qj and GHSA-68fv-2mgg-jv7q.
+overrides:
+  'fast-uri@>=3.0.0 <3.1.8': '3.1.8'
+  'source-map-js@>=1.0.0 <1.2.2': '1.2.2'
