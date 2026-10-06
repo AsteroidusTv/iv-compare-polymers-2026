@@ -1,8 +1,11 @@
 import type { MetricKey } from "./iv-data";
+import { pearlMetric } from './light-ageing-metrics';
 
 /** French wording for figures and their captions; analytical keys stay unchanged. */
 export function figureMetricLabel(metric: MetricKey): string {
-  const labels: Record<MetricKey, string> = {
+  const pearl = pearlMetric(metric);
+  if (pearl) return pearl.figureLabel;
+  const labels: Partial<Record<MetricKey, string>> = {
     light_pout_mean_mW_cm2: "Pout (moyenne aller/retour)",
     efficiency_pct: "PCE",
     jsc_mA_cm2: "Jsc",
@@ -14,7 +17,7 @@ export function figureMetricLabel(metric: MetricKey): string {
     light_pout_forward_mW_cm2: "Pout (balayage avant)",
     light_pout_reverse_mW_cm2: "Pout (balayage arrière)",
   };
-  return labels[metric];
+  return labels[metric] ?? metric;
 }
 
 export function figureAgeingContext(stress: string): string {
@@ -22,7 +25,7 @@ export function figureAgeingContext(stress: string): string {
   if (stress === "TC") return "pendant l’essai de thermal cycling (TC)";
   if (stress === "DH+TC") return "pendant les essais de damp heat et de thermal cycling (DH+TC)";
   if (stress === "Outdoor") return "en exposition extérieure";
-  if (stress === "Light ageing") return "pendant le vieillissement sous lumière (Pearl)";
+  if (stress === "Light ageing") return "pendant le vieillissement sous lumière";
   return `sous vieillissement ${stress}`;
 }
 

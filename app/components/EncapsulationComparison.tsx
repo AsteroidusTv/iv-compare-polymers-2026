@@ -1,4 +1,7 @@
 "use client";
+import { ExportMenu, CopyCaption } from "./ExportMenu";
+import { Disclosure } from "./Disclosure";
+import { cellLabel } from "../lib/public-labels";
 
 import { useRef, useState } from "react";
 import type { CurveSeries } from "./Charts";
@@ -126,7 +129,7 @@ function EncapsulationJVComparison({ dataset, pairs, selections, splitByRibbon }
     <div className="encapsulation-diagnostic-head"><strong>Campaign-level JV diagnostic</strong><span>Mean paired changes from the representative raw sweeps</span></div>
     <div className="table-scroll"><table><thead><tr><th>Formulation / batch</th><th>Raw JV pairs</th><th>Mean ΔPCE (pp)</th><th>Mean ΔJsc (mA/cm²)</th><th>Mean ΔVoc (V)</th><th>Mean ΔFF (pp)</th></tr></thead><tbody>{diagnosticGroups.map((group) => {
       const delta = (key: "efficiency_pct" | "jsc_mA_cm2" | "voc_V" | "ff_pct") => mean(group.pairs.map((item) => (item.afterMeasurement[key] as number) - (item.beforeMeasurement[key] as number)));
-      return <tr key={group.key}><td>{group.material} / {group.batch}{diagnosticLabels.get(group.key) ? ` / ${diagnosticLabels.get(group.key)}` : ""}{splitByRibbon ? ` / ${ribbonLabel(group.ribbon)}` : ""}</td><td>{group.pairs.length}</td><td>{delta("efficiency_pct").toFixed(2)}</td><td>{delta("jsc_mA_cm2").toFixed(2)}</td><td>{delta("voc_V").toFixed(3)}</td><td>{delta("ff_pct").toFixed(2)}</td></tr>;
+      return <tr key={group.key}><td>{group.material.replace(/_/g, " / ")} / {group.batch}{diagnosticLabels.get(group.key) ? ` / ${diagnosticLabels.get(group.key)}` : ""}{splitByRibbon ? ` / ${ribbonLabel(group.ribbon)}` : ""}</td><td>{group.pairs.length}</td><td>{delta("efficiency_pct").toFixed(2)}</td><td>{delta("jsc_mA_cm2").toFixed(2)}</td><td>{delta("voc_V").toFixed(3)}</td><td>{delta("ff_pct").toFixed(2)}</td></tr>;
     })}</tbody></table></div>
   </section>;
 }
@@ -170,14 +173,14 @@ export function EncapsulationComparison({ dataset, selections, ribbonSampleIds, 
   const summaryHelp = `The same physical cells are paired before encapsulation and after encapsulation, before ageing. Open points are before; filled points are after; optional thin lines connect the same cell. Boxes span Q1–Q3, with the median and 1.5 × IQR whiskers. Groups with different recorded metadata remain separate. Missing or unspecified equipment is labelled as the standard laminator according to the lab convention; this label does not merge distinct recorded processes. Ambiguous recipe codes are not treated as verified processes. QA-flagged or ambiguous pairs are excluded. Dates come from linked raw JV files when available. ${excluded} selected-material cells have no unique valid PCE pair.`;
   return <div className="encapsulation-workspace">
     <section className="chart-card encapsulation-summary" aria-label="Before and after encapsulation">
-      <div className="chart-title"><div className="trend-panel-title"><strong>PCE avant / après encapsulation</strong><InfoTip text={summaryHelp} align="left" /></div><button type="button" className="soft-button" disabled={!groups.length} onClick={() => void exportGraphic("svg")}>Export SVG</button><button type="button" className="soft-button" disabled={!groups.length} onClick={() => void exportGraphic("svg", "report")}>Report SVG</button></div>
-      {manifest && <div className="control-row">
+      <div className="chart-title"><div className="trend-panel-title"><strong>PCE before / after encapsulation</strong><InfoTip text={summaryHelp} align="left" /></div></div>
+      {manifest && <ExportMenu><button type="button" className="soft-button" disabled={!groups.length} onClick={() => void exportGraphic("svg")}>Export SVG</button><button type="button" className="soft-button" disabled={!groups.length} onClick={() => void exportGraphic("svg", "report")}>Report-ready SVG</button>
         <button type="button" disabled={!groups.length} onClick={()=>void exportGraphic("png")}>Export PNG</button>
-        <button type="button" onClick={()=>downloadFigureFile(pairedFigureCsv(manifest,"figure"),"encapsulation.figure.csv","text/csv")}>Data shown in figure CSV</button>
+        <button type="button" onClick={()=>downloadFigureFile(pairedFigureCsv(manifest,"figure"),"encapsulation.figure.csv","text/csv")}>Figure data · CSV</button>
         <button type="button" onClick={()=>downloadFigureFile(pairedFigureCsv(manifest,"full-selected"),"encapsulation.full-selected.csv","text/csv")}>Full selected dataset CSV</button>
-        <button type="button" onClick={()=>downloadFigureFile(JSON.stringify(manifest,null,2),"encapsulation.figure.json","application/json")}>Figure manifest JSON</button>
-        <button type="button" onClick={()=>void navigator.clipboard.writeText(manifest.caption).catch(()=>downloadFigureFile(manifest.caption,"encapsulation.caption.txt","text/plain"))}>Copy caption</button>
-      </div>}
+        <button type="button" onClick={()=>downloadFigureFile(JSON.stringify(manifest,null,2),"encapsulation.figure.json","application/json")}>Method & sources · JSON</button>
+        <CopyCaption caption={manifest.caption}/>
+      </ExportMenu>}
       {exportError && <p role="alert">{exportError}</p>}
       {missing.length > 0 && <p role="status">No paired data for: {missing.join(" · ")}. Choose another encapsulant above.</p>}
       {availableGroups.length > 0 && <fieldset className="encapsulation-group-filter">
@@ -186,10 +189,10 @@ export function EncapsulationComparison({ dataset, selections, ribbonSampleIds, 
           const groupLabel = groupLabels.get(group.key);
           return <label key={group.key}>
             <input type="checkbox" checked={!hiddenGroupKeys.has(group.key)} onChange={() => toggleGroup(group.key)} />
-            <span>{group.material} · batch {group.batch}{groupLabel ? ` · ${groupLabel}` : ""}{splitByRibbon ? ` · ${ribbonLabel(group.ribbon)}` : ""} · n={group.pairs.length}</span>
+            <span>{group.material.replace(/_/g, " / ")} · batch {group.batch}{groupLabel ? ` · ${groupLabel}` : ""}{splitByRibbon ? ` · ${ribbonLabel(group.ribbon)}` : ""} · n={group.pairs.length}</span>
           </label>;
         })}</div>
-        <details><summary>Exclude groups from this analysis (reason recorded: user_excluded)</summary>{availableGroups.map(group=><label key={group.key}><input type="checkbox" checked={excludedGroupKeys.has(group.key)} onChange={()=>setExcludedGroupKeys(current=>{const next=new Set(current); if(next.has(group.key)) next.delete(group.key); else next.add(group.key); return next;})} /> Exclude {group.material} · {group.batch}{groupLabels.get(group.key) ? ` · ${groupLabels.get(group.key)}` : ""}{splitByRibbon ? ` · ${ribbonLabel(group.ribbon)}` : ""}</label>)}</details>
+        <details><summary>Exclude groups from calculations</summary>{availableGroups.map(group=><label key={group.key}><input type="checkbox" checked={excludedGroupKeys.has(group.key)} onChange={()=>setExcludedGroupKeys(current=>{const next=new Set(current); if(next.has(group.key)) next.delete(group.key); else next.add(group.key); return next;})} /> Exclude {group.material.replace(/_/g, " / ")} · {group.batch}{groupLabels.get(group.key) ? ` · ${groupLabels.get(group.key)}` : ""}{splitByRibbon ? ` · ${ribbonLabel(group.ribbon)}` : ""}</label>)}</details>
         {groups.length < availableGroups.length && <button type="button" className="soft-button" onClick={() => setHiddenGroupKeys(new Set())}>Show all</button>}
       </fieldset>}
       {availableGroups.length > 0 && <label>Paired change summary <select value={deltaSummary} onChange={event => setDeltaSummary(event.target.value as typeof deltaSummary)}><option value="median">Median of individual changes</option><option value="mean">Mean of individual changes</option><option value="none">Individual values only</option></select></label>}
@@ -227,7 +230,7 @@ export function EncapsulationComparison({ dataset, selections, ribbonSampleIds, 
                       <rect x={x - 20} y={y(box.q3)} width={40} height={Math.max(1, y(box.q1) - y(box.q3))} />
                       <line x1={x - 20} x2={x + 20} y1={y(box.median)} y2={y(box.median)} strokeWidth={2} />
                     </g>}
-                    {group.pairs.map((pair, i) => <circle key={pair.sampleUid} cx={x + offsets[i]} cy={y(pair[stage])} r={3.5} fill={stageIndex ? color : "white"} stroke={color}><title>{pair.reference} : {figureStageLabel(stage)} {pair[stage]} %</title></circle>)}
+                    {group.pairs.map((pair, i) => <circle key={pair.sampleUid} cx={x + offsets[i]} cy={y(pair[stage])} r={3.5} fill={stageIndex ? color : "white"} stroke={color}><title>{cellLabel({sample_uid: pair.sampleUid, sample_id_raw: pair.reference})} : {figureStageLabel(stage)} {pair[stage]} %</title></circle>)}
                     <text x={x} y={323} textAnchor="middle" fontSize={12}>{figureStageLabel(stage)}</text>
                   </g>;
                 })}
@@ -240,18 +243,18 @@ export function EncapsulationComparison({ dataset, selections, ribbonSampleIds, 
             })}
           </svg>
         </div>
-        <details><summary>Individual paired changes and alternative summaries</summary>{groups.map(group => { const changes = pairedChanges(group.pairs); return <div key={group.key}><h4>{group.material} / {group.batch}{groupLabels.get(group.key) ? ` / ${groupLabels.get(group.key)}` : ""}{splitByRibbon ? ` / ${ribbonLabel(group.ribbon)}` : ""}</h4><p>Median ΔPCE: {changes.absolute.median?.toFixed(2)} pp · Median individual relative change: {changes.relative.median?.toFixed(2) ?? "—"}% (n={changes.relative.n}) · Relative change of group means: {changes.relativeChangeOfGroupMeans?.toFixed(2) ?? "—"}%</p><table><thead><tr><th>Cell</th><th>Before (%)</th><th>After (%)</th><th>Δ (pp)</th><th>Individual Δ (%)</th><th>Before→after interval</th></tr></thead><tbody>{group.pairs.map((pair,i) => { const days = pairedMeasurementDayRange([pair]); return <tr key={pair.sampleUid}><td>{pair.sampleUid}</td><td>{pair.before}</td><td>{pair.after}</td><td>{changes.individual[i].absolute.toFixed(2)}</td><td>{changes.individual[i].relative?.toFixed(2) ?? "Unavailable: before = 0"}</td><td>{days ? `${days.min}–${days.max} d` : "Unknown"}</td></tr>; })}</tbody></table></div>; })}</details>
+        <details><summary>Individual paired changes and alternative summaries</summary>{groups.map(group => { const changes = pairedChanges(group.pairs); return <div key={group.key}><h4>{group.material.replace(/_/g, " / ")} / {group.batch}{groupLabels.get(group.key) ? ` / ${groupLabels.get(group.key)}` : ""}{splitByRibbon ? ` / ${ribbonLabel(group.ribbon)}` : ""}</h4><p>Median ΔPCE: {changes.absolute.median?.toFixed(2)} pp · Median individual relative change: {changes.relative.median?.toFixed(2) ?? "—"}% (n={changes.relative.n}) · Relative change of group means: {changes.relativeChangeOfGroupMeans?.toFixed(2) ?? "—"}%</p><table><thead><tr><th>Cell</th><th>Before (%)</th><th>After (%)</th><th>Δ (pp)</th><th>Individual Δ (%)</th><th>Before→after interval</th></tr></thead><tbody>{group.pairs.map((pair,i) => { const days = pairedMeasurementDayRange([pair]); return <tr key={pair.sampleUid}><td>{pair.sampleUid}</td><td>{pair.before}</td><td>{pair.after}</td><td>{changes.individual[i].absolute.toFixed(2)}</td><td>{changes.individual[i].relative?.toFixed(2) ?? "Unavailable: before = 0"}</td><td>{days ? `${days.min}–${days.max} d` : "Unknown"}</td></tr>; })}</tbody></table></div>; })}</details>
         <div className="table-scroll"><table><thead><tr><th>Formulation / batch</th><th>Paired n</th><th>Mean before (%)</th><th>Mean after (%)</th><th>Mean paired Δη (pp)</th><th>Mean paired ΔPCErel (%) <InfoTip text="Mean of the relative PCE change calculated separately for each paired cell: (after − before) / before × 100%." align="right" /></th><th>Measurement timeline <InfoTip text="Before measurement → encapsulation → after measurement. Dates appear only when the raw files link unambiguously to the same physical cell." align="right" /></th></tr></thead><tbody>{groups.map((group) => {
           const beforeDates = group.pairs.map((pair) => pair.beforeMeasurementDate).filter((value): value is string => Boolean(value));
           const encapsulationDates = group.pairs.map((pair) => pair.encapsulationDate).filter((value): value is string => Boolean(value));
           const afterDates = group.pairs.flatMap((pair) => pair.afterMeasurementDates);
           const relativeChange = meanPairedRelativeChange(group.pairs);
-          return <tr key={group.key}><td>{group.material} / {group.batch}{groupLabels.get(group.key) ? ` / ${groupLabels.get(group.key)}` : ""}{splitByRibbon ? ` / ${ribbonLabel(group.ribbon)}` : ""}{group.electrode === "Cu" ? "" : ` / ${group.electrode}`}</td><td>{group.pairs.length}</td><td>{mean(group.pairs.map((pair) => pair.before)).toFixed(2)}</td><td>{mean(group.pairs.map((pair) => pair.after)).toFixed(2)}</td><td>{mean(group.pairs.map((pair) => pair.after - pair.before)).toFixed(2)}</td><td>{relativeChange === null ? "—" : relativeChange.toFixed(2)}</td><td>{dateRange(beforeDates)} → {dateRange(encapsulationDates)} → {dateRange(afterDates)}</td></tr>;
+          return <tr key={group.key}><td>{group.material.replace(/_/g, " / ")} / {group.batch}{groupLabels.get(group.key) ? ` / ${groupLabels.get(group.key)}` : ""}{splitByRibbon ? ` / ${ribbonLabel(group.ribbon)}` : ""}{group.electrode === "Cu" ? "" : ` / ${group.electrode}`}</td><td>{group.pairs.length}</td><td>{mean(group.pairs.map((pair) => pair.before)).toFixed(2)}</td><td>{mean(group.pairs.map((pair) => pair.after)).toFixed(2)}</td><td>{mean(group.pairs.map((pair) => pair.after - pair.before)).toFixed(2)}</td><td>{relativeChange === null ? "—" : relativeChange.toFixed(2)}</td><td>{dateRange(beforeDates)} → {dateRange(encapsulationDates)} → {dateRange(afterDates)}</td></tr>;
         })}</tbody></table></div>
       </>}
     </section>
-    {dataset ? <EncapsulationJVComparison dataset={dataset} pairs={rawCurvePairs} selections={selections} splitByRibbon={splitByRibbon} /> : null}
-    {dataset ? <StagedAgeing dataset={dataset} materials={selectedMaterials} ribbonSampleIds={ribbonSampleIds} ribbonSelection={ribbonSelection} splitByRibbon={splitByRibbon} /> : null}
-    {dataset ? <SynchronizedMetrics dataset={dataset} materials={selectedMaterials} ribbonSampleIds={ribbonSampleIds} ribbonSelection={ribbonSelection} /> : null}
+    {dataset ? <Disclosure title="Inspect paired J–V curves" description="Additional analysis · uses the same selected material families"><EncapsulationJVComparison dataset={dataset} pairs={rawCurvePairs} selections={selections} splitByRibbon={splitByRibbon} /></Disclosure> : null}
+    {dataset ? <Disclosure title="Compare before, after and aged states" description="Additional analysis · uses the same selected material families"><StagedAgeing dataset={dataset} materials={selectedMaterials} ribbonSampleIds={ribbonSampleIds} ribbonSelection={ribbonSelection} splitByRibbon={splitByRibbon} /></Disclosure> : null}
+    {dataset ? <Disclosure title="Compare PCE, Jsc, Voc and FF" description="Additional analysis · uses the same selected material families"><SynchronizedMetrics dataset={dataset} materials={selectedMaterials} ribbonSampleIds={ribbonSampleIds} ribbonSelection={ribbonSelection} /></Disclosure> : null}
   </div>;
 }

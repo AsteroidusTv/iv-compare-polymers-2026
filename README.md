@@ -1,6 +1,6 @@
 # IV Compare
 
-Internal scientific application for comparing photovoltaic encapsulants, ageing observations, outdoor logger data, and raw IV curves.
+Interactive research companion for comparing photovoltaic encapsulants, ageing observations, outdoor logger data, and measured J–V curves.
 
 ## Documentation
 
@@ -38,8 +38,9 @@ directory argument; building, verifying and running use the versioned files
 inside this repository. `data/raw` keeps originals, `data/processed` keeps
 derived audit inputs, and `public/data` contains the packages served to the browser.
 
-Pearl adds **Light ageing**, with separate forward/reverse Pout metrics in
-mW/cm² and first-recorded-point retention. Five A4 cells of TPO-2 / Lenzing
+**Light ageing** provides Pout, Voc, Jsc, FF, Vmpp and Impp for each sweep direction
+or their paired mean, with first-recorded-point retention. Temperature and photodiode
+channels are available as absolute context. Five A4 cells of TPO-2 / Lenzing
 and POE-2 / TF4 supply 1,908 observations. See the
 [source audit and normalization rules](docs/data/LIGHT_AGEING_PEARL.md).
 Original files are in `data/raw/LightAgeing/`; the derived audit copy is

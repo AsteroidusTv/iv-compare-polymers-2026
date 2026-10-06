@@ -1,4 +1,5 @@
-export type MetricKey = "efficiency_pct" | "jsc_mA_cm2" | "voc_V" | "ff_pct" | "outdoor_pr_pct" | "outdoor_pmpp_W" | "outdoor_irradiance_W_m2" | "light_pout_forward_mW_cm2" | "light_pout_reverse_mW_cm2" | "light_pout_mean_mW_cm2";
+import { LIGHT_METRICS, LIGHT_METRIC_KEYS, type LightAgeingMetricKey } from './light-ageing-metrics';
+export type MetricKey = "efficiency_pct" | "jsc_mA_cm2" | "voc_V" | "ff_pct" | "outdoor_pr_pct" | "outdoor_pmpp_W" | "outdoor_irradiance_W_m2" | LightAgeingMetricKey;
 export type Aggregation = "mean" | "median";
 
 export interface Sample {
@@ -30,7 +31,7 @@ export interface Recipe {
   pressure_values_mbar?: string | null;
 }
 
-export interface Observation {
+export interface Observation extends Partial<Record<LightAgeingMetricKey, number | null>> {
   observation_uid: string;
   sample_uid: string;
   test_type: string;
@@ -209,7 +210,7 @@ export function validateDataset(value: unknown): IVDataset {
   const fileIds = new Set(files.map((row) => row.file_uid));
   observations.forEach((row) => {
     if (!sampleIds.has(row.sample_uid)) throw new Error(`Observation ${row.observation_uid} references unknown sample ${row.sample_uid}.`);
-    for (const metric of ["light_pout_forward_mW_cm2", "light_pout_reverse_mW_cm2"] as const) {
+    for (const metric of LIGHT_METRIC_KEYS) {
       const value = row[metric];
       if (value !== undefined && value !== null && (typeof value !== "number" || !Number.isFinite(value))) throw new Error(`Invalid light-ageing metric in ${row.observation_uid}.`);
     }
@@ -492,8 +493,8 @@ export async function importDatasetFiles(files: File[]): Promise<IVDataset> {
 }
 
 export const METRICS: Record<MetricKey, { label: string; unit: string; digits: number }> = {
-  light_pout_mean_mW_cm2: { label: "Light-ageing Pout — mean forward/reverse", unit: "mW/cm²", digits: 2 },
-  efficiency_pct: { label: "Efficiency", unit: "%", digits: 2 },
+  ...LIGHT_METRICS,
+  efficiency_pct: { label: "PCE · power conversion efficiency", unit: "%", digits: 2 },
   jsc_mA_cm2: { label: "Jsc", unit: "mA/cm²", digits: 2 },
   voc_V: { label: "Voc", unit: "V", digits: 3 },
   ff_pct: { label: "Fill factor", unit: "%", digits: 1 },

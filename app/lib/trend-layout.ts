@@ -1,5 +1,5 @@
 import type { SeriesConfig } from "./comparison";
-import { LIGHT_AGEING_METRICS } from "./comparison";
+import { pearlMetric } from './light-ageing-metrics';
 
 export type TrendArrangement = "metric" | "material" | "series";
 export type TrendColumns = "auto" | "one" | "two";
@@ -16,9 +16,9 @@ interface LayoutSeries {
 export function arrangeTrendPanels<T extends LayoutSeries>(series: T[], arrangement: TrendArrangement): { key: string; series: T[] }[] {
   const panels = new Map<string, { key: string; series: T[] }>();
   for (const item of series) {
-    // Only the three Pearl Pout metrics share an axis when comparing directions by material.
-    const metricAxis = arrangement === "material" && LIGHT_AGEING_METRICS.includes(item.config.metric)
-      ? "light_pout" : item.config.metric;
+    // Pair directions of one quantity only: Voc and Vmpp must not mix despite identical units.
+    const metricAxis = arrangement === "material"
+      ? pearlMetric(item.config.metric)?.family ?? item.config.metric : item.config.metric;
     const key = JSON.stringify([item.config.stress, metricAxis, item.xUnit, item.yUnit,
       ...(arrangement === "material" ? [item.config.material] : []),
       ...(arrangement === "series" ? [item.parentSeriesId ?? item.config.id] : []),

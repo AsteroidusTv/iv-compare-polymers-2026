@@ -1,6 +1,8 @@
 "use client";
+import { ExportMenu, CopyCaption } from "./ExportMenu";
 
-import { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
+import { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent, useEffect, useId, useRef, useState } from "react";
+import { axisNumberFormat } from '../lib/chart-number-format';
 
 import { legendElectrodesByKey, legendSelectionsByKey, pointsThrough, showTrendMarkers, trendDisplayValues, trendExportScaleWarning, trendIntervalVisible, uniqueLegendEntries } from "../lib/chart-export";
 import { figureCsv, figureManifest, jvMethodCaption, type FigureExportContext, type FigureManifest } from "../lib/figure-export";
@@ -243,10 +245,10 @@ function downloadManifest(manifest: FigureManifest, stem: string) {
 
 function FigureDownloads({ manifest, stem }: { manifest: FigureManifest; stem: string }) {
   return <>
-    <button type="button" onClick={() => downloadBlob(new Blob([figureCsv(manifest)], { type: "text/csv;charset=utf-8" }), `${stem}.figure.csv`)}>Data shown in this figure (CSV)</button>
-    <button type="button" onClick={() => downloadManifest(manifest, stem)}>Figure manifest (JSON)</button>
-    <button type="button" onClick={() => downloadBlob(new Blob([manifest.caption], { type: "text/plain;charset=utf-8" }), `${stem}.caption.txt`)}>Caption</button>
-    <button type="button" onClick={() => void navigator.clipboard.writeText(manifest.caption).catch(() => downloadBlob(new Blob([manifest.caption], { type: "text/plain;charset=utf-8" }), `${stem}.caption.txt`))}>Copy caption</button>
+    <button type="button" onClick={() => downloadBlob(new Blob([figureCsv(manifest)], { type: "text/csv;charset=utf-8" }), `${stem}.figure.csv`)}>Figure data · CSV</button>
+    <button type="button" onClick={() => downloadManifest(manifest, stem)}>Method & sources · JSON</button>
+    <button type="button" onClick={() => downloadBlob(new Blob([manifest.caption], { type: "text/plain;charset=utf-8" }), `${stem}.caption.txt`)}>Download caption</button>
+    <CopyCaption caption={manifest.caption} filename={`${stem}.caption.txt`}/>
     <span title="SVG and PNG use a white publication background and retain the displayed colours and line patterns. A companion JSON records data, selection, provenance and view limits. CSV retains analytically plotted points outside the viewport and explicitly identifies clipping.">Publication · white ⓘ</span>
   </>;
 }
@@ -317,6 +319,7 @@ export function TrendChart({
   const [showIntervals, setShowIntervals] = useState(true);
   const dragRef = useRef<{ clientX: number; clientY: number; centreX: number; centreY: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const clipId = `plot-${useId().replace(/:/g, '')}`;
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -397,6 +400,7 @@ export function TrendChart({
   const xMax = xMin + xSpan;
   const yMin = fullYMin + (viewport.centreY - 0.5 / viewport.zoom) * (fullYMax - fullYMin);
   const yMax = yMin + ySpan;
+  const yNumberFormat = axisNumberFormat(ySpan);
   const sx = (value: number) => margin.left + ((value - xMin) / (xMax - xMin || 1)) * (width - margin.left - margin.right);
   const sy = (value: number) => height - margin.bottom - ((value - yMin) / (yMax - yMin || 1)) * (height - margin.top - margin.bottom);
   const xTicks = viewport.zoom === 1 ? (graphEnd === null ? tickSequence(fullXMin, fullXMax, fullXStep) : ticks(fullXMin, fullXMax)) : ticks(xMin, xMax);
@@ -413,7 +417,7 @@ export function TrendChart({
     exportSelection: legendSelections.get(item.exportLegendKey ?? item.label),
   }));
   const exportTitle = reportTitle ?? `Évolution au cours du temps — ${yUnit}`;
-  const scaleNote = `${manualYValid ? "Manual" : "Auto"} Y: ${numberFormat.format(yMin)}–${numberFormat.format(yMax)} ${yUnit}${clippedY ? " · values or intervals clipped" : ""}${showIntervals ? "" : " · uncertainty intervals hidden"}`;
+  const scaleNote = `${manualYValid ? "Manual" : "Auto"} Y: ${yNumberFormat.format(yMin)}–${yNumberFormat.format(yMax)} ${yUnit}${clippedY ? " · values or intervals clipped" : ""}${showIntervals ? "" : " · uncertainty intervals hidden"}`;
   const samplingNote = displayInterval ? `Affichage espacé de ${displayInterval} h par courbe ; premier et dernier points conservés, sans moyenne ni interpolation. Analyse sur les données complètes.` : "";
   const exportSubtitle = [trendExportScaleWarning(clippedY, showIntervals), samplingNote].filter(Boolean).join(" · ");
   const yAxisLabel = reportYAxisLabel ?? yUnit;
@@ -484,10 +488,10 @@ export function TrendChart({
         <button type="button" onClick={() => changeZoom(viewport.zoom * 1.5)} disabled={viewport.zoom === MAX_TREND_ZOOM} aria-label="Zoom in">+</button>
         <button type="button" className="chart-reset-button" onClick={() => setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 })} disabled={viewport.zoom === 1}>Reset</button>
         <label className="chart-end-control"><FieldTitle help="Limits this figure to observations at or before the chosen time, without interpolation. Figure CSV follows this cutoff; Full selected dataset CSV retains the full selection. This does not alter the raw source.">Graph end</FieldTitle> <input type="number" min={minimumTime} max={maximumTime} step="1" inputMode="numeric" value={displayedGraphEnd} aria-label={`Graph end (${xUnit})`} onChange={(event) => { setGraphEndInput(event.target.value); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} /><span>{xUnit}</span></label>
-        <button type="button" className="chart-reset-button" onClick={() => { setGraphEndInput(null); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} disabled={graphEndInput === null}>Max</button>
-        {xUnit === "h" && <label className="chart-density-control"><FieldTitle help="Display only: for each curve, keep the first measured point, then the first recorded point at least the chosen interval after the previous displayed point. Always keep the last point, even if closer. Times and values are unchanged: no averaging, smoothing or interpolation. Statistics, references and Y-axis scale use all eligible points. Figure exports follow this display; Full selected dataset CSV retains the full data.">Point spacing</FieldTitle><select aria-label="Displayed point spacing" value={pointInterval} onChange={event => setPointInterval(Number(event.target.value))}><option value={0}>All points</option>{[1, 2, 5, 10, 24].map(interval => <option key={interval} value={interval}>Every {interval} h</option>)}</select></label>}
+        <button type="button" className="chart-reset-button" onClick={() => { setGraphEndInput(null); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} disabled={graphEndInput === null}>Full duration</button>
+        {xUnit === "h" && sourcePoints.length > 30 && <label className="chart-density-control"><FieldTitle help="Display only: for each curve, keep the first measured point, then the first recorded point at least the chosen interval after the previous displayed point. Always keep the last point, even if closer. Times and values are unchanged: no averaging, smoothing or interpolation. Statistics, references and Y-axis scale use all eligible points. Figure exports follow this display; Full selected dataset CSV retains the full data.">Point spacing</FieldTitle><select aria-label="Displayed point spacing" value={pointInterval} onChange={event => setPointInterval(Number(event.target.value))}><option value={0}>All points</option>{[1, 2, 5, 10, 24].map(interval => <option key={interval} value={interval}>Every {interval} h</option>)}</select></label>}
         {displayInterval > 0 && <span role="status">{all.length}/{analyticalSeries.reduce((sum, item) => sum + item.points.length, 0)} points displayed · analysis unchanged</span>}
-        <span className="chart-export-divider" aria-hidden="true" />
+        <ExportMenu>
         <button type="button" className="chart-export-button" onClick={() => {
           if (!svgRef.current) return;
           void exportPng(svgRef.current, exportTitle, exportSubtitle, exportSeries, exportStem, width, height, manifest).catch((error: unknown) => window.alert(error instanceof Error ? error.message : "The PNG file could not be generated."));
@@ -497,40 +501,41 @@ export function TrendChart({
         }}>Export SVG</button>
         <button type="button" className="chart-export-button" onClick={() => {
           if (svgRef.current) exportSvg(svgRef.current, exportTitle, exportSubtitle, exportSeries, exportStem, width, height, manifest, "report");
-        }}>Report SVG</button>
+        }}>Report-ready SVG</button>
         <FigureDownloads manifest={manifest} stem={exportStem} />
+        </ExportMenu>
       </div>
       <figure className="data-figure">
       <div className="chart-zoom-controls" aria-label="Y-axis scale">
-        <button type="button" onClick={() => { setManualY(null); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} aria-pressed={manualY === null}>Auto Y</button>
-        <button type="button" onClick={() => { setManualY({ min: String(fullYMin), max: String(fullYMax) }); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} aria-pressed={manualY !== null}>Manual Y</button>
+        <button type="button" onClick={() => { setManualY(null); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} aria-pressed={manualY === null}>Automatic Y</button>
+        <button type="button" onClick={() => { setManualY({ min: String(fullYMin), max: String(fullYMax) }); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} aria-pressed={manualY !== null}>Set Y limits</button>
         {manualY && <>
           <label>Y min <input aria-label="Y minimum" type="number" step="any" style={{ width: 90 }} value={manualY.min} onChange={(event) => { setManualY({ ...manualY, min: event.target.value }); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} /></label>
           <label>Y max <input aria-label="Y maximum" type="number" step="any" style={{ width: 90 }} value={manualY.max} onChange={(event) => { setManualY({ ...manualY, max: event.target.value }); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} /></label>
           {!manualYValid && <span role="alert">Enter finite bounds with min &lt; max. Auto scale used meanwhile.</span>}
         </>}
-        <label><input type="checkbox" checked={showIntervals} onChange={(event) => { setShowIntervals(event.target.checked); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} /> Show uncertainty intervals (95% CI / IQR)</label><InfoTip text="The median interval describes the middle 50% of observations; a mean confidence interval describes conditional precision. Hiding intervals changes visual scaling only, not calculations. With one cell there is no interval; median mode also omits it with two cells." />
+        {all.some(point => point.n > 1 && !point.selectedLabel) && <><label><input type="checkbox" checked={showIntervals} onChange={(event) => { setShowIntervals(event.target.checked); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} /> Show uncertainty intervals (95% CI / IQR)</label><InfoTip text="The median interval describes the middle 50% of observations; a mean confidence interval describes conditional precision. Hiding intervals changes visual scaling only, not calculations. With one cell there is no interval; median mode also omits it with two cells." /></>}
         <span role="status">{scaleNote}</span>
         {all.some((point) => !point.selectedLabel && point.n < 3) && <span title="For one or two contributing cells, individual values are drawn. An interval cannot establish population precision from such a small sample.">Small n: individual values shown</span>}
         {showIntervals && all.some(point => trendIntervalVisible(point, true) && point.intervalLabel === "95% CI" && point.n < 5) && <span role="status">Small-n 95% CI: highly uncertain, shown without truncation. Points show the observed spread.</span>}
       </div>
       <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} role="img" tabIndex={0} aria-label={`Zoomable comparative evolution chart. ${graphEnd === null ? "All QA-valid values are displayed." : `QA-valid observations through ${numberFormat.format(graphEnd)} ${xUnit} are displayed without interpolation.`}`} onKeyDown={onKeyDown} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={endPointerDrag} onPointerCancel={endPointerDrag} onDoubleClick={() => setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 })}>
-        <defs><clipPath id="trend-plot-clip"><rect x={margin.left} y={margin.top} width={plotWidth} height={plotHeight} /></clipPath></defs>
-        {yTicks.map((tick) => <g key={`y-${tick}`}><line className="grid-line" x1={margin.left} x2={width - margin.right} y1={sy(tick)} y2={sy(tick)} /><text className="axis-label" x={margin.left - 12} y={sy(tick) + 4} textAnchor="end">{numberFormat.format(tick)}</text></g>)}
+        <defs><clipPath id={clipId}><rect x={margin.left} y={margin.top} width={plotWidth} height={plotHeight} /></clipPath></defs>
+        {yTicks.map((tick) => <g key={`y-${tick}`}><line className="grid-line" x1={margin.left} x2={width - margin.right} y1={sy(tick)} y2={sy(tick)} /><text className="axis-label" x={margin.left - 12} y={sy(tick) + 4} textAnchor="end">{yNumberFormat.format(tick)}</text></g>)}
         {xTicks.map((tick) => <g key={`x-${tick}`}><line className="tick-line" x1={sx(tick)} x2={sx(tick)} y1={height - margin.bottom} y2={height - margin.bottom + 6} /><text className="axis-label" x={sx(tick)} y={height - 20} textAnchor="middle">{numberFormat.format(tick)}</text></g>)}
         <line className="axis-line" x1={margin.left} x2={width - margin.right} y1={height - margin.bottom} y2={height - margin.bottom} />
         <text className="axis-title" x={width - margin.right} y={height - 5} textAnchor="end">{figureXAxisLabel(xUnit)}</text>
         <text className="axis-title" x={margin.left} y={14}>{yAxisLabel}</text>
         {isRetention && yMin <= 100 && yMax >= 100 ? <g className="reference-baseline"><line x1={margin.left} x2={width - margin.right} y1={sy(100)} y2={sy(100)} /><text x={width - margin.right - 4} y={sy(100) - 6} textAnchor="end">Référence · 100 %</text></g> : null}
-        <g clipPath="url(#trend-plot-clip)">{plottedSeries.map((item, seriesIndex) => {
+        <g clipPath={`url(#${clipId})`}>{plottedSeries.map((item, seriesIndex) => {
           const ordered = [...item.points].sort((a, b) => a.x - b.x);
           const path = ordered.map((point, index) => `${index ? "L" : "M"}${sx(point.x)},${sy(point.y)}`).join(" ");
           const visibleMarkers = showTrendMarkers(xUnit, ordered.length);
           return <g key={item.label} data-export-series-index={seriesIndex}>
-            {ordered.filter(point => trendIntervalVisible(point, showIntervals)).map((point) => <line key={`range-${point.x}`} x1={sx(point.x)} x2={sx(point.x)} y1={sy(point.intervalLow)} y2={sy(point.intervalHigh)} stroke={item.color} strokeWidth="1.5" opacity=".3"><title>{`${point.intervalLabel}: ${numberFormat.format(point.intervalLow)}–${numberFormat.format(point.intervalHigh)} ${yUnit}; n=${point.n}`}</title></line>)}
-            {visibleMarkers && ordered.filter((point) => !point.selectedLabel).flatMap((point) => point.members.map((member) => <path key={`member-${point.x}-${member.observationId}`} d={markerPath(item.marker,sx(point.x),sy(member.value),3)} fill={item.color} opacity=".7"><title>{`${member.sampleLabel} (${member.sampleUid}; batch ${member.batchNo ?? "not recorded"}): ${numberFormat.format(member.value)} ${yUnit}; n=${point.n}`}</title></path>))}
+            {ordered.filter(point => trendIntervalVisible(point, showIntervals)).map((point) => <line key={`range-${point.x}`} x1={sx(point.x)} x2={sx(point.x)} y1={sy(point.intervalLow)} y2={sy(point.intervalHigh)} stroke={item.color} strokeWidth="1.5" opacity=".3"><title>{`${point.intervalLabel}: ${yNumberFormat.format(point.intervalLow)}–${yNumberFormat.format(point.intervalHigh)} ${yUnit}; n=${point.n}`}</title></line>)}
+            {visibleMarkers && ordered.filter((point) => !point.selectedLabel).flatMap((point) => point.members.map((member) => <path key={`member-${point.x}-${member.observationId}`} d={markerPath(item.marker,sx(point.x),sy(member.value),3)} fill={item.color} opacity=".7"><title>{`${member.sampleLabel}: ${yNumberFormat.format(member.value)} ${yUnit}; n=${point.n}`}</title></path>))}
             <path d={path} fill="none" stroke={item.color} strokeWidth="3" strokeDasharray={item.linePattern} strokeLinejoin="round" strokeLinecap="round" />
-            {ordered.map((point) => <path className={visibleMarkers ? `trend-point${point.selectedLabel ? " selected" : ""}` : "trend-point-hit"} key={`point-${point.x}`} d={markerPath(visibleMarkers ? item.marker : "circle",sx(point.x),sy(point.y),visibleMarkers ? point.selectedLabel ? 2.75 : 3.5 : 6)} fill={visibleMarkers ? point.selectedLabel ? item.color : "white" : "transparent"} stroke={item.color} strokeOpacity={visibleMarkers ? 1 : 0} strokeWidth={visibleMarkers ? point.selectedLabel ? "1.4" : "1.9" : 1.5} tabIndex={0} role="img" aria-label={`${item.label}, ${numberFormat.format(point.x)} ${xUnit}, ${numberFormat.format(point.y)} ${yUnit}, ${point.selectedLabel ?? `n ${point.n}`}`}><title>{`${item.label} — ${numberFormat.format(point.x)} ${xUnit}: ${numberFormat.format(point.y)} ${yUnit}${point.selectedLabel ? ` · ${point.selectedLabel}` : ` (${point.intervalLabel} ${numberFormat.format(point.intervalLow)}–${numberFormat.format(point.intervalHigh)}, n=${point.n})`}`}</title></path>)}
+            {ordered.map((point) => <path className={visibleMarkers ? `trend-point${point.selectedLabel ? " selected" : ""}` : "trend-point-hit"} key={`point-${point.x}`} d={markerPath(visibleMarkers ? item.marker : "circle",sx(point.x),sy(point.y),visibleMarkers ? point.selectedLabel ? 2.75 : 3.5 : 6)} fill={visibleMarkers ? point.selectedLabel ? item.color : "white" : "transparent"} stroke={item.color} strokeOpacity={visibleMarkers ? 1 : 0} strokeWidth={visibleMarkers ? point.selectedLabel ? "1.4" : "1.9" : 1.5} tabIndex={0} role="img" aria-label={`${item.label}, ${numberFormat.format(point.x)} ${xUnit}, ${yNumberFormat.format(point.y)} ${yUnit}, ${point.selectedLabel ?? `n ${point.n}`}`}><title>{`${item.label} — ${numberFormat.format(point.x)} ${xUnit}: ${yNumberFormat.format(point.y)} ${yUnit}${point.selectedLabel ? ` · ${point.selectedLabel}` : ` (${point.intervalLabel} ${yNumberFormat.format(point.intervalLow)}–${yNumberFormat.format(point.intervalHigh)}, n=${point.n})`}`}</title></path>)}
           </g>;
         })}</g>
       </svg>
@@ -598,6 +603,7 @@ export function CurveChart({
   const dragRef = useRef<{ clientX: number; clientY: number; centreX: number; centreY: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const width = CURVE_CHART_WIDTH;
+  const clipId = `plot-${useId().replace(/:/g, '')}`;
   const height = CURVE_CHART_HEIGHT;
   const margin = CURVE_CHART_MARGIN;
 
@@ -698,7 +704,7 @@ export function CurveChart({
         <output aria-live="polite">{Math.round(viewport.zoom * 100)}%</output>
         <button type="button" onClick={() => changeZoom(viewport.zoom * 1.5)} disabled={viewport.zoom === MAX_TREND_ZOOM} aria-label="Zoom in">+</button>
         <button type="button" className="chart-reset-button" onClick={() => setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 })} disabled={viewport.zoom === 1}>Reset</button>
-        <span className="chart-export-divider" aria-hidden="true" />
+        <ExportMenu>
         <button type="button" className="chart-export-button" onClick={() => {
           if (!svgRef.current) return;
           void exportPng(svgRef.current, exportTitle, exportSubtitle, series, exportStem, width, height, manifest).catch((error: unknown) => window.alert(error instanceof Error ? error.message : "The PNG file could not be generated."));
@@ -708,12 +714,13 @@ export function CurveChart({
         }}>Export SVG</button>
         <button type="button" className="chart-export-button" onClick={() => {
           if (svgRef.current) exportSvg(svgRef.current, exportTitle, exportSubtitle, series, exportStem, width, height, manifest, "report");
-        }}>Report SVG</button>
+        }}>Report-ready SVG</button>
         <FigureDownloads manifest={manifest} stem={exportStem} />
+        </ExportMenu>
       </div>
       <figure className="data-figure">
       <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} role="img" tabIndex={0} aria-label={`Zoomable compared current–voltage curves, ${currentConvention === "instrument" ? "instrument" : "photovoltaic"} convention`} onKeyDown={onKeyDown} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={endPointerDrag} onPointerCancel={endPointerDrag} onDoubleClick={() => setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 })}>
-        <defs><clipPath id="curve-plot-clip"><rect x={margin.left} y={margin.top} width={width - margin.left - margin.right} height={height - margin.top - margin.bottom} /></clipPath></defs>
+        <defs><clipPath id={clipId}><rect x={margin.left} y={margin.top} width={width - margin.left - margin.right} height={height - margin.top - margin.bottom} /></clipPath></defs>
         {yTicks.map((tick) => <g key={`y-${tick}`}><line className="grid-line" x1={margin.left} x2={width - margin.right} y1={sy(tick)} y2={sy(tick)} /><text className="axis-label" x={margin.left - 12} y={sy(tick) + 4} textAnchor="end">{numberFormat.format(tick)}</text></g>)}
         {xTicks.map((tick) => <g key={`x-${tick}`}><line className="tick-line" x1={sx(tick)} x2={sx(tick)} y1={height - margin.bottom} y2={height - margin.bottom + 6} /><text className="axis-label" x={sx(tick)} y={height - 20} textAnchor="middle">{numberFormat.format(tick)}</text></g>)}
         {yMin < 0 && yMax > 0 ? <line className="zero-axis" x1={margin.left} x2={width - margin.right} y1={sy(0)} y2={sy(0)} /> : null}
@@ -721,7 +728,7 @@ export function CurveChart({
         <line className="axis-line" x1={margin.left} x2={width - margin.right} y1={height - margin.bottom} y2={height - margin.bottom} />
         <text className="axis-title" x={width - margin.right} y={height - 5} textAnchor="end">Tension (V)</text>
         <text className="axis-title" x={margin.left} y={14}>{yAxisLabel}</text>
-        <g clipPath="url(#curve-plot-clip)">
+        <g clipPath={`url(#${clipId})`}>
           {series.flatMap((item, seriesIndex) => item.segments.map((segment) => {
             const path = segment.points.map((point, index) => `${index ? "L" : "M"}${sx(point.x)},${sy(point.y)}`).join(" ");
             return <g key={segment.id} opacity={segment.isPrimary ? 1 : .48} data-export-series-index={seriesIndex}>

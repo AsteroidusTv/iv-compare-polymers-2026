@@ -15,16 +15,16 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.SITE_ORIGIN ?? "http://localhost:3000"),
   title: "IV Compare — Polymers & ageing",
-  description: "Compare performance and IV curves after DH, TC, or outdoor ageing.",
+  description: "Explore photovoltaic encapsulant performance under damp heat, thermal cycling, outdoor exposure and light ageing. Compare cells, inspect J–V curves and export reproducible figures.",
   openGraph: {
     title: "IV Compare",
-    description: "Polymers • Lamination • Ageing",
+    description: "Photovoltaic encapsulants · ageing data and reproducible comparisons",
     images: [{ url: "/og.png", width: 1200, height: 630, alt: "IV Compare — Polymers, lamination, and ageing" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "IV Compare",
-    description: "Polymers • Lamination • Ageing",
+    description: "Photovoltaic encapsulants · ageing data and reproducible comparisons",
     images: ["/og.png"],
   },
   icons: {

@@ -2,6 +2,7 @@ import type { IVDataset, MetricKey, Observation } from "./iv-data";
 import { numeric, outdoorBaseline } from "./science";
 import { sourceQualityFlagApplies } from "./lab-quality";
 import { lightIrradianceExcluded } from "./source-quality";
+import { metricValueMode, pearlMetric } from './light-ageing-metrics';
 
 export interface BaselineTrace {
   status: "valid" | "missing_baseline" | "zero_baseline" | "negative_baseline" | "ambiguous_baseline";
@@ -27,13 +28,14 @@ export function normalizationTraces(dataset: IVDataset, options: {
   includeQa: boolean; outdoorWindow: 3 | 7 | 14; qaIssues: ReadonlyMap<string, string>;
 }): NormalizationTrace[] {
   const { metric, protocol } = options;
+  const definition = pearlMetric(metric), mode = metricValueMode(metric, options.mode);
   // Combine only paired readings from one source row, before normalization and cell aggregation.
-  const observationsForMetric = metric === "light_pout_mean_mW_cm2"
+  const observationsForMetric = definition?.direction === 'mean'
     ? dataset.observations.map(row => {
       if (row.test_type !== "Light ageing") return row;
-      const forward = row.light_pout_forward_mW_cm2, reverse = row.light_pout_reverse_mW_cm2;
-      return { ...row, light_pout_mean_mW_cm2: numeric(forward) && numeric(reverse) && forward >= 0 && reverse >= 0 ? forward / 2 + reverse / 2 : null,
-        aggregation_protocol: "Arithmetic mean (Pout_F + Pout_R) / 2 from the same Pearl source row; both finite non-negative readings required; no temporal interpolation" };
+      const forward = row[definition.forwardKey!], reverse = row[definition.reverseKey!];
+      return { ...row, [metric]: numeric(forward) && numeric(reverse) && (definition.signed || forward >= 0 && reverse >= 0) ? forward / 2 + reverse / 2 : null,
+        aggregation_protocol: `Arithmetic mean (${definition.forwardKey} + ${definition.reverseKey}) / 2 from the same light-ageing source row; both finite ${definition.signed ? 'signed' : 'non-negative'} readings required; no temporal interpolation` };
     }) : dataset.observations;
   const ids = new Set(options.sampleUids), baselines = new Map<string, BaselineTrace>();
   const qaReasons = (row: Observation) => [...new Set([
@@ -47,10 +49,10 @@ export function normalizationTraces(dataset: IVDataset, options: {
       const first = measured[0];
       const observations = first ? measured.filter(row => row.exposure_duration_numeric === first.exposure_duration_numeric) : [];
       const value = observations.length === 1 && numeric(first[metric]) && (options.includeQa || !qaReasons(first).length) ? first[metric] as number : null;
-      const status = observations.length > 1 ? "ambiguous_baseline" : value === null ? "missing_baseline" : value === 0 ? "zero_baseline" : value < 0 ? "negative_baseline" : "valid";
-      const result: BaselineTrace = {status, value, observations, low:false, sensitivityPct:null, definition: metric === "light_pout_mean_mW_cm2"
-        ? "Arithmetic mean of paired forward/reverse Pout at the first recorded Pearl point of the same specimen after explicit different-irradiance exclusions; no later-point substitution"
-        : "First recorded Pearl point of the same specimen and sweep direction after explicit owner-adjudicated different-irradiance exclusions; no Unaged substitution or automatic reference optimization"};
+      const status = observations.length > 1 ? "ambiguous_baseline" : value === null ? "missing_baseline" : value === 0 ? "zero_baseline" : value < 0 && !definition?.signed ? "negative_baseline" : "valid";
+      const result: BaselineTrace = {status, value, observations, low:false, sensitivityPct:null, definition: definition?.direction === 'mean'
+        ? "Arithmetic mean of paired forward/reverse readings at the first recorded light-ageing point of the same specimen after explicit different-irradiance exclusions; no later-point substitution"
+        : "First recorded light-ageing point of the same specimen and sweep direction after explicit owner-adjudicated different-irradiance exclusions; no Unaged substitution or automatic reference optimization"};
       baselines.set(sampleUid,result); return result;
     }
     const rows = dataset.observations.filter(row => row.sample_uid === sampleUid
@@ -73,10 +75,10 @@ export function normalizationTraces(dataset: IVDataset, options: {
     if (protocol === "Light ageing" && lightIrradianceExcluded(observation.data_quality_flag)) exclusions.push("different_irradiance");
     if (!options.includeQa && reasons.length) exclusions.push("qa_metric");
     if (protocol !== "Unaged" && !numeric(observation.exposure_duration_numeric)) exclusions.push("missing_time");
-    const baseline = options.mode === "retention" ? baselineFor(observation.sample_uid) : null;
+    const baseline = mode === "retention" ? baselineFor(observation.sample_uid) : null;
     if (baseline && baseline.status !== "valid") exclusions.push(baseline.status);
     return { version: "1.0.0", observation, absoluteValue, baseline, qaReasons: reasons, exclusions,
-      rule: options.mode === "absolute" ? "absolute" : "100 * individual_value / individual_baseline",
+      rule: mode === "absolute" ? "absolute" : "100 * individual_value / individual_baseline",
       value: exclusions.length ? null : baseline ? 100 * absoluteValue! / baseline.value! : absoluteValue };
   });
   const counts = new Map<string, number>();

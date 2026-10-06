@@ -9,6 +9,7 @@ import { referenceLinkDiagnostic } from "../app/lib/reference-links.mjs";
 import { prepareRebuildOutput, validateDecisionRegistry, validateRawCoverage } from "./rebuild-boundary.mjs";
 import { validateDataset, type Observation } from "../app/lib/iv-data";
 import { loadLightAgeing } from "./light-ageing.mjs";
+import { LIGHT_METRIC_KEYS } from '../app/lib/light-ageing-metrics';
 
 const root=path.resolve(import.meta.dirname,"..");
 const args=process.argv.slice(2);
@@ -81,7 +82,7 @@ if(comparison){
   const id={samples:"sample_uid",observations:"observation_uid",files:"file_uid",measurements:"measurement_uid"}[key];
   const left=reference[key] as Record<string,unknown>[],right=payload[key] as Record<string,unknown>[];
   const oldMap=new Map(left.map(row=>[row[id],row])),newMap=new Map(right.map(row=>[row[id],row]));
-  const fields=key==="samples"?["material_family","material_raw","batch_no_raw","electrode","recipe_uid","assigned_test","initial_efficiency_pct","encapsulation_date"]:key==="observations"?["sample_uid","test_type","exposure_duration_numeric","efficiency_pct","jsc_mA_cm2","voc_V","ff_pct","outdoor_pr_pct","outdoor_pmpp_W","outdoor_irradiance_W_m2","light_pout_forward_mW_cm2","light_pout_reverse_mW_cm2"]:key==="measurements"?["sample_uid","file_uid","jsc_mA_cm2","voc_V","ff_pct","efficiency_pct","pmpp_mW_cm2","point_count"]:["sample_uid","match_status","reference_sample_uid"];
+  const fields=key==="samples"?["material_family","material_raw","batch_no_raw","electrode","recipe_uid","assigned_test","initial_efficiency_pct","encapsulation_date"]:key==="observations"?["sample_uid","test_type","exposure_duration_numeric","efficiency_pct","jsc_mA_cm2","voc_V","ff_pct","outdoor_pr_pct","outdoor_pmpp_W","outdoor_irradiance_W_m2",...LIGHT_METRIC_KEYS]:key==="measurements"?["sample_uid","file_uid","jsc_mA_cm2","voc_V","ff_pct","efficiency_pct","pmpp_mW_cm2","point_count"]:["sample_uid","match_status","reference_sample_uid"];
   const changes=[];
   for(const [uid,row] of newMap){const old=oldMap.get(uid);if(!old)continue;for(const field of fields){const a=old[field]??null,b=row[field]??null;if(typeof a==="number"&&typeof b==="number"&&Math.abs(a-b)<1e-9)continue;if(JSON.stringify(a)!==JSON.stringify(b))changes.push({id:uid,field,before:a,after:b});}}
   differences[key]={oldCount:left.length,newCount:right.length,missingIds:[...oldMap.keys()].filter(id=>!newMap.has(id)),newIds:[...newMap.keys()].filter(id=>!oldMap.has(id)),changes};

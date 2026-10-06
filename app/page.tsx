@@ -6,6 +6,9 @@ import { DragEvent, Fragment, useCallback, useEffect, useMemo, useRef, useState 
 import { CurveChart, CurveSeries, TrendChart, TrendPoint, TrendSeries } from "./components/Charts";
 import { EncapsulationComparison } from "./components/EncapsulationComparison";
 import { OutdoorSensitivity } from "./components/OutdoorSensitivity";
+import { LightAgeingOverlay } from "./components/LightAgeingOverlay";
+import { Disclosure } from "./components/Disclosure";
+import { cellLabel, protocolLabel, readableReason, specimenLabel } from "./lib/public-labels";
 import { JVDiagnosticDetails } from "./components/JVDiagnosticDetails";
 import { labQualityIssues } from "./lib/lab-quality";
 import { sourceQualityFlagApplies } from "./lib/source-quality";
@@ -33,6 +36,7 @@ import { describeGraphElectrode } from "./lib/chart-export";
 import { figureAgeingContext, figureMetricLabel } from "./lib/figure-language";
 import { resolveSelectedSampleIds, toggleSelectedSampleId } from "./lib/sample-selection";
 import { arrangeTrendPanels, type TrendArrangement, type TrendColumns } from "./lib/trend-layout";
+import { metricValueMode, pearlMetric } from './lib/light-ageing-metrics';
 import { ALL_RIBBONS, STANDARD_RIBBON, matchesRibbon, recordedRibbon, ribbonChoice, ribbonLabel, ribbonOptions, ribbonSelectionLabel } from "./lib/ribbon";
 import {
   measurementQualityReasons,
@@ -43,7 +47,6 @@ import {
 } from "./lib/science";
 import {
   createInitialSeries,
-  LIGHT_AGEING_METRICS,
   metricOptionsFor,
   normalizeSeriesConfig,
   SeriesConfig,
@@ -80,10 +83,10 @@ type ContextTrendSeries = TrendSeries & {
 };
 
 
-const METRIC_HELP: Record<MetricKey, string> = {
+const METRIC_HELP: Partial<Record<MetricKey, string>> = {
   light_pout_mean_mW_cm2: "Arithmetic mean (Pout forward + Pout reverse) / 2 for the same cell and recorded time, in mW/cm². Both readings must be available and non-negative. Retention divides this mean by the mean at the first remaining recorded point. QA from either direction applies; different-irradiance tests stay excluded. This combines the two directions without correcting hysteresis or averaging across times.",
-  light_pout_forward_mW_cm2: "Pearl output power density from the forward sweep, in mW/cm², at the recorded elapsed time in hours. The laboratory confirms nominal Light ageing at 1 sun and 40 °C. This remains recorded Pout, not a newly reconstructed or calibrated PCE. Owner-identified different-irradiance tests are excluded; retention uses the first remaining point of this cell and direction.",
-  light_pout_reverse_mW_cm2: "Pearl output power density from the reverse sweep, in mW/cm². Forward and reverse sweeps remain separate. Different-irradiance tests are excluded; retention uses the first remaining reverse-sweep point of this cell.",
+  light_pout_forward_mW_cm2: "light-ageing output power density from the forward sweep, in mW/cm², at the recorded elapsed time in hours. The laboratory confirms nominal Light ageing at 1 sun and 40 °C. This remains recorded Pout, not a newly reconstructed or calibrated PCE. Owner-identified different-irradiance tests are excluded; retention uses the first remaining point of this cell and direction.",
+  light_pout_reverse_mW_cm2: "light-ageing output power density from the reverse sweep, in mW/cm². Forward and reverse sweeps remain separate. Different-irradiance tests are excluded; retention uses the first remaining reverse-sweep point of this cell.",
   efficiency_pct: "Efficiency is maximum electrical power divided by incident light power. The laboratory selects the performance plateau reached after repeated JV measurements under light soaking. The laboratory recognizes the plateau when efficiency stops increasing; no numerical tolerance, minimum duration or scan count was supplied. The report will discuss measurement variability and this limitation.",
   jsc_mA_cm2: "Jsc is the short-circuit current density evaluated at V = 0. It mainly reflects the generation and collection of photogenerated charge carriers.",
   voc_V: "Voc is the open-circuit voltage measured when current is zero. It is sensitive to recombination losses and interface quality.",
@@ -93,14 +96,21 @@ const METRIC_HELP: Record<MetricKey, string> = {
   outdoor_irradiance_W_m2: "Median incident irradiance for the same daylight observations used to summarise PR and Pmpp. It provides measurement context and is not itself a stability metric.",
 };
 
+function metricHelp(metric: MetricKey): string {
+  const definition = pearlMetric(metric);
+  if (!definition) return METRIC_HELP[metric] ?? '';
+  if (definition.contextOnly) return `${definition.label}. Recorded context only, always displayed in absolute ${definition.unit}; no performance retention. Photodiode signals are not calibrated irradiance. Different-irradiance experiment rows remain excluded.`;
+  return METRIC_HELP[metric] ?? `${definition.label}, in ${definition.unit}. ${definition.family === 'ff' ? 'Source FF fractions are multiplied by 100 to show percent. ' : ''}${definition.signed ? 'Recorded current sign is preserved. A nonzero negative reference is valid; retention uses the signed ratio. ' : ''}${definition.direction === 'mean' ? 'Arithmetic mean of paired forward/reverse readings from the same source row, before normalization. Both readings and their QA are required. ' : ''}Retention uses the first remaining recorded point of the same cell and metric. Different-irradiance tests are excluded; no interpolation or later-reference substitution.`;
+}
+
 const HELP = {
   polymer: "Family is a navigation label, not proof that formulations, batches or processes are interchangeable. Analysis grouping and filters are explicit below.",
   addMaterial: "Adds another independent comparison series. The same encapsulant can be selected more than once with a different ageing protocol or metric.",
   ageing: "Laboratory-confirmed nominal conditions: DH at 85 °C / 85% relative humidity; TC from -40 to 80 °C; Light ageing at 1 sun / 40 °C. TC uses cycles, DH and Light ageing hours, Outdoor days. Ramps, dwell times and interruptions are not specified. Compare durations within the same protocol.",
-  retention: "Retention = same-cell value / reference × 100. DH/TC use unique Unaged; Light ageing uses the first recorded Pearl point after different-irradiance exclusions, for the selected direction or the paired forward/reverse mean. The combined mode normalizes the mean powers, rather than averaging separately normalized directions. Outdoor uses the median of the first 3–7 valid days, with B3/B14 sensitivity.",
+  retention: "Retention = same-cell value / reference × 100. DH/TC use unique Unaged; Light ageing uses the first recorded light-ageing point after different-irradiance exclusions, for the selected direction or the paired forward/reverse mean. The combined mode normalizes the mean powers, rather than averaging separately normalized directions. Outdoor uses the median of the first 3–7 valid days, with B3/B14 sensitivity.",
   labConvention: "The laboratory confirms one sample UID is one cell and all recorded material/electrode labels, including Ag/Cu. Shared substrates and batch independence remain unspecified. Counts describe cells, not proof of statistically independent replicates.",
-  traceDisplay: "Individual samples draws one separate trajectory for every checked patch, using the same material colour and different line patterns. Mean or Median replaces those trajectories with one aggregate curve per material.",
-  matching: "Matching links each IV file to an inventory sample using its metadata. “To resolve” contains only genuinely ambiguous or unidentified files. Reference cells and files already placed in laboratory Trash folders are retained separately for audit and do not participate in polymer comparisons.",
+  traceDisplay: "Individual cells draws one separate trajectory for every selected cell, using the same material colour and different line patterns. Mean or Median replaces those trajectories with one aggregate curve per material.",
+  matching: "Matching links each IV file to an inventory sample using its metadata. Unresolved links are ambiguous or unidentified files. Reference measurements and excluded acquisitions are retained for provenance and do not participate in material comparisons.",
   observations: "Total number of individual measurements contributing to the points currently shown. This is not the number of durations or averages.",
   interval: "For each duration, the main line shows the selected aggregate. Mean values carry a 95% confidence interval; median values carry an interquartile range. Min and max remain available in the export.",
   replicates: "When n > 1, select n to open the individual observations. Choosing a sample changes only the plotted point; the aggregate, calculations, and exports remain unchanged.",
@@ -303,20 +313,21 @@ export default function Home() {
       const baselineWarnings = new Set<string>();
       (normalizationBySeries.get(config.id) ?? []).forEach(trace => {
         const observation = trace.observation;
-        if (trace.baseline && trace.baseline.status !== "valid") baselineWarnings.add(`${observation.sample_uid}: ${trace.baseline.status}`);
-        if (trace.baseline?.low) baselineWarnings.add(`${observation.sample_uid}: low initial PCE; inspect absolute values`);
-        if (numeric(trace.baseline?.sensitivityPct) && trace.baseline.sensitivityPct > 5) baselineWarnings.add(`${observation.sample_uid}: baseline-window sensitivity ${trace.baseline.sensitivityPct.toFixed(1)}%`);
+        const sample = sampleMap.get(observation.sample_uid);
+        const publicName = sample ? specimenLabel(sample) : "Unidentified cell";
+        if (trace.baseline && trace.baseline.status !== "valid") baselineWarnings.add(`${publicName}: ${readableReason(trace.baseline.status)}`);
+        if (trace.baseline?.low) baselineWarnings.add(`${publicName}: low initial PCE; inspect absolute values`);
+        if (numeric(trace.baseline?.sensitivityPct) && trace.baseline.sensitivityPct > 5) baselineWarnings.add(`${publicName}: baseline-window sensitivity ${trace.baseline.sensitivityPct.toFixed(1)}%`);
         if (trace.value === null) return;
         const value = trace.value;
         const x = config.stress === "Unaged" ? 0 : observation.exposure_duration_numeric;
         if (!numeric(x)) return;
         const members = groups.get(x) ?? [];
-        const sample = sampleMap.get(observation.sample_uid);
         members.push({
           trace,
           observationId: observation.observation_uid,
           sampleUid: observation.sample_uid,
-          sampleLabel: sample?.sample_label || sample?.sample_id_raw || observation.sample_uid,
+          sampleLabel: sample ? specimenLabel(sample) : "Unidentified cell",
           sampleReference: sample?.sample_id_raw || observation.sample_uid,
           batchNo: sample?.batch_no_raw || undefined,
           value,
@@ -342,7 +353,7 @@ export default function Home() {
       const signatures = new Set(points.map((point) => point.members.map((member) => member.sampleUid).sort().join("|")));
       const electrodeNote = describeGraphElectrode(points.flatMap((point) => point.members.map((member) => sampleMap.get(member.sampleUid)?.electrode)));
       const contextLabel = [config.stress, METRICS[config.metric].label, electrodeNote].filter(Boolean).join(" · ");
-      return { id: config.id, label: `${String.fromCharCode(65 + index)} · ${config.material}`, color, marker:materialStyle(config.material).marker, points, config, xUnit: timeUnit(config.stress), yUnit: mode === "retention" ? "% of reference" : METRICS[config.metric].unit, contextLabel, exportLabel: config.material, exportLegendKey: config.id, baselineWarnings: [...baselineWarnings], sampleSetChanges: signatures.size > 1 };
+      return { id: config.id, label: `${String.fromCharCode(65 + index)} · ${config.material}`, color, marker:materialStyle(config.material).marker, points, config, xUnit: timeUnit(config.stress), yUnit: metricValueMode(config.metric, mode) === "retention" ? "% of reference" : METRICS[config.metric].unit, contextLabel, exportLabel: config.material, exportLegendKey: config.id, baselineWarnings: [...baselineWarnings], sampleSetChanges: signatures.size > 1 };
     };
     return seriesConfigs.map(build);
   }, [dataset, seriesConfigs, mode, aggregation, sampleMap, normalizationBySeries]);
@@ -460,7 +471,7 @@ export default function Home() {
     return {
       id: selection.seriesId,
       label: curveComparison === "ageing"
-        ? [`${fr.format(selection.actualTime)} ${timeUnit(selection.config.stress)}`, resolvedAgeingSample?.label, electrodeNote].filter(Boolean).join(" · ")
+        ? [`${fr.format(selection.actualTime)} ${timeUnit(selection.config.stress)}`, sampleMap.get(selection.measurement.sample_uid ?? '') ? cellLabel(sampleMap.get(selection.measurement.sample_uid!)!) : null, electrodeNote].filter(Boolean).join(" · ")
         : [`${String.fromCharCode(65 + seriesConfigs.findIndex((config) => config.id === selection.seriesId))} · ${selection.material}`, ribbonSelection === ALL_RIBBONS ? null : ribbonLabel(recordedRibbon(sampleMap.get(selection.measurement.sample_uid ?? "") ?? { ribbon_raw: null })), electrodeNote].filter(Boolean).join(" · "),
       color: selection.color,
       marker: materialStyle(selection.material).marker,
@@ -573,7 +584,7 @@ export default function Home() {
           intervalLabel: summary.n > 1 ? summary.intervalLabel : "single value" as const,
           n: summary.n,
           members,
-          selectedLabel: `${sample.sampleLabel} · ${sample.sampleReference}`,
+          selectedLabel: sample.sampleLabel,
         }];
       });
       return {
@@ -581,7 +592,7 @@ export default function Home() {
         id: `${series.id}::${sample.sampleUid}`,
         label: `${String.fromCharCode(65 + parentIndex)}${sampleIndex + 1} · ${sample.sampleLabel}`,
         points,
-        contextLabel: [series.config.stress, METRICS[series.config.metric].label, sample.sampleUid, `Excel ref. ${sample.sampleReference}`, describeGraphElectrode([sampleMap.get(sample.sampleUid)?.electrode])].filter(Boolean).join(" · "),
+        contextLabel: [protocolLabel(series.config.stress), METRICS[series.config.metric].label, describeGraphElectrode([sampleMap.get(sample.sampleUid)?.electrode])].filter(Boolean).join(" · "),
         exportLabel: series.config.material,
         exportLegendKey: series.id,
         parentSeriesId: series.id,
@@ -593,12 +604,14 @@ export default function Home() {
     ? sampleTrendSeries
     : selectedTrendSeries;
   const displayedTrendSeries = baseDisplayedTrendSeries.map(series => {
-    if (trendArrangement !== "material" || !LIGHT_AGEING_METRICS.includes(series.config.metric)) return series;
-    const direction = series.config.metric === "light_pout_forward_mW_cm2" ? "aller"
-      : series.config.metric === "light_pout_reverse_mW_cm2" ? "retour" : "moyenne aller/retour";
-    return { ...series, label: `${series.label} · ${direction}`, exportLabel: `${series.exportLabel ?? series.config.material} · ${direction}`,
-      marker: series.config.metric === "light_pout_reverse_mW_cm2" ? "circle" as const
-        : series.config.metric === "light_pout_mean_mW_cm2" ? "diamond" as const : series.marker };
+    const definition = pearlMetric(series.config.metric);
+    if (trendArrangement !== "material" || !definition?.direction) return series;
+    const direction = definition.direction === 'forward' ? "aller"
+      : definition.direction === 'reverse' ? "retour" : "moyenne aller/retour";
+    const uiDirection = definition.direction === 'mean' ? 'paired mean' : definition.direction;
+    return { ...series, label: `${series.label} · ${uiDirection}`, exportLabel: `${series.exportLabel ?? series.config.material} · ${direction}`,
+      marker: definition.direction === 'reverse' ? "circle" as const
+        : definition.direction === 'mean' ? "diamond" as const : series.marker };
   });
   const visibleCurveSeries = curveSeries.filter((series) => !hiddenSeries.has(series.id));
   const visibleCurveSelections = curveSelections.filter((selection) => !hiddenSeries.has(selection.seriesId));
@@ -622,15 +635,11 @@ export default function Home() {
     return next;
   });
   const selectAllTrendSamples = (seriesId: SeriesId) => {
-    setTrendDisplay("samples");
-    setCohortMode("available");
     setHiddenSeries(new Set());
     setTrendSampleFilters((current) => Object.fromEntries(Object.entries(current).filter(([key]) => key !== seriesId)));
   };
   const toggleTrendSample = (seriesId: SeriesId, sampleId: string) => {
     const availableIds = (trendSampleOptions[seriesId] ?? []).map((member) => member.sampleUid);
-    setTrendDisplay("samples");
-    setCohortMode("available");
     setHiddenSeries(new Set());
     setTrendSampleFilters((current) => {
       const nextSelection = toggleSelectedSampleId(availableIds, current[seriesId], sampleId);
@@ -672,7 +681,7 @@ export default function Home() {
     ].filter(Boolean);
     return {
       title: `Latest shared duration: ${fr.format(time)} ${sharedXUnit}`,
-      detail: `Observed aggregate spread: ${fr.format(difference)} ${mode === "retention" ? "retention points" : METRICS[points[0].series.config.metric].unit} across ${points.length} series. Descriptive comparison only${limitations.length ? ` because ${limitations.join(" and ")}` : "; no hypothesis test has been applied"}.`,
+      detail: `Observed aggregate spread: ${fr.format(difference)} ${metricValueMode(points[0].series.config.metric, mode) === "retention" ? "retention points" : METRICS[points[0].series.config.metric].unit} across ${points.length} series. Descriptive comparison only${limitations.length ? ` because ${limitations.join(" and ")}` : "; no hypothesis test has been applied"}.`,
       time,
       count: points.reduce((total, item) => total + item.point.n, 0),
     };
@@ -703,7 +712,7 @@ export default function Home() {
     setSeriesConfigs((current) => [...current, normalizeSeriesConfig(dataset, { ...base, id })]);
   };
   const removeComparisonMaterial = (seriesId: string) => {
-    setSeriesConfigs((current) => current.filter((config) => config.id !== seriesId));
+    setSeriesConfigs((current) => current.length > 1 ? current.filter((config) => config.id !== seriesId) : current);
     removeSeriesChoices(seriesId);
   };
   const aggregationHelp = {
@@ -719,6 +728,8 @@ export default function Home() {
       quantitativeValidated: curveSelections.length > 0 && curveSelections.every(selection => jvDiagnostics.get(selection.measurement.measurement_uid)?.quantitativeEligible),
     },
     filters: seriesConfigs,
+    seriesValueModes: Object.fromEntries(seriesConfigs.map(config => [config.id, metricValueMode(config.metric, mode)])),
+    contextMetricsNote: seriesConfigs.some(config => pearlMetric(config.metric)?.contextOnly) ? 'Temperature and photodiodes are always absolute context, never performance retention. Photodiode units remain undocumented; no irradiance conversion.' : undefined,
     analysisTrace: view==="curves"?undefined:Object.fromEntries(normalizationBySeries),
     selectedSamples: view==="curves"?curveSelections.map(selection=>selection.measurement.sample_uid):activeTrendSampleIds,
     selectedSampleMetadata: dataset?.samples.filter(sample=>seriesConfigs.some(config=>samplePasses(sample.sample_uid,config))),
@@ -728,7 +739,7 @@ export default function Home() {
     chartLayout: view === "trend" ? { arrangement: trendArrangement, columns: trendColumns, panels: trendPanels.map(panel => ({ key: panel.key, seriesIds: panel.series.map(series => series.id) })) } : undefined,
     analyticalCurveSeries: view==="curves"?curveSeries:undefined,
     jvSelection: view==="curves"&&dataset?jvSelectionLedger(dataset,fullJVMeasurementIds(dataset,seriesConfigs,curveComparison,resolvedAgeingSample?.sampleUid??null,ribbonSampleIds),curveSelections.map(selection=>selection.measurement.measurement_uid),curveSelections.map(selection=>selection.actualTime),includeQa,inspectUnsafeJV):undefined,
-    methodCaption: `${ribbonSelectionLabel(ribbonSelection)}. ${splitByRibbon && view === "trend" && trendDisplay === "aggregate" ? "Groupes séparés par type de ruban. " : ""}${view==="curves"?`${curveComparison==="ageing"?"Même cellule à plusieurs temps de vieillissement":"Cellules choisies au même protocole et au même temps"} ; les balayages ne sont pas regroupés. ${inspectUnsafeJV?"Inspection non résolue : ne constitue pas une validation quantitative.":"Balayages avec branche exploitable et cohérence numérique automatique ; validation instrumentale encore à confirmer."}`:`${seriesConfigs.map(config=>`${config.stress} / ${figureMetricLabel(config.metric)}`).join("; ")}. ${seriesConfigs.some(config=>config.metric==="light_pout_mean_mW_cm2")?"Pout combiné = (F + R) / 2 sur la même ligne source, avant normalisation ; les deux lectures sont requises. ":""} ${mode==="retention"?`Normalisation par cellule × 100 ; référence Unaged unique pour DH/TC, premier point Pearl de la même cellule pour la métrique choisie (sens individuel ou moyenne aller/retour) pour Light ageing, B${outdoorWindow} pour l'extérieur (minimum 3 jours valides).`:"Valeurs absolues mesurées."} ${trendDisplay==="samples"?"Trajectoires individuelles, sans regroupement":`Agrégation : ${aggregation} ; regroupement : ${grouping} ; cohorte : ${cohortMode}`}. Données signalées par le contrôle qualité ${includeQa?"incluses explicitement pour examen":"exclues"}.`}`,
+    methodCaption: `${seriesConfigs.some(config=>pearlMetric(config.metric)?.contextOnly) ? "Températures et photodiodes : valeurs absolues uniquement, sans rétention ni conversion en irradiance. " : ""}${ribbonSelectionLabel(ribbonSelection)}. ${splitByRibbon && view === "trend" && trendDisplay === "aggregate" ? "Groupes séparés par type de ruban. " : ""}${view==="curves"?`${curveComparison==="ageing"?"Même cellule à plusieurs temps de vieillissement":"Cellules choisies au même protocole et au même temps"} ; les balayages ne sont pas regroupés. ${inspectUnsafeJV?"Inspection non résolue : ne constitue pas une validation quantitative.":"Balayages avec branche exploitable et cohérence numérique automatique ; validation instrumentale encore à confirmer."}`:`${seriesConfigs.map(config=>`${config.stress} / ${figureMetricLabel(config.metric)}`).join("; ")}. ${seriesConfigs.some(config=>pearlMetric(config.metric)?.direction==="mean")?"Métrique combinée = (F + R) / 2 sur la même ligne source, avant normalisation ; les deux lectures sont requises. ":""} ${mode==="retention"?`Normalisation par cellule × 100 ; référence Unaged unique pour DH/TC, premier point de vieillissement sous lumière de la même cellule pour la métrique choisie (sens individuel ou moyenne aller/retour) pour Light ageing, B${outdoorWindow} pour l'extérieur (minimum 3 jours valides).`:"Valeurs absolues mesurées."} ${trendDisplay==="samples"?"Trajectoires individuelles, sans regroupement":`Agrégation : ${aggregation} ; regroupement : ${grouping} ; cohorte : ${cohortMode}`}. Données signalées par le contrôle qualité ${includeQa?"incluses explicitement pour examen":"exclues"}.`}`,
     qa: { includeFlagged: includeQa, inspectUnsafeJV },
     normalization: { mode, outdoorBaselineDays: outdoorWindow },
     aggregation: { method: aggregation, grouping, splitByRibbon },
@@ -746,41 +757,44 @@ export default function Home() {
       <header className="topbar">
         <div className="brand-mark">IV</div>
         <div>
-          <p className="eyebrow">Internal tool · IV data</p>
+          <p className="eyebrow">Photovoltaic encapsulant study</p>
           <h1>IV Compare</h1>
         </div>
-        <nav className="site-nav" aria-label="Main navigation"><Link href="/" aria-current="page">Workspace</Link><Link href="/guide">Guide & methods <span aria-hidden="true">↗</span></Link></nav>
+        <nav className="site-nav" aria-label="Main navigation"><Link href="/" aria-current="page">Explore data</Link><Link href="/guide">Guide & methods <span aria-hidden="true">↗</span></Link></nav>
         <div className={`dataset-pill ${loadState}`} role="status"><span /> {loadMessage}</div>
       </header>
 
       <section className="workspace-intro" aria-label="Getting started">
-        <div><p className="eyebrow">Photovoltaic encapsulants · research workspace</p><h2>Explore performance.<br /><span>Understand the comparison.</span></h2><p>Follow ageing, inspect a cell’s JV curves, or compare PCE before and after encapsulation.</p></div>
-        <Link className="guide-callout" href="/guide"><span className="guide-icon" aria-hidden="true">?</span><div><strong>Start with a clear method</strong><span>How to use the workspace, what the defaults mean, and where uncertainty remains.</span></div><span aria-hidden="true">→</span></Link>
+        <div><p className="eyebrow">Interactive research companion</p><h2>Explore performance.<br /><span>Understand the comparison.</span></h2><p>Explore the measurements behind the study: follow cell performance, inspect J–V curves and compare before / after encapsulation.</p></div>
+        <Link className="guide-callout" href="/guide"><span className="guide-icon" aria-hidden="true">?</span><div><strong>Start with a clear method</strong><span>Definitions, experimental protocols and how to interpret the figures.</span></div><span aria-hidden="true">→</span></Link>
       </section>
 
       <section className="dataset-toolbar">
         <div className="dataset-stats" aria-label="Dataset summary">
-          <div><strong>{report ? fr.format(report.samples) : "—"}</strong><span>inventory samples <InfoTip text="All identifiers in the loaded inventory. Dataset coverage is not the number of eligible or independent cells in the current graph." /></span></div>
+          <div><strong>{report ? fr.format(report.samples) : "—"}</strong><span>recorded cells <InfoTip text="All identifiers in the loaded inventory. Dataset coverage is not the number of eligible or independent cells in the current graph." /></span></div>
           <div><strong>{report ? fr.format(report.measurements) : "—"}</strong><span>IV measurements <InfoTip text="Raw measurement records. Multiple acquisitions of one sample do not add independent cells; not every record passes screening." /></span></div>
           <div><strong>{report ? `${fr.format(report.points / 1000)}k` : "—"}</strong><span>raw points <InfoTip text="All voltage/current points, including secondary segments. The chart point audit explains the displayed subset." /></span></div>
         </div>
+        <Disclosure title="Dataset & downloads" description="Study data, source information or your own compatible dataset" className="dataset-tools">
+          <p>The study dataset loads automatically. File imports replace it for this browser session; no file is uploaded.</p>
+          <a className="soft-button" href="/data/iv-compare-dowsil.ivpack" download="iv-compare-study.ivpack">Download study dataset</a>
+          <button type="button" className="soft-button" onClick={() => void fetchDefaultDataset().then(data => installDataset(data, "Study dataset restored")).catch(error => { setLoadState("error"); setLoadMessage(String(error)); })}>Restore study dataset</button>
+          <Link href="/guide#exports">Data format & provenance</Link>
         <label className={`compact-import ${loadState === "loading" ? "busy" : ""}`} onDragOver={(event) => event.preventDefault()} onDrop={onDrop}>
           <input ref={fileInputRef} type="file" multiple accept=".ivpack,.json,.gz,.xlsx,.tsv" aria-label="Import IV data" onChange={(event) => void processFiles(Array.from(event.target.files ?? []))} />
           <span className="import-action">Import data</span>
           <small>.ivpack or .xlsx + .tsv · processed locally</small>
         </label>
+        </Disclosure>
       </section>
 
       <section id="comparison" className="workspace-card" aria-busy={loadState === "loading"}>
         <div className="workspace-head">
           <div>
             <p className="eyebrow">Comparison workspace</p>
-            <h3>{view === "curves" && curveComparison === "ageing" ? "One cell through ageing" : view === "encapsulation" ? "Before / after encapsulation" : sharedCurveStress ? (sharedCurveStress === "Unaged" ? "Initial-state comparison" : `Performance after ${sharedCurveStress}`) : "Compare recorded conditions"}</h3>
+            <h3>{view === "curves" && curveComparison === "ageing" ? "One cell through ageing" : view === "encapsulation" ? "Before / after encapsulation" : sharedCurveStress ? (sharedCurveStress === "Unaged" ? "Initial-state comparison" : `Performance · ${protocolLabel(sharedCurveStress)}`) : "Compare recorded conditions"}</h3>
           </div>
-          <div className="head-actions">
-            <a className="soft-button" href="/data/iv-compare-dowsil.ivpack" download>Sample package</a>
-            {view === "trend" && <button type="button" className="primary-button" onClick={exportTrend} disabled={!comparisonCount}>Full selected dataset CSV</button>}
-          </div>
+
         </div>
 
         <nav className="view-tabs" aria-label="Chart type">
@@ -788,29 +802,32 @@ export default function Home() {
           <button aria-pressed={view === "curves"} className={view === "curves" ? "active" : ""} onClick={() => setView("curves")}><span>02</span> JV curves<small>Inspect measured sweeps</small></button>
           <button aria-pressed={view === "encapsulation"} className={view === "encapsulation" ? "active" : ""} onClick={() => setView("encapsulation")}><span>03</span> Before / after<small>Compare paired PCE values</small></button>
         </nav>
-        <p className="view-description">{view === "trend" ? "Choose a material, ageing protocol and metric for each series. Start with individual samples, then compare summaries if needed." : view === "curves" ? "Inspect the same cell at exact measured stages, or compare materials at one time. Passing numerical screening does not establish experimental validation." : "Pair Initial Eff with the same cell’s unique Unaged PCE. Ageing controls and trend sample filters do not define this comparison."} <Link href={`/guide#${view === "curves" ? "jv" : view === "encapsulation" ? "paired" : "workflow"}`}>Read the method →</Link></p>
+        <p className="view-description">{view === "trend" ? "Choose a material, ageing protocol and metric for each series. Start with individual samples, then compare summaries if needed." : view === "curves" ? "Inspect the same cell at exact measured stages, or compare materials at one time. Passing numerical screening does not establish experimental validation." : "Compare the same cells before and after encapsulation. These paired results are independent of the ageing selections."} <Link href={`/guide#${view === "curves" ? "jv" : view === "encapsulation" ? "paired" : "workflow"}`}>Read the method →</Link></p>
 
         <div className="materials-panel">
-          <div className="materials-panel-title"><FieldTitle help={`${HELP.polymer} ${HELP.addMaterial}`}>{view === "curves" && curveComparison === "ageing" ? "Material and ageing protocol" : "Comparison series"}</FieldTitle><span>{view === "curves" && curveComparison === "ageing" ? "1 material" : `${comparisonMaterials.length} series`}</span></div>
+          <div className="materials-panel-title"><FieldTitle help={`${HELP.polymer} ${HELP.addMaterial}`}>{view === "curves" && curveComparison === "ageing" ? "Material and ageing protocol" : "Comparison series"}</FieldTitle><div className="series-panel-actions"><span>{view === "curves" && curveComparison === "ageing" ? "1 material" : `${comparisonMaterials.length} series`}</span>
+            {!(view === "curves" && curveComparison === "ageing") && <div className="add-material-wrap">
+              <button type="button" className="add-material" onClick={addComparisonMaterial} disabled={!dataset || seriesConfigs.length >= MAX_SERIES}><span aria-hidden="true">+</span> Add series</button>
+              <InfoTip text={seriesConfigs.length >= MAX_SERIES ? `A maximum of ${MAX_SERIES} series can be displayed.` : HELP.addMaterial} align="right" />
+            </div>}
+          </div></div>
           <div className="material-selectors">
             {seriesConfigs.filter((_, index) => !(view === "curves" && curveComparison === "ageing") || index === 0).map((config, index) => {
               const stresses = dataset ? stressesForConfig(dataset, config) : [];
               const metrics = metricOptionsFor(config.stress);
               return <article className="material-selector series-config-card" key={config.id} style={{ borderTopColor: materialStyle(config.material).color }}>
-                <div className="series-config-title"><span className="material-slot"><i style={{ background: materialStyle(config.material).color }} />Series {String.fromCharCode(65 + index)}</span>{index >= 2 ? <button type="button" className="remove-material" onClick={() => removeComparisonMaterial(config.id)} aria-label={`Remove series ${String.fromCharCode(65 + index)}`} title="Remove this series">×</button> : null}</div>
+                <div className="series-config-title"><span className="material-slot"><i style={{ background: materialStyle(config.material).color }} />Series {String.fromCharCode(65 + index)}</span>{seriesConfigs.length > 1 && !(view === "curves" && curveComparison === "ageing") ? <button type="button" className="remove-material" onClick={() => removeComparisonMaterial(config.id)} aria-label={`Remove series ${String.fromCharCode(65 + index)}`} title="Remove this series">×</button> : null}</div>
                 <div className="series-config-grid">
                   <label><FieldTitle help={HELP.polymer}>Encapsulant</FieldTitle><select aria-label={`Series ${String.fromCharCode(65 + index)} encapsulant`} value={config.material} onChange={(event) => { updateSeriesConfig(config.id, { material: event.target.value }); setCurveAgeingSample(null); setCurveAgeingTimes([]); setCurveMeasurementIds({}); }}>{materials.map((item) => <option key={item}>{item}</option>)}</select></label>
-                  {view !== "encapsulation" && <label><FieldTitle help={HELP.ageing}>Ageing protocol</FieldTitle><select aria-label={`Series ${String.fromCharCode(65 + index)} ageing protocol`} value={config.stress} onChange={(event) => { updateSeriesConfig(config.id, { stress: event.target.value }); setCurveAgeingSample(null); setCurveAgeingTimes([]); setCurveMeasurementIds({}); }}>{stresses.map((item) => <option key={item}>{item}</option>)}</select></label>}
-                  {view !== "encapsulation" && <label className="series-metric"><FieldTitle help={METRIC_HELP[config.metric]}>Metric</FieldTitle><select aria-label={`Series ${String.fromCharCode(65 + index)} metric`} value={config.metric} onChange={(event) => updateSeriesConfig(config.id, { metric: event.target.value as MetricKey })}>{metrics.map((key) => <option key={key} value={key}>{METRICS[key].label}</option>)}</select></label>}
+                  {view !== "encapsulation" && <label><FieldTitle help={HELP.ageing}>Ageing protocol</FieldTitle><select aria-label={`Series ${String.fromCharCode(65 + index)} ageing protocol`} value={config.stress} onChange={(event) => { updateSeriesConfig(config.id, { stress: event.target.value }); setCurveAgeingSample(null); setCurveAgeingTimes([]); setCurveMeasurementIds({}); }}>{stresses.map((item) => <option key={item} value={item}>{protocolLabel(item)}</option>)}</select></label>}
+                  {view === "trend" && <label className="series-metric"><FieldTitle help={metricHelp(config.metric)}>Parameter</FieldTitle><select aria-label={`Series ${String.fromCharCode(65 + index)} metric`} value={config.metric} onChange={(event) => updateSeriesConfig(config.id, { metric: event.target.value as MetricKey })}>{config.stress === 'Light ageing'
+                    ? [...new Set(metrics.map(key => pearlMetric(key)?.contextOnly ? 'Context · absolute values' : pearlMetric(key)?.family))].map(group => <optgroup key={group} label={group === 'Context · absolute values' ? group : group?.toUpperCase()}>{metrics.filter(key => (pearlMetric(key)?.contextOnly ? 'Context · absolute values' : pearlMetric(key)?.family) === group).map(key => <option key={key} value={key}>{METRICS[key].label.replace('Light-ageing ', '')}</option>)}</optgroup>)
+                    : metrics.map((key) => <option key={key} value={key}>{METRICS[key].label}</option>)}</select>{pearlMetric(config.metric)?.contextOnly ? <span className="muted">Context · absolute values only</span> : null}</label>}
 
                 </div>
                 {view !== "encapsulation" && <details className="series-details"><summary>Refine selection <span>{(["formulation", "batch", "recipe", "electrode"] as const).filter(field => config[field] && config[field] !== "all").length || "No"} active filters</span></summary><div className="series-config-grid">{([['formulation','Formulation','material_raw'],['batch','Batch','batch_no_raw'],['recipe','Recipe','recipe_uid'],['electrode','Electrode','electrode']] as const).map(([field,label,source]) => <label key={field}><FieldTitle help={HELP[field]}>{label}</FieldTitle><select aria-label={`Series ${String.fromCharCode(65 + index)} ${label.toLowerCase()}`} value={config[field] ?? "all"} onChange={(event) => updateSeriesConfig(config.id,{[field]:event.target.value})}><option value="all">All recorded values</option>{unique(dataset?.samples.filter((sample) => sample.material_family === config.material).map((sample) => sample[source]) ?? []).map((value) => <option key={value} value={value}>{field === "recipe" ? dataset?.recipes.find((recipe) => recipe.recipe_uid === value)?.recipe_raw || value : value}</option>)}</select></label>)}</div></details>}
               </article>;
             })}
-            {!(view === "curves" && curveComparison === "ageing") && <div className="add-material-wrap">
-              <button type="button" className="add-material" onClick={addComparisonMaterial} disabled={!dataset || seriesConfigs.length >= MAX_SERIES}><span aria-hidden="true">+</span> Add series</button>
-              <InfoTip text={seriesConfigs.length >= MAX_SERIES ? `A maximum of ${MAX_SERIES} series can be displayed.` : HELP.addMaterial} align="right" />
-            </div>}
           </div>
         </div>
 
@@ -824,14 +841,14 @@ export default function Home() {
           </div>
           <InfoTip text={HELP.retention} align="left" />
           <div className="segmented" aria-label="Trend display">
-            <button aria-pressed={trendDisplay === "samples"} className={trendDisplay === "samples" ? "active" : ""} onClick={() => { setTrendDisplay("samples"); setCohortMode("available"); setHiddenSeries(new Set()); }}>Individual samples</button>
+            <button aria-pressed={trendDisplay === "samples"} className={trendDisplay === "samples" ? "active" : ""} onClick={() => { setTrendDisplay("samples"); setCohortMode("available"); setHiddenSeries(new Set()); }}>Individual cells</button>
             <button aria-pressed={trendDisplay === "aggregate"} className={trendDisplay === "aggregate" ? "active" : ""} onClick={() => { setTrendDisplay("aggregate"); setHiddenSeries(new Set()); }}>{aggregation === "mean" ? "Mean" : "Median"}</button>
           </div>
           <InfoTip text={HELP.traceDisplay} align="left" />
           {trendDisplay === "aggregate" && <label className="inline-select"><FieldTitle help={aggregationHelp}>Aggregation</FieldTitle><select aria-label="Aggregation" value={aggregation} onChange={(event) => setAggregation(event.target.value as Aggregation)}><option value="mean">Mean + 95% CI</option><option value="median">Median + IQR</option></select></label>}
-          <span className="condition-group"><span className="condition-chip">Experimental metadata retained</span><InfoTip text={HELP.labConvention} /></span>
 
-          <span className="quality-note">{report ? `${report.matchedFiles}/${report.files} files matched · ${report.reviewFiles} to resolve${report.auditFiles ? ` · ${report.auditFiles} reference/audit` : ""}` : ""}<InfoTip text={HELP.matching} align="right" /></span>
+
+
         </div>
 
         }
@@ -843,21 +860,43 @@ export default function Home() {
           {grouping !== "conservative" && <span role="status">Explicit pooling: formulations, batches, recipes or electrodes may differ. Inspect composition below; this is not an isolated material effect.</span>}
           <span className="check-item outdoor-quality-toggle"><label className="check-control"><input type="checkbox" checked={includeQa} onChange={(event) => setIncludeQa(event.target.checked)} /> Include QA-flagged data{relevantOutdoorIssues.length ? ` (${relevantOutdoorIssues.length} outdoor)` : ""}</label><InfoTip text={`${HELP.qa} ${HELP.outdoorQa}`} align="right" /></span>
         </section></details>}
-        <details className="advanced-panel"><summary><span>Ribbon selection</span><span>{ribbonSelectionLabel(ribbonSelection)}{splitByRibbon ? " / groups split" : ""}</span></summary><div className="advanced-content"><div className="control-row" aria-label="Sélection des rubans">
-          <label>Type de ruban<select aria-label="Filtrer les cellules par type de ruban" value={ribbonSelection} onChange={(event) => setSelectedRibbon(event.target.value)}>
-            <option value={ALL_RIBBONS}>Tous les rubans</option>
+        <details className="advanced-panel"><summary><span>Cell preparation filters</span><span>{ribbonSelection === ALL_RIBBONS ? "All ribbon types" : ribbonSelection === STANDARD_RIBBON ? "Standard ribbon" : ribbonSelection}{splitByRibbon ? " / groups split" : ""}</span></summary><div className="advanced-content"><div className="control-row" aria-label="Cell preparation filters">
+          <label>Ribbon type<select aria-label="Filter cells by ribbon type" value={ribbonSelection} onChange={(event) => setSelectedRibbon(event.target.value)}>
+            <option value={ALL_RIBBONS}>All ribbon types</option>
             {availableRibbons.map((value) => <option key={value} value={ribbonChoice(value)}>{value}</option>)}
-            <option value={STANDARD_RIBBON}>Ruban standard</option>
+            <option value={STANDARD_RIBBON}>Standard ribbon</option>
           </select></label>
-          <label className="check-control"><input type="checkbox" checked={splitByRibbon} onChange={(event) => setSplitByRibbon(event.target.checked)} /> Séparer les groupes par type de ruban</label>
-          <InfoTip text="Le filtre s'applique à tous les graphes. La séparation agit sur les agrégats et boîtes ; les courbes JV et les trajectoires individuelles restent par cellule. « Non renseigné », « stand » et les notes « too short », « facing down », « all the length » sont classés comme ruban standard faute de référence explicite. Ces notes de préparation restent dans les données brutes et ne prouvent pas une pose identique." />
+          <label className="check-control"><input type="checkbox" checked={splitByRibbon} onChange={(event) => setSplitByRibbon(event.target.checked)} /> Split summaries by ribbon type</label>
+          <InfoTip text="Filters apply to all views. Splitting changes summary curves and boxes; individual cells and J–V curves remain separate. Missing ribbon references and preparation notes are classified as standard ribbon. This classification does not imply identical placement; original notes remain in provenance." />
         </div></div></details>
-        {view === "trend" && <div className={`method-summary ${includeQa || grouping !== "conservative" ? "attention" : ""}`} role="status"><strong>Current method</strong><span>{mode === "retention" ? "Same-sample reference / retention (%)" : "Absolute values / recorded units"} / {trendDisplay === "samples" ? "individual trajectories" : `${aggregation === "median" ? "median / IQR" : "mean / 95% CI"} / ${grouping} groups / ${cohortMode} cohort`} / {includeQa ? "QA-flagged observations included" : "QA-flagged observations excluded"}{seriesConfigs.some(config => config.stress === "Outdoor") && mode === "retention" ? ` / Outdoor B${outdoorWindow}` : ""}</span><Link href="/guide#quality">Method & limits</Link></div>}
-        {view === "trend" && lightIrradianceExclusionCount > 0 && <div className="quality-alert" role="status"><strong>{lightIrradianceExclusionCount} observations excluded · 1.5-sun test & recovery</strong><span>Different illumination and the following transition are excluded from 1-sun curves, summaries and references, including QA inspection mode. Raw records remain available.</span><InfoTip text="Owner-confirmed 1.5-sun test: explicit worksheet rows 5–6 and 84–87 in each Pearl summary. Row 7 remains the reference; row 88 resumes the standard series. These source-bound exclusions apply to both sweep directions, without smoothing or dividing powers by 1.5." /></div>}
+        {view === "trend" && <div className={`method-summary ${includeQa || grouping !== "conservative" ? "attention" : ""}`} role="status"><strong>Current method</strong><span>{mode === "retention" ? "Same-sample reference / retention (%)" : "Absolute values / recorded units"} / {trendDisplay === "samples" ? "individual trajectories" : `${aggregation === "median" ? "median / IQR" : "mean / 95% CI"} / ${grouping} groups / ${cohortMode} cohort`} / {includeQa ? "QA-flagged observations included" : "QA-flagged observations excluded"}{seriesConfigs.some(config => config.stress === "Outdoor") && mode === "retention" ? ` / Outdoor B${outdoorWindow}` : ""}{seriesConfigs.some(config => pearlMetric(config.metric)?.contextOnly) ? " / context signals always absolute" : ""}</span><Link href="/guide#quality">Method & limits</Link></div>}
+        {view === "trend" && lightIrradianceExclusionCount > 0 && <div className="quality-alert" role="status"><strong>{lightIrradianceExclusionCount} observations excluded · 1.5-sun test & recovery</strong><span>Different illumination and the following transition are excluded from 1-sun curves, summaries and references, including QA inspection mode. Raw records remain available.</span><InfoTip text="Documented 1.5-sun test: explicit worksheet rows 5–6 and 84–87 in each light-ageing summary. Row 7 remains the reference; row 88 resumes the standard series. These source-bound exclusions apply to both sweep directions, without smoothing or dividing powers by 1.5." /></div>}
         {view === "trend" && relevantLabIssues.size > 0 && <details style={{ margin: "12px 24px" }}><summary>Lab QA · {relevantLabIssues.size} flagged observations {includeQa ? "included" : "excluded from curves, aggregates and references"}</summary><ul>{[...relevantLabIssues].map(([id, reason]) => <li key={id}>{reason}</li>)}</ul></details>}
         {view === "trend" && trendDisplay === "aggregate" && aggregation === "mean" && <p style={{ margin: "12px 24px" }}>95% confidence intervals can be very wide with only two cells. They are not measured values or QA flags. Use individual samples or Median + IQR to inspect the spread.</p>}
 
 
+        {view === "trend" && <Disclosure title="Choose cells" description="Select which cells contribute · legend clicks only hide curves" className="cell-selection-panel"><div className="sample-selection-grid">                  {trendSeries.map((series, seriesIndex) => {
+                    const options = trendSampleOptions[series.id] ?? [];
+                    const selectedIds = activeTrendSampleIds[series.id] ?? [];
+                    const allSelected = selectedIds.length === options.length;
+                    return <fieldset className="sample-filter" key={series.id} style={{ borderTopColor: series.color }}>
+                      <legend>Cells · series {String.fromCharCode(65 + seriesIndex)} <InfoTip text={HELP.globalReplicate} align="right" /></legend>
+                      <div className="sample-filter-options">
+                        <button type="button" className={allSelected ? "active" : ""} onClick={() => selectAllTrendSamples(series.id)} disabled={allSelected}>All</button>
+                        {options.map((member, index) => {
+                          const checked = selectedIds.includes(member.sampleUid);
+                          const lastSelected = checked && selectedIds.length === 1;
+                          return <label className={checked ? "active" : ""} key={member.sampleUid} title={member.sampleLabel}>
+                            <input type="checkbox" checked={checked} disabled={lastSelected} onChange={() => toggleTrendSample(series.id, member.sampleUid)} />
+                            <span aria-hidden="true">{index + 1}</span>
+                            <small>{sampleMap.get(member.sampleUid) ? cellLabel(sampleMap.get(member.sampleUid)!) : member.sampleLabel}</small>
+                          </label>;
+                        })}
+                      </div>
+                      <small className="sample-filter-summary">{selectedIds.length}/{options.length} selected · {trendDisplay === "aggregate" ? `${aggregation === "mean" ? "mean" : "median"} of selection` : "individual curves"}</small>
+                    </fieldset>;
+                  })}</div></Disclosure>}
+      {dataset && view === 'trend' && seriesConfigs.some(config => config.stress === 'Light ageing') && <LightAgeingOverlay dataset={dataset} sampleUids={dataset.samples.filter(sample => seriesConfigs.some(config => config.stress === 'Light ageing' && samplePasses(sample.sample_uid, config) && (!activeTrendSampleIds[config.id] || activeTrendSampleIds[config.id].includes(sample.sample_uid)))).map(sample => sample.sample_uid)}/>}
         {view === "encapsulation" ? <EncapsulationComparison dataset={dataset} selections={seriesConfigs.map((config) => ({ material: config.material, color: materialStyle(config.material).color }))} ribbonSampleIds={ribbonSampleIds} ribbonSelection={ribbonSelection} splitByRibbon={splitByRibbon} /> : view === "trend" ? (
           <div className="chart-layout">
             <section className="chart-card">
@@ -871,7 +910,7 @@ export default function Home() {
                 <label>Arrange<select aria-label="Graph columns" value={trendColumns} onChange={event => setTrendColumns(event.target.value as TrendColumns)}>
                   <option value="auto">Auto</option><option value="one">Stacked</option><option value="two">Side by side</option>
                 </select></label>
-                <span className="graph-layout-count" role="status">{trendPanels.length} {trendPanels.length === 1 ? "graph" : "graphs"}<InfoTip text="By metric overlays materials with the same metric and protocol: forward and reverse Pearl sweeps become two graphs. By material overlays Pearl sweep directions within each material. One graph per series keeps comparison cards separate. Different protocols or incompatible axes always stay separate. This changes the display, not cell selection, normalization or aggregation. Side-by-side graphs stack on narrow screens." align="right" /></span>
+                <span className="graph-layout-count" role="status">{trendPanels.length} {trendPanels.length === 1 ? "graph" : "graphs"}<InfoTip text="By metric overlays materials with the same metric and protocol: forward and reverse light-ageing sweeps become two graphs. By material overlays light-ageing sweep directions within each material. One graph per series keeps comparison cards separate. Different protocols or incompatible axes always stay separate. This changes the display, not cell selection, normalization or aggregation. Side-by-side graphs stack on narrow screens." align="right" /></span>
               </div>
               <div className="chart-title">
                 {displayedTrendSeries.map((series) => {
@@ -880,6 +919,7 @@ export default function Home() {
                 })}
                 <span>{trendPanels.length === 1 ? "Shared scale" : "Independent scale per graph"}</span>
               </div>
+              {!trendPanels.length && loadState !== "loading" && <div className="empty-chart" role="status"><strong>No eligible measurements for this selection</strong><span>Check the protocol, parameter, selected cells and initial reference. Try absolute values if a valid reference is unavailable.</span><Link href="/guide#quality">Understand missing data →</Link></div>}
               <div className={`trend-panels layout-${trendColumns} ${trendPanels.length > 1 ? "multiple" : "single"}`}>
                 {trendPanels.map(({ key: panelKey, series: panel }) => {
                   const first = panel[0];
@@ -887,18 +927,20 @@ export default function Home() {
                   const visiblePanel = panel.filter((series) => !hiddenSeries.has(series.id));
                   const parent = trendSeries.find((series) => series.id === first.parentSeriesId);
                   const panelMetric = panel.every(series => series.config.metric === first.config.metric) ? first.config.metric : null;
-                  const reportMetric = panelMetric ? figureMetricLabel(panelMetric) : "Pout (balayages aller/retour)";
-                  const panelTitle = trendArrangement === "metric" ? `${reportMetric} · ${first.config.stress}`
-                    : trendArrangement === "material" ? `${first.config.material} · ${reportMetric} · ${first.config.stress}`
-                    : `${parent?.label ?? first.label} · ${reportMetric}`;
+                  const reportMetric = panelMetric ? figureMetricLabel(panelMetric) : `${pearlMetric(first.config.metric)?.figureLabel.split(' (')[0]} (balayages aller/retour)`;
+                  const uiMetric = panelMetric ? METRICS[panelMetric].label.replace('Light-ageing ', '') : `${pearlMetric(first.config.metric)?.family.toUpperCase()} · forward / reverse sweeps`;
+                  const panelMode = metricValueMode(first.config.metric, mode);
+                  const panelTitle = trendArrangement === "metric" ? `${uiMetric} · ${protocolLabel(first.config.stress)}`
+                    : trendArrangement === "material" ? `${first.config.material} · ${uiMetric} · ${protocolLabel(first.config.stress)}`
+                    : `${parent?.label ?? first.label} · ${uiMetric}`;
                   const helpMetric = panelMetric;
                   const reportTitle = first.config.stress === "Unaged"
                     ? `${reportMetric} à l’état initial`
-                    : `${mode === "retention" ? "Rétention de " : ""}${reportMetric} ${figureAgeingContext(first.config.stress)}`;
+                    : `${panelMode === "retention" ? "Rétention de " : ""}${reportMetric} ${figureAgeingContext(first.config.stress)}`;
                   const reportReference = first.config.stress === "Outdoor" ? "la référence" : "la valeur initiale";
-                  const reportYAxisLabel = mode === "retention" ? `Rétention de ${reportMetric} (% de ${reportReference})` : `${reportMetric} (${first.yUnit})`;
+                  const reportYAxisLabel = panelMode === "retention" ? `Rétention de ${reportMetric} (% de ${reportReference})` : `${reportMetric} (${first.yUnit})`;
                   return <section className="trend-panel" key={panelKey}>
-                    <div className="trend-panel-head"><div><span className="trend-panel-title"><strong>{panelTitle}</strong>{helpMetric ? <InfoTip text={METRIC_HELP[helpMetric]} align="left" /> : null}</span><span className="trend-panel-context">{trendDisplay === "samples" ? `${panel.length} individual sample trajectories · ${first.xUnit}` : panel.length > 1 ? `${panel.length} compatible series · ${first.xUnit}` : first.contextLabel}</span></div></div>
+                    <div className="trend-panel-head"><div><span className="trend-panel-title"><strong>{panelTitle}</strong>{helpMetric ? <InfoTip text={metricHelp(helpMetric)} align="left" /> : null}</span><span className="trend-panel-context">{trendDisplay === "samples" ? `${panel.length} individual sample trajectories · ${first.xUnit}` : panel.length > 1 ? `${panel.length} compatible series · ${first.xUnit}` : first.contextLabel}{pearlMetric(first.config.metric)?.contextOnly ? ' · absolute context' : ''}</span></div></div>
                     <TrendChart series={visiblePanel} xUnit={first.xUnit} yUnit={first.yUnit} reportTitle={reportTitle} reportYAxisLabel={reportYAxisLabel} exportContext={{...figureContext,analyticalTrendSeries:panel, panel:{title:panelTitle,seriesIds:panel.map(series=>series.id)}}} />
                   </section>;
                 })}
@@ -911,42 +953,21 @@ export default function Home() {
               <dl>
                 <div><dt>Observations <InfoTip text={HELP.observations} align="left" /></dt><dd>{comparisonCount}</dd></div>
                 <div><dt>Mode <InfoTip text={HELP.retention} align="left" /></dt><dd>{mode === "retention" ? "normalised reference" : "absolute"}</dd></div>
-                <div><dt>Display</dt><dd>{trendDisplay === "samples" ? "individual samples" : "aggregate trajectories"}</dd></div>
-                <div><dt>Aggregation <InfoTip text={aggregationHelp} align="left" /></dt><dd>{trendDisplay === "samples" ? "within each patch" : { mean: "mean + 95% CI", median: "median + IQR" }[aggregation]}</dd></div>
+                <div><dt>Display</dt><dd>{trendDisplay === "samples" ? "individual cells" : "aggregate trajectories"}</dd></div>
+                <div><dt>Aggregation <InfoTip text={aggregationHelp} align="left" /></dt><dd>{trendDisplay === "samples" ? "None · one curve per cell" : { mean: "mean + 95% CI", median: "median + IQR" }[aggregation]}</dd></div>
               </dl>
               {outdoorIssueExample ? <div className="quality-alert" role="status"><strong>{relevantOutdoorIssues.length} outdoor anomal{relevantOutdoorIssues.length > 1 ? "ies" : "y"} {includeQa ? "included for review" : "excluded from analysis"}</strong><span>{outdoorIssueSample?.material_family ?? outdoorIssueExample.sampleUid}{numeric(outdoorIssueExample.time) ? ` · day ${fr.format(outdoorIssueExample.time)}` : ""}: {outdoorIssueExample.reason}{relevantOutdoorIssues.length > 1 ? ` ${relevantOutdoorIssues.length - 1} additional flagged value${relevantOutdoorIssues.length > 2 ? "s" : ""}.` : ""}</span></div> : null}
               {selectedTrendSeries.some((series) => series.sampleSetChanges || series.baselineWarnings.length) ? <p className="caution">{selectedTrendSeries.some((series) => series.sampleSetChanges) ? "The contributing sample set changes between some durations. " : ""}{selectedTrendSeries.flatMap((series) => series.baselineWarnings).slice(0, 2).join(" · ")}</p> : null}
-              {seriesConfigs.some(config => config.stress === "Light ageing") ? <p className="caution">Pearl : Pout en mW/cm², temps écoulé en heures. Moyenne aller/retour : (Pout F + Pout R) / 2 au même instant, avec les deux lectures disponibles. La rétention utilise la valeur de la métrique choisie au premier point restant de chaque cellule. Les lectures à 1,5 sun et leurs transitions sont exclues (30 lignes dans les cinq cellules). Les liens avec l’inventaire sont provisoires. Aucune interpolation n’est appliquée.</p> : null}
+              {seriesConfigs.some(config => config.stress === "Light ageing") ? <p className="caution">Electrical parameters are available for each sweep or their paired mean. Temperature and photodiodes are absolute context signals. Pout is not a measured PCE. Cell identity links remain provisional.</p> : null}
               {trendDisplay!=="samples" && cohortDiagnostics.some(group=>group.timeline.some(point=>point.apparentRecoveryRisk)) && <p className="caution" role="status">Apparent recovery may be affected by changing cohort composition. Inspect the contributing specimens below.</p>}
             </aside>
-            <section className="data-table-card">
-              <details><summary>Missingness and analytical exclusions</summary>{missingness.map(group => <div key={group.seriesId}><h4>{group.protocol} · {group.metric}</h4><table><thead><tr><th>Specimen</th><th>Time</th><th>Status</th><th>Contributes</th><th>Reasons</th></tr></thead><tbody>{group.rows.map(row => <tr key={`${row.sampleUid}:${row.time}`}><td>{row.sampleUid}</td><td>{row.time}</td><td>{row.status}</td><td>{row.contributes ? "yes" : "no"}</td><td>{row.exclusionReasons.join("; ") || "—"}</td></tr>)}</tbody></table></div>)}</details>
+            <section className="data-table-card"><Disclosure title="Data, references & exclusions" description="Values behind the graphs, contributing cells and quality decisions">
+              <details><summary>Missingness and analytical exclusions</summary>{missingness.map(group => <div key={group.seriesId}><h4>{group.protocol} · {group.metric}</h4><table><thead><tr><th>Specimen</th><th>Time</th><th>Status</th><th>Contributes</th><th>Reasons</th></tr></thead><tbody>{group.rows.map(row => <tr key={`${row.sampleUid}:${row.time}`}><td>{row.sampleUid}</td><td>{row.time}</td><td>{row.status}</td><td>{row.contributes ? "yes" : "no"}</td><td>{row.exclusionReasons.map(readableReason).join("; ") || "—"}</td></tr>)}</tbody></table></div>)}</details>
               <details><summary>Cohort composition · n specimens / b batches at each time</summary>{cohortDiagnostics.map(({series,timeline}) => <div key={series.id}><h4>{series.label}</h4>{timeline.map((point) => <p key={point.time}><b>{point.time} {series.xUnit} · n={point.n} · b={point.batches.length}</b> · {point.sampleUids.join(", ")} {point.entered.length ? ` · entered: ${point.entered.join(", ")}` : ""}{point.left.length ? ` · no longer contributing: ${point.left.join(", ")}` : ""}{point.apparentRecoveryRisk ? " · Apparent recovery may reflect loss of low-performing specimens rather than performance recovery." : ""}</p>)}</div>)}</details>
               <div className="section-head">
-                <div><p className="eyebrow">Aggregated values</p><h4>Displayed points</h4></div>
+                <div><p className="eyebrow">Figure data</p><h4>Values used in the graphs</h4></div><button type="button" className="soft-button" onClick={exportTrend} disabled={!comparisonCount}>Full selected dataset CSV</button>
                 <div className="table-head-tools">
                   <span>{trendDisplay === "samples" ? "Selected samples are drawn as separate trajectories." : `${aggregation === "mean" ? "95% CI" : "IQR"} · selected samples define each aggregate.`} <InfoTip text={`${HELP.traceDisplay} ${HELP.interval} ${HELP.replicates}`} align="right" /></span>
-                  {trendSeries.map((series, seriesIndex) => {
-                    const options = trendSampleOptions[series.id] ?? [];
-                    const selectedIds = activeTrendSampleIds[series.id] ?? [];
-                    const allSelected = selectedIds.length === options.length;
-                    return <fieldset className="sample-filter" key={series.id} style={{ borderTopColor: series.color }}>
-                      <legend>Samples {String.fromCharCode(65 + seriesIndex)} <InfoTip text={HELP.globalReplicate} align="right" /></legend>
-                      <div className="sample-filter-options">
-                        <button type="button" className={allSelected ? "active" : ""} onClick={() => selectAllTrendSamples(series.id)} disabled={allSelected}>All</button>
-                        {options.map((member, index) => {
-                          const checked = selectedIds.includes(member.sampleUid);
-                          const lastSelected = checked && selectedIds.length === 1;
-                          return <label className={checked ? "active" : ""} key={member.sampleUid} title={`${member.sampleLabel} · Excel ref. ${member.sampleReference}`}>
-                            <input type="checkbox" checked={checked} disabled={lastSelected} onChange={() => toggleTrendSample(series.id, member.sampleUid)} />
-                            <span>{index + 1}</span>
-                            <small>{member.sampleLabel}</small>
-                          </label>;
-                        })}
-                      </div>
-                      <small className="sample-filter-summary">{selectedIds.length}/{options.length} selected · {trendDisplay === "aggregate" ? `${aggregation === "mean" ? "mean" : "median"} of selection` : "individual curves"}</small>
-                    </fieldset>;
-                  })}
                 </div>
               </div>
               <div className="table-scroll"><table><thead><tr><th>Series / conditions</th><th>Sample / reference <InfoTip text={HELP.patchReference} align="left" /></th><th>Time</th><th>Plotted value</th><th>Interval low</th><th>Interval high</th><th>n</th></tr></thead><tbody>
@@ -967,20 +988,20 @@ export default function Home() {
                   </Fragment>;
                 }))}
               </tbody></table></div>
-            </section>
+            </Disclosure></section>
           </div>
         ) : (
           <div className="curve-workspace">
             <div className="jv-action-bar">
             <div className="segmented" aria-label="IV comparison mode">
-              <button className={curveComparison === "ageing" ? "active" : ""} onClick={() => { setCurveComparison("ageing"); setHiddenSeries(new Set()); setCurveMeasurementIds({}); }}>One cell over ageing</button>
-              <button className={curveComparison === "materials" ? "active" : ""} onClick={() => { setCurveComparison("materials"); setHiddenSeries(new Set()); setCurveMeasurementIds({}); }}>Materials at one time</button>
+              <button aria-pressed={curveComparison === "ageing"} className={curveComparison === "ageing" ? "active" : ""} onClick={() => { setCurveComparison("ageing"); setHiddenSeries(new Set()); setCurveMeasurementIds({}); }}>One cell over ageing</button>
+              <button aria-pressed={curveComparison === "materials"} className={curveComparison === "materials" ? "active" : ""} onClick={() => { setCurveComparison("materials"); setHiddenSeries(new Set()); setCurveMeasurementIds({}); }}>Materials at one time</button>
             </div>
             <button type="button" className="soft-button" disabled={!dataset} onClick={()=>{if(dataset)downloadFigureFile(fullJVSelectionCsv(dataset,fullJVMeasurementIds(dataset,seriesConfigs,curveComparison,resolvedAgeingSample?.sampleUid??null,ribbonSampleIds)),"jv.full-selected.csv","text/csv");}}>Full selected JV dataset CSV</button>
             </div>
             {curveComparison === "materials" && !sharedCurveStress ? <div className="missing-selection"><strong>IV curve overlay requires one shared ageing protocol.</strong><span>The performance view still compares these conditions in separate panels. Choose the same protocol in every series to overlay raw IV curves.</span></div> : <>
             <div className="curve-toolbar">
-              {curveComparison === "materials" ? <label><FieldTitle help={HELP.targetTime}>Target time</FieldTitle><select aria-label="Target time" value={resolvedCurveTime ?? ""} onChange={(event) => { setCurveTime(Number(event.target.value)); setCurveMeasurementIds({}); }} disabled={!selectableCurveTimes.length}>{selectableCurveTimes.length ? selectableCurveTimes.map((time) => <option key={time} value={time}>{fr.format(time)} {curveXUnit}{curveTimes.common.includes(time) ? " · exact for all series" : ""}</option>) : <option>No exact shared time available</option>}</select></label> : <label><FieldTitle help="Only cells with QA-valid raw IV curves at two or more exact stages are offered. Every curve belongs to this same physical cell.">Physical cell</FieldTitle><select aria-label="Physical cell for IV ageing" value={resolvedAgeingSample?.sampleUid ?? ""} disabled={!ageingCandidates.length} onChange={(event) => { setCurveAgeingSample(event.target.value); setCurveAgeingTimes([]); setCurveMeasurementIds({}); setHiddenSeries(new Set()); }}>{ageingCandidates.length ? ageingCandidates.map((candidate) => <option key={candidate.sampleUid} value={candidate.sampleUid}>{candidate.label} · {candidate.sampleUid} · {candidate.times.length} stages</option>) : <option>No cell with multiple exact IV stages</option>}</select></label>}
+              {curveComparison === "materials" ? <label><FieldTitle help={HELP.targetTime}>Target time</FieldTitle><select aria-label="Target time" value={resolvedCurveTime ?? ""} onChange={(event) => { setCurveTime(Number(event.target.value)); setCurveMeasurementIds({}); }} disabled={!selectableCurveTimes.length}>{selectableCurveTimes.length ? selectableCurveTimes.map((time) => <option key={time} value={time}>{fr.format(time)} {curveXUnit}{curveTimes.common.includes(time) ? " · exact for all series" : ""}</option>) : <option>No exact shared time available</option>}</select></label> : <label><FieldTitle help="Only cells with QA-valid raw IV curves at two or more exact stages are offered. Every curve belongs to this same physical cell.">Physical cell</FieldTitle><select aria-label="Physical cell for IV ageing" value={resolvedAgeingSample?.sampleUid ?? ""} disabled={!ageingCandidates.length} onChange={(event) => { setCurveAgeingSample(event.target.value); setCurveAgeingTimes([]); setCurveMeasurementIds({}); setHiddenSeries(new Set()); }}>{ageingCandidates.length ? ageingCandidates.map((candidate) => <option key={candidate.sampleUid} value={candidate.sampleUid}>{sampleMap.get(candidate.sampleUid) ? specimenLabel(sampleMap.get(candidate.sampleUid)!) : "Unidentified cell"} · {candidate.times.length} stages</option>) : <option>No cell with multiple exact IV stages</option>}</select></label>}
               <label><FieldTitle help={HELP.convention}>Current convention</FieldTitle><select aria-label="Current convention" value={currentConvention} onChange={(event) => setCurrentConvention(event.target.value as CurrentConvention)}><option value="instrument">Instrument · negative J</option><option value="pv">PV · positive generated J</option></select></label>
               <label><FieldTitle help={HELP.sweep}>Sweep</FieldTitle><select aria-label="Sweep" value={sweepView} onChange={(event) => setSweepView(event.target.value as SweepView)}><option value="primary">Primary · recommended</option><option value="all">All segments</option></select></label>
               <label><FieldTitle help={HELP.scale} align="right">Scale</FieldTitle><select aria-label="Scale" value={curveScale} onChange={(event) => setCurveScale(event.target.value as CurveScale)}><option value="primary">Primary segments</option><option value="all">All data</option></select></label>
@@ -992,15 +1013,15 @@ export default function Home() {
               </div>
             </div>
             <div className="curve-selection-grid" aria-label="IV measurement selection">
-              {curveComparison === "ageing" && resolvedAgeingSample ? <div className="sample-filter-card" style={{ borderTopColor: materialStyle(seriesConfigs[0]?.material ?? "").color }}><strong>Ageing stages · same cell</strong><div className="sample-filter-options">{resolvedAgeingSample.times.map((candidate) => { const checked = selectedAgeingTimes.includes(candidate.time); return <label className={checked ? "active" : ""} key={candidate.time}><input type="checkbox" checked={checked} disabled={checked && selectedAgeingTimes.length <= 2} onChange={() => { setCurveAgeingTimes(toggleAgeingTime(selectedAgeingTimes, candidate.time)); setCurveMeasurementIds({}); setHiddenSeries(new Set()); }} /> {fr.format(candidate.time)} {timeUnit(seriesConfigs[0]?.stress ?? "")}</label>; })}</div><small>Choose at least two measured stages. 0 means Unaged after encapsulation, when an IV file is linked to this same cell.</small></div> : null}
+              {curveComparison === "ageing" && resolvedAgeingSample ? <div className="sample-filter-card" style={{ borderTopColor: materialStyle(seriesConfigs[0]?.material ?? "").color }}><strong>Ageing stages · same cell</strong><div className="sample-filter-options">{resolvedAgeingSample.times.map((candidate) => { const checked = selectedAgeingTimes.includes(candidate.time); return <label className={checked ? "active" : ""} key={candidate.time}><input type="checkbox" checked={checked} disabled={checked && selectedAgeingTimes.length <= 2} onChange={() => { setCurveAgeingTimes(toggleAgeingTime(selectedAgeingTimes, candidate.time)); setCurveMeasurementIds({}); setHiddenSeries(new Set()); }} /> {fr.format(candidate.time)} {timeUnit(seriesConfigs[0]?.stress ?? "")}</label>; })}</div><small>Choose at least two measured stages. Time zero is the same cell after encapsulation and before ageing, when a linked measurement exists.</small></div> : null}
               {(curveComparison === "ageing" ? ageingCurveSelections.map((selection) => ({ seriesId: selection.seriesId, color: selection.color, candidates: resolvedAgeingSample?.times.find((item) => item.time === selection.actualTime)?.measurements ?? [], title: `${fr.format(selection.actualTime)} ${timeUnit(selection.config.stress)} measurement` })) : curveCandidateGroups.map((group, index) => ({ ...group, title: `Series ${String.fromCharCode(65 + index)} measurement` }))).map((group, index) => <label key={group.seriesId} style={{ borderTopColor: group.color }}>
                 <FieldTitle help={HELP.curveChoice} align={index === curveCandidateGroups.length - 1 ? "right" : "left"}>{group.title}</FieldTitle>
-                <select aria-label={`${group.title} measurement`} value={curveMeasurementIds[group.seriesId] ?? "representative"} disabled={!group.candidates.length} onChange={(event) => setCurveMeasurementIds((current) => ({ ...current, [group.seriesId]: event.target.value === "representative" ? null : event.target.value }))}>
-                  <option value="representative">Example cell · nearest specimen median efficiency</option>
-                  {group.candidates.map((measurement) => {
+                <select aria-label={group.title} value={curveMeasurementIds[group.seriesId] ?? "representative"} disabled={!group.candidates.length} onChange={(event) => setCurveMeasurementIds((current) => ({ ...current, [group.seriesId]: event.target.value === "representative" ? null : event.target.value }))}>
+                  <option value="representative">Representative sweep · near median PCE</option>
+                  {group.candidates.map((measurement, acquisitionIndex) => {
                     const sample = measurement.sample_uid ? sampleMap.get(measurement.sample_uid) : undefined;
                     const efficiency = numeric(measurement.efficiency_pct) ? `${fr.format(measurement.efficiency_pct)}%` : "efficiency unavailable";
-                    return <option value={measurement.measurement_uid} key={measurement.measurement_uid}>{sample?.sample_label ?? measurement.sample_uid ?? "Unmatched sample"} · {measurement.measurement_uid} · {efficiency}</option>;
+                    return <option value={measurement.measurement_uid} key={measurement.measurement_uid}>{sample ? cellLabel(sample) : "Unidentified cell"} · sweep {acquisitionIndex + 1} · {efficiency}</option>;
                   })}
                   {!group.candidates.length ? <option>No QA-valid measurement at this exact time</option> : null}
                 </select>
@@ -1020,17 +1041,17 @@ export default function Home() {
             <div className="measurement-grid">
               {curveSelections.map((selection) => <article className="measurement-card" key={selection.seriesId} style={{ borderTopColor: selection.color }}>
                 <p className="eyebrow">{selection.material}</p>
-                <h4>{fr.format(selection.actualTime)} {displayedCurveXUnit} · {selection.measurement.measurement_uid}</h4>
+                <h4>{fr.format(selection.actualTime)} {displayedCurveXUnit} · {sampleMap.get(selection.measurement.sample_uid ?? "") ? cellLabel(sampleMap.get(selection.measurement.sample_uid!)!) : "Unidentified cell"}</h4>
                 <JVDiagnosticDetails diagnostic={jvDiagnostics.get(selection.measurement.measurement_uid)} />
                 <p className="measurement-selection-mode">{curveMeasurementIds[selection.seriesId] ? "Explicit measurement" : "Example cell nearest the specimen median efficiency"}</p>
                 <dl>
-                  <div><dt>Efficiency <InfoTip text={HELP.efficiency} align="left" /></dt><dd>{numeric(selection.measurement.efficiency_pct) ? `${fr.format(selection.measurement.efficiency_pct)} %` : "—"}</dd></div>
+                  <div><dt>PCE <InfoTip text={HELP.efficiency} align="left" /></dt><dd>{numeric(selection.measurement.efficiency_pct) ? `${fr.format(selection.measurement.efficiency_pct)} %` : "—"}</dd></div>
                   <div><dt>Voc <InfoTip text={HELP.voc} /></dt><dd>{numeric(selection.measurement.voc_V) ? `${fr.format(selection.measurement.voc_V)} V` : "—"}</dd></div>
                   <div><dt>Jsc <InfoTip text={HELP.jsc} /></dt><dd>{numeric(selection.measurement.jsc_mA_cm2) ? `${fr.format(selection.measurement.jsc_mA_cm2)} mA/cm²` : "—"}</dd></div>
                   <div><dt>FF <InfoTip text={HELP.ff} align="right" /></dt><dd>{numeric(selection.measurement.ff_pct) ? `${fr.format(selection.measurement.ff_pct)} %` : "—"}</dd></div>
                 </dl>
                 <p className="curve-segment-note">Primary segment: {selection.analysis.primaryPointCount}/{selection.analysis.rawPointCount} points · {selection.analysis.segments.length} segment{selection.analysis.segments.length > 1 ? "s" : ""} retained<InfoTip text={HELP.segmentation} align="right" /></p>
-                <small>{sampleMap.get(selection.measurement.sample_uid ?? "")?.sample_label ?? selection.measurement.sample_uid ?? "Unmatched sample"} · {selection.file.source_file} · {selection.file.match_status}{numeric(selection.file.match_score) ? ` (${fr.format(selection.file.match_score)})` : ""}</small>
+                <details className="source-details"><summary>Measurement provenance</summary><small>Archive ID: {selection.measurement.measurement_uid}<br/>Source: {selection.file.source_file}<br/>Identity link: {selection.file.match_status?.replace(/_/g, " ")}{numeric(selection.file.match_score) ? ` (${fr.format(selection.file.match_score)})` : ""}</small></details>
               </article>)}
               {!curveSelections.length ? <div className="missing-selection">No measurement matches these filters.</div> : null}
             </div>
@@ -1039,9 +1060,9 @@ export default function Home() {
         )}
       </section>
 
-      {dataset&&view==="trend"&&seriesConfigs.some(config=>config.stress==="Outdoor")&&<OutdoorSensitivity dataset={dataset} materials={seriesConfigs.filter(config=>config.stress==="Outdoor").map(config=>config.material)} ribbonSampleIds={ribbonSampleIds} ribbonSelection={ribbonSelection}/>}
+      {dataset&&view==="trend"&&seriesConfigs.some(config=>config.stress==="Outdoor")&&<Disclosure title="Outdoor sensitivity analysis" description="Check how the irradiance threshold and initial reference affect the result" className="supplementary-analysis"><OutdoorSensitivity dataset={dataset} materials={seriesConfigs.filter(config=>config.stress==="Outdoor").map(config=>config.material)} ribbonSampleIds={ribbonSampleIds} ribbonSelection={ribbonSelection}/></Disclosure>}
       <footer>
-        <span>IV Compare · format .ivpack v{dataset?.schemaVersion ?? "1.0"}</span>
+        <span>IV Compare · Photovoltaic encapsulant study</span>
         <Link href="/guide">Guide, scientific choices & limitations</Link>
       </footer>
     </main>
