@@ -16,12 +16,9 @@ const REPORT_PALETTE: Record<string, string> = {
 
 const REPORT_CSS = `
   text { font-family: "Latin Modern Roman", "TeX Gyre Termes", "Times New Roman", serif !important; fill: #202020 !important; }
-  svg > text:first-of-type { font-size: 16px !important; font-weight: 700; }
-  .export-title { font-size: 15px !important; font-weight: 700; }
-  .export-subtitle { font-size: 10px !important; }
-  .export-legend { font-size: 10.5px !important; }
-  .axis-label { fill: #353535 !important; font-size: 10px !important; }
-  .axis-title { fill: #202020 !important; font-size: 11px !important; font-weight: 600; }
+  svg > text:first-of-type, .export-title { font-weight: 700; }
+  .axis-label { fill: #353535 !important; }
+  .axis-title { fill: #202020 !important; font-weight: 600; }
   .grid-line, line[stroke="#ddd"] { stroke: #d7d7d7 !important; stroke-width: 0.7px !important; }
   .axis-line, .tick-line, .zero-axis { stroke: #333 !important; stroke-width: 0.9px !important; }
   .reference-baseline line { stroke: #777 !important; stroke-width: 0.9px !important; }

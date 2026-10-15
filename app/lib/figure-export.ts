@@ -1,6 +1,7 @@
 import type { CurveSeries, TrendSeries } from "../components/Charts";
 import { trendIntervalVisible } from "./chart-export";
 import { segmentLinePattern } from "./material-style";
+import { figureBatchLabel, figureFormulationLabel } from "./figure-language";
 
 /** Caller-owned scientific context; chart-owned limits and points are never inferred from it. */
 export interface FigureExportContext {
@@ -26,7 +27,7 @@ export function jvMethodCaption(context:FigureExportContext,series:CurveSeries[]
   }))];
   const selected=context.selectedSampleMetadata??context.selectedSamples;
   const samples=(Array.isArray(selected)?selected:[]).filter((sample):sample is import("./iv-data").Sample=>typeof sample==="object"&&sample!==null&&ids.includes(sample.sample_uid));
-  const descriptions=samples.map(sample=>`${sample.sample_uid} : ${sample.material_raw??sample.material_family}, lot ${sample.batch_no_raw??"inconnu"}`);
+  const descriptions=samples.map(sample=>`${sample.sample_uid} : ${figureFormulationLabel(sample)}, ${figureBatchLabel([sample.batch_no_raw])}`);
   const conditions=series.flatMap(item=>{
     const source=context.seriesMetadata?.[item.id] as {file?:import("./iv-data").IVFile}|undefined;
     const file=source?.file;
@@ -107,7 +108,7 @@ export function figureCsv(manifest: FigureManifest): string {
   if (manifest.kind === "trend") {
     for (const series of manifest.series as TrendSeries[]) for (const point of series.points) {
       if (manifest.analyticLimit.maximumX !== null && point.x > manifest.analyticLimit.maximumX) continue;
-      const common = { ...shared, series_id: series.id, series_label: series.label, color: series.color, line_pattern: series.linePattern,
+      const common = { ...shared, series_id: series.id, series_label: series.label, display_mode: series.displayMode, color: series.color, line_pattern: series.linePattern,
         x: point.x, plotted_y: point.y, n: point.n, minimum: point.min, maximum: point.max,
         interval_low: point.intervalLow, interval_high: point.intervalHigh, interval_method: point.intervalLabel,
         interval_drawn: trendIntervalVisible(point,manifest.intervalsVisible),

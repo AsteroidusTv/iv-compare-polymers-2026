@@ -9,7 +9,7 @@ import { cellLabel, protocolLabel, readableReason, specimenLabel } from '../app/
 test('public labels explain protocols and cells without mutating archived identifiers', () => {
   const sample = {sample_uid: 'SMP2-060', sample_id_raw: '1_R23', material_family: 'TPO-2 / Lenzing', batch_no_raw: 'A4'};
   assert.equal(cellLabel(sample), 'Cell 1');
-  assert.equal(specimenLabel(sample), 'TPO-2 / Lenzing · Batch A4 · Cell 1');
+  assert.equal(specimenLabel(sample), 'TPO-2 · Batch A4 · Cell 1');
   assert.equal(sample.sample_id_raw, '1_R23');
   assert.equal(protocolLabel('DH'), 'Damp heat (DH)');
   assert.equal(protocolLabel('TC'), 'Thermal cycling (TC)');

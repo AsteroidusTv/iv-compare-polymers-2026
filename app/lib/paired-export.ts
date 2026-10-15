@@ -3,6 +3,7 @@ import { datasetPackageHash, type IVDataset } from "./iv-data";
 import { buildIdentity } from "./build-identity";
 import { numeric } from "./science";
 import { ALL_RIBBONS, ribbonSelectionLabel } from "./ribbon";
+import { publicationText } from "./figure-language";
 
 /** Inventory PCE provenance is independent of raw JV quantitative eligibility. */
 export function pairedFigureManifest(dataset: IVDataset, groups: EncapsulationGroup[], options: {
@@ -51,7 +52,7 @@ export function pairedFigureManifest(dataset: IVDataset, groups: EncapsulationGr
     dateCoverage: { totalPairs: group.pairs.length, pairsWithInterval: group.pairs.filter(pair => pairedMeasurementDayRange([pair]) !== null).length },
   }));
   const caption = `PCE avant et après encapsulation pour ${visible.reduce((n, group) => n + group.pairs.length, 0)} cellules appariées, regroupées par formulation et lot${options.splitByRibbon ? " et séparées par type de ruban" : ""} ; les sous-groupes issus de métadonnées distinctes restent séparés. ${options.ribbonSelection && options.ribbonSelection !== ALL_RIBBONS ? `Filtre : ${ribbonSelectionLabel(options.ribbonSelection)}. ` : ""}Points vides/pleins : avant/après. ${options.showConnections ? "Les lignes relient une même cellule." : "Aucune ligne entre les cellules ; l'appariement reste utilisé pour calculer les variations."} Boîtes : Q1–Q3 (percentiles interpolés linéairement, h=(n−1)p) ; trait central : médiane ; moustaches : dernières valeurs observées dans 1,5 × IQR. Si n < 3, seuls les points individuels sont tracés. ${options.deltaSummary === "none" ? "Aucune variation résumée par groupe n'est tracée." : `La variation relative ${options.deltaSummary === "mean" ? "moyenne" : "médiane"} est la ${options.deltaSummary === "mean" ? "moyenne" : "médiane"} des variations individuelles (après−avant)/avant × 100 ; dénominateurs nuls omis.`} Source : Initial Eff → Unaged. Les intervalles entre mesures, lorsqu'ils sont connus, ne sont pas des durées de procédé. Paires ambiguës ou signalées par le contrôle qualité exclues ; les groupes masqués le sont uniquement à l'affichage.`;
-  return { schemaVersion: "iv-compare-paired-figure/1", generatedAt: new Date().toISOString(), kind: "paired-pce", title: "PCE avant / après encapsulation", caption,
+  return { schemaVersion: "iv-compare-paired-figure/1", generatedAt: new Date().toISOString(), kind: "paired-pce", title: "PCE avant / après encapsulation", caption: publicationText(caption),
     dataset: { name: dataset.name, schemaVersion: dataset.schemaVersion, packageSha256: datasetPackageHash(dataset), provenance: dataset.provenance },
     sourceCode: buildIdentity, selection: options, candidates, groups: summaries,
     actualContributors: candidates.filter(row => row.analyticalEligible).map(row => row.sampleUid),

@@ -1,10 +1,11 @@
 "use client";
 import { useState, type ReactNode } from 'react';
 import { downloadFigureFile } from '../lib/browser-figure-download';
+import { FigurePresentationControls } from './FigurePresentation';
 
 export function ExportMenu({ children }: { children: ReactNode }) {
   return <details className="export-menu"><summary>Export figure <span aria-hidden="true">↓</span></summary>
-    <div className="export-options"><p>SVG stays sharp in a report. PNG is a ready-to-use image. Data and method files keep the result reproducible.</p><div className="export-actions">{children}</div></div>
+    <div className="export-options"><p>SVG stays sharp in a report. PNG is a ready-to-use image. Data and method files keep the result reproducible.</p><FigurePresentationControls/><div className="export-actions">{children}</div></div>
   </details>;
 }
 

@@ -103,7 +103,7 @@ test('material layout pairs only the directions of the same quantity, not Voc an
 
 test('small signed signals and voltage ticks remain distinct from zero in chart labels', () => {
   const current = axisNumberFormat(0.00002);
-  assert.equal(current.format(-0.0001998), '-0.0001998');
+  assert.equal(current.format(-0.0001998), '-0,0001998');
   assert.notEqual(current.format(-0.0001998), current.format(-0.000198));
   const voltage = axisNumberFormat(0.01);
   assert.notEqual(voltage.format(1.003), voltage.format(1.004));

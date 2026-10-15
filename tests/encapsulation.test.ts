@@ -46,7 +46,7 @@ test("encapsulation groups keep recorded lamination recipes separate", () => {
   const bothStandard = encapsulationDisplayLabels(result.groups.map((group) => ({ ...group, recipeUid: "standard" })), recipes);
   assert.deepEqual([...bothStandard.values()], ["Lamineuse standard", "Lamineuse standard"]);
   const bothSmall = encapsulationDisplayLabels(result.groups.map((group) => ({ ...group, recipeUid: "small" })), recipes);
-  assert.deepEqual([...bothSmall.values()], ["Petite lamineuse · groupe 1", "Petite lamineuse · groupe 2"]);
+  assert.deepEqual([...bothSmall.values()], ["Petite lamineuse", "Petite lamineuse"]);
 });
 
 test("paired PCE groups split by ribbon only when requested", () => {

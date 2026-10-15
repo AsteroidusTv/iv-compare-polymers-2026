@@ -26,6 +26,8 @@ test("server-renders the IV Compare application shell", async () => {
   assert.doesNotMatch(html, /Internal tool|within each patch|TM publication/i);
   assert.match(html, /Photovoltaic encapsulant study/);
   assert.match(html, /Choose cells/);
+  assert.match(html, /Display for all series/);
+  assert.match(html, /Select cells and aggregation per series/);
   assert.match(html, /Data, references &amp; exclusions/);
 });
 
@@ -44,4 +46,6 @@ test("guide renders without a dataset and its chapter links resolve to real sect
   assert.doesNotMatch(html, /\bPearl\b/i);
   assert.doesNotMatch(html, /Internal tool|laboratory Trash/i);
   assert.match(html, /Export figure/);
+  assert.match(html, /Aggregate selected cells/);
+  assert.match(html, /Cohort windows and analysis grouping apply only to summaries/);
 });

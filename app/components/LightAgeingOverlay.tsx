@@ -1,4 +1,6 @@
 "use client";
+import { figureSpecimenLabel, figureXAxisLabel } from "../lib/figure-language";
+import { figureNumber } from "../lib/chart-number-format";
 import { ExportMenu, CopyCaption } from "./ExportMenu";
 import { useId, useMemo, useRef, useState } from 'react';
 import { datasetPackageHash, type IVDataset } from '../lib/iv-data';
@@ -8,7 +10,7 @@ import { rowsCsv } from '../lib/tabular-export';
 import { downloadFigureFile, downloadScientificGraphic } from '../lib/browser-figure-download';
 import { InfoTip } from './InfoTip';
 import type { LightAgeingMetricKey } from '../lib/light-ageing-metrics';
-import { cellLabel, specimenLabel, readableReason } from '../lib/public-labels';
+import { specimenLabel, readableReason } from '../lib/public-labels';
 
 const sweepLabels = { mean: 'moyenne aller/retour', forward: 'balayage aller', reverse: 'balayage retour' };
 type CellAnalysis = ReturnType<typeof lightAgeingOverlay>[number];
@@ -34,9 +36,8 @@ function CellFigure({ analysis, dataset, cutoff, manual, yMin, yMax }: {
   const width = 1180, height = 590, left = 85, top = 125, pw = 1035, ph = 390;
   const x = (time: number) => left + time / Math.max(end, 0.000001) * pw;
   const y = (value: number) => top + ph - (value - min) / (max - min) * ph;
-  const title = 'Rétention de Pout, Jsc, Voc et FF — light ageing';
-  const subtitle = [sample.material_family, sample.batch_no_raw && `Lot ${sample.batch_no_raw}`,
-    cellLabel(sample).replace('Cell ', 'Cellule '), sample.electrode && `Électrode ${sample.electrode}`, sweepLabels[sweep]].filter(Boolean).join(' · ');
+  const title = 'Rétention de Pout, Jsc, Voc et FF — vieillissement sous lumière';
+  const subtitle = [figureSpecimenLabel(sample), sample.electrode && `électrode ${sample.electrode}`, sweepLabels[sweep]].filter(Boolean).join(' · ');
   const caption = `${title}. ${subtitle}. Temps écoulé en heures. Chaque grandeur est normalisée par sa première valeur enregistrée admissible pour cette cellule, après exclusions explicites d'irradiance ; aucun remplacement par une référence ultérieure. ${sweep === 'mean' ? 'Moyenne arithmétique (aller + retour) / 2 pour chaque grandeur sur la même ligne, avant normalisation ; les deux lectures sont requises. ' : ''}Pout est une puissance surfacique, pas une PCE. Contrôle qualité propre à chaque grandeur ; valeurs manquantes ou exclues interrompent les courbes. Aucune interpolation ni agrégation entre cellules.`;
   const rows = panels.flatMap(panel => panel.points.map(point => ({ sample_uid: sample.sample_uid, metric: panel.metric, sweep,
     time_h: point.time, retention_pct: point.value, absolute_value: point.trace?.absoluteValue,
@@ -82,7 +83,7 @@ function CellFigure({ analysis, dataset, cutoff, manual, yMin, yMax }: {
       {panels.map((panel, index) => <g key={panel.metric}><line x1={170 + index * 240} x2={210 + index * 240} y1={80} y2={80} stroke={panel.color} strokeWidth={3} strokeDasharray={panel.dash}/><MetricMarker stem={panel.stem} x={190 + index * 240} y={80} color={panel.color}/><text x={220 + index * 240} y={85} fontSize={16} fontWeight={600} fill="#17233b">{panel.label}</text></g>)}
       <text className="axis-title" x={left} y={111} fontSize={16} fill="#5f6875">Rétention (% de la valeur initiale)</text>
       <defs><clipPath id={clip}><rect x={left} y={top} width={pw} height={ph}/></clipPath></defs>
-      {Array.from({ length: 6 }, (_, i) => min + (max - min) * i / 5).map(value => <g key={value}><line className="grid-line" x1={left} x2={left + pw} y1={y(value)} y2={y(value)} stroke="#e8e5de"/><text className="axis-label" x={left - 12} y={y(value) + 4} textAnchor="end" fontSize={14} fill="#737b88">{Number(value.toFixed(1))}</text></g>)}
+      {Array.from({ length: 6 }, (_, i) => min + (max - min) * i / 5).map(value => <g key={value}><line className="grid-line" x1={left} x2={left + pw} y1={y(value)} y2={y(value)} stroke="#e8e5de"/><text className="axis-label" x={left - 12} y={y(value) + 4} textAnchor="end" fontSize={14} fill="#737b88">{figureNumber(value,1)}</text></g>)}
       <g clipPath={`url(#${clip})`}><line x1={left} x2={left + pw} y1={y(100)} y2={y(100)} stroke="#8c929b" strokeDasharray="5 5"/>
         {panels.map(panel => <g key={panel.metric}>{panel.points.map((point, i) => {
           if (point.value === null) return null;
@@ -93,8 +94,8 @@ function CellFigure({ analysis, dataset, cutoff, manual, yMin, yMax }: {
         })}</g>)}
       </g>
       <line x1={left} x2={left + pw} y1={top + ph} y2={top + ph} stroke="#bdc4cd"/>
-      {Array.from({ length: 6 }, (_, i) => end * i / 5).map((time, i) => <text className="axis-label" key={i} x={x(time)} y={top + ph + 25} textAnchor="middle" fontSize={14} fill="#737b88">{Number(time.toFixed(1))}</text>)}
-      <text className="axis-title" x={left + pw} y={top + ph + 55} textAnchor="end" fontSize={16} fill="#5f6875">Temps de vieillissement (h)</text>
+      {Array.from({ length: 6 }, (_, i) => end * i / 5).map((time, i) => <text className="axis-label" key={i} x={x(time)} y={top + ph + 25} textAnchor="middle" fontSize={14} fill="#737b88">{figureNumber(time,1)}</text>)}
+      <text className="axis-title" x={left + pw} y={top + ph + 55} textAnchor="end" fontSize={16} fill="#5f6875">{figureXAxisLabel('h')}</text>
     </svg>
     <details><summary>Missing values, source rows and normalization references</summary><div className="table-scroll"><table><thead><tr><th>Metric</th><th>Time (h)</th><th>Retention (%)</th><th>Absolute</th><th>Initial reference</th><th>Source row</th><th>Exclusions</th></tr></thead><tbody>{panels.flatMap(panel => panel.points.map(point => <tr key={`${panel.metric}:${point.time}`}><td>{panel.label}</td><td>{point.time}</td><td>{point.value?.toFixed(2) ?? 'Missing'}</td><td>{point.trace?.absoluteValue ?? '—'}</td><td>{point.trace?.baseline?.value ?? '—'}</td><td>{point.trace?.observation.source_row ?? '—'}</td><td>{point.reasons.map(readableReason).join('; ') || 'observed'}</td></tr>))}</tbody></table></div></details>
   </article>;

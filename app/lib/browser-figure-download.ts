@@ -1,5 +1,8 @@
 /** Browser I/O only; scientific data and decisions are supplied by callers. */
 import { applyReportSvgStyle } from "./report-svg";
+import { applyFigureTypography, DEFAULT_FIGURE_PRESENTATION, validFigurePresentation, type FigurePresentation } from "./figure-presentation";
+import { readWorkspaceValue } from "./workspace-storage";
+import { publicationText } from "./figure-language";
 
 const prepared: {url:string;row:HTMLElement}[]=[];
 /** Keep a real user-clickable fallback: some embedded browsers suppress synthetic downloads. */
@@ -24,14 +27,25 @@ export function downloadFigureFile(contents: BlobPart, name: string, type: strin
   prepared.push({url,row});while(prepared.length>6){const oldest=prepared.shift()!;URL.revokeObjectURL(oldest.url);oldest.row.remove();}
   anchor.click();
 }
-export async function downloadScientificGraphic(svg: SVGSVGElement, width: number, height: number, manifest: unknown, stem: string, format: "svg" | "png", preset: "default" | "report" = "default") {
+export async function downloadScientificGraphic(svg: SVGSVGElement, width: number, height: number, manifest: unknown, stem: string, format: "svg" | "png", preset: "default" | "report" = "default", options?: FigurePresentation) {
+  let presentation = options ?? DEFAULT_FIGURE_PRESENTATION;
+  if (!options) try { presentation = readWorkspaceValue(window.localStorage, "figure:publication", DEFAULT_FIGURE_PRESENTATION, validFigurePresentation); } catch { /* Storage may be disabled. */ }
+  const sourceManifest = manifest && typeof manifest === "object" ? manifest as Record<string, unknown> : { source: manifest };
+  const exportedManifest = { ...sourceManifest, ...(typeof sourceManifest.caption === "string" ? {caption: publicationText(sourceManifest.caption)} : {}),
+    display: { ...(sourceManifest.display as Record<string, unknown> ?? {}), publication: presentation } };
   const clone = svg.cloneNode(true) as SVGSVGElement;
   clone.setAttribute("xmlns", "http://www.w3.org/2000/svg"); clone.setAttribute("width",String(width)); clone.setAttribute("height",String(height));
   // Export dimensions are fixed even when the on-screen SVG is responsive.
   clone.style.removeProperty("width"); clone.style.removeProperty("height");
   clone.style.background = "white"; clone.style.fontFamily = "Arial, sans-serif";
-  const metadata = document.createElementNS("http://www.w3.org/2000/svg", "metadata"); metadata.textContent = JSON.stringify(manifest); clone.appendChild(metadata);
+  const metadata = document.createElementNS("http://www.w3.org/2000/svg", "metadata"); metadata.textContent = JSON.stringify(exportedManifest); clone.appendChild(metadata);
+  // Walk leaf text nodes so mathematical tspans and subscripts remain intact.
+  for (const element of clone.querySelectorAll("text,title")) {
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    let node; while ((node = walker.nextNode())) node.nodeValue = publicationText(node.nodeValue ?? "");
+  }
   if (preset === "report") applyReportSvgStyle(clone);
+  applyFigureTypography(clone, presentation);
   const outputStem = preset === "report" ? `${stem}.report` : stem;
   const content = new XMLSerializer().serializeToString(clone);
   if (format === "svg") downloadFigureFile(content, `${outputStem}.svg`, "image/svg+xml;charset=utf-8");
@@ -47,5 +61,5 @@ export async function downloadScientificGraphic(svg: SVGSVGElement, width: numbe
       downloadFigureFile(blob,`${outputStem}.png`,"image/png");
     } finally {URL.revokeObjectURL(url);}
   }
-  downloadFigureFile(JSON.stringify(manifest,null,2),`${outputStem}.figure.json`,"application/json");
+  downloadFigureFile(JSON.stringify(exportedManifest,null,2),`${outputStem}.figure.json`,"application/json");
 }

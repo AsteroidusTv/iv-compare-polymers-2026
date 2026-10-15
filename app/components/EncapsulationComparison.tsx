@@ -1,5 +1,5 @@
 "use client";
-import { figureFormulationLabel } from "../lib/figure-language";
+import { figureBatchLabel, figureFormulationLabel } from "../lib/figure-language";
 import { sampleFormulation } from "../lib/formulation";
 import { ExportMenu, CopyCaption } from "./ExportMenu";
 import { Disclosure } from "./Disclosure";
@@ -24,6 +24,9 @@ import { SynchronizedMetrics } from "./SynchronizedMetrics";
 import { fullJVSelectionCsv } from "../lib/jv-full-export";
 import { figureStageLabel } from "../lib/figure-language";
 import { recordedRibbon, ribbonLabel } from "../lib/ribbon";
+import { useFigurePresentation } from "./FigurePresentation";
+import { figureFonts, wrapFigureText } from "../lib/figure-presentation";
+import { figureNumber } from "../lib/chart-number-format";
 
 const dateFormat = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
 
@@ -138,6 +141,7 @@ function EncapsulationJVComparison({ dataset, pairs, selections, splitByRibbon }
 }
 
 export function EncapsulationComparison({ dataset, selections, ribbonSampleIds, ribbonSelection, splitByRibbon }: { dataset: IVDataset | null; selections: { material: string; color: string }[]; ribbonSampleIds: ReadonlySet<string>; ribbonSelection: string; splitByRibbon: boolean }) {
+  const publication = useFigurePresentation(), fonts = figureFonts(publication);
   const svgRef = useRef<SVGSVGElement>(null);
   const [hiddenGroupKeys, setHiddenGroupKeys] = useWorkspaceSet("encapsulation:hidden");
   const [excludedGroupKeys, setExcludedGroupKeys] = useWorkspaceSet("encapsulation:excluded");
@@ -156,7 +160,10 @@ export function EncapsulationComparison({ dataset, selections, ribbonSampleIds, 
   const min = values.length ? Math.max(0, Math.floor(Math.min(...values)) - 1) : 0;
   const max = values.length ? Math.ceil(Math.max(...values)) + 1 : 1;
   const width = Math.max(720, groups.length * (splitByRibbon ? 290 : 230) + 100);
-  const height = showMeasurementInterval ? 456 : 435;
+  const labelWidth = Math.max(150, (width - 120) / Math.max(groups.length,1) - 24);
+  const processLines = new Map(groups.map(group => [group.key, wrapFigureText([groupLabels.get(group.key), splitByRibbon ? ribbonLabel(group.ribbon) : null].filter(Boolean).join(" · "), labelWidth, fonts.detail)]));
+  const extraLabelHeight = Math.max(0, ...[...processLines.values()].map(lines => (lines.length - 1) * 19));
+  const height = (showMeasurementInterval ? 456 : 435) + extraLabelHeight;
   const y = (value: number) => 300 - (value - min) / (max - min) * 240;
   const visibleSampleUids = new Set(groups.flatMap((group) => group.pairs.map((pair) => pair.sampleUid)));
   const rawCurvePairs = dataset ? encapsulationCurvePairs(dataset).filter((pair) => selectedMaterials.includes(pair.sample.material_family) && visibleSampleUids.has(pair.sample.sample_uid)).sort((a, b) => a.sample.material_family.localeCompare(b.sample.material_family) || (a.sample.batch_no_raw || "").localeCompare(b.sample.batch_no_raw || "", "en", { numeric: true }) || processOrder(a.sample.recipe_raw) - processOrder(b.sample.recipe_raw) || (a.sample.recipe_raw || "").localeCompare(b.sample.recipe_raw || "") || (a.sample.sample_id_raw || "").localeCompare(b.sample.sample_id_raw || "", "en", { numeric: true })) : [];
@@ -185,6 +192,7 @@ export function EncapsulationComparison({ dataset, selections, ribbonSampleIds, 
         <CopyCaption caption={manifest.caption}/>
       </ExportMenu>}
       {exportError && <p role="alert">{exportError}</p>}
+      <details className="figure-publication-settings"><summary>Read the before / after plot</summary><p>Les boîtes représentent Q1–Q3, le trait central la médiane et les moustaches les dernières valeurs observées dans 1,5 × l’écart interquartile. Les points représentent les cellules individuelles : vides avant encapsulation, pleins après. Avec moins de trois cellules, seuls les points sont tracés. Les cellules ne sont pas reliées par défaut.</p></details>
       {missing.length > 0 && <p role="status">No paired data for: {missing.join(" · ")}. Choose another encapsulant above.</p>}
       {availableGroups.length > 0 && <fieldset className="encapsulation-group-filter">
         <legend>Displayed batches <InfoTip text="Hide a formulation/batch group from the PCE chart, summary table, SVG export and JV diagnostic. The source data remain unchanged." align="left" /></legend>
@@ -192,10 +200,10 @@ export function EncapsulationComparison({ dataset, selections, ribbonSampleIds, 
           const groupLabel = groupLabels.get(group.key);
           return <label key={group.key}>
             <input type="checkbox" checked={!hiddenGroupKeys.has(group.key)} onChange={() => toggleGroup(group.key)} />
-            <span>{group.material.replace(/_/g, " / ")} · batch {group.batch}{groupLabel ? ` · ${groupLabel}` : ""}{splitByRibbon ? ` · ${ribbonLabel(group.ribbon)}` : ""} · n={group.pairs.length}</span>
+            <span>{figureFormulationLabel({material_family:group.family,material_raw:group.material})} · batch {group.batch}{groupLabel ? ` · ${groupLabel}` : ""}{splitByRibbon ? ` · ${ribbonLabel(group.ribbon)}` : ""} · n={group.pairs.length}</span>
           </label>;
         })}</div>
-        <details><summary>Exclude groups from calculations</summary>{availableGroups.map(group=><label key={group.key}><input type="checkbox" checked={excludedGroupKeys.has(group.key)} onChange={()=>setExcludedGroupKeys(current=>{const next=new Set(current); if(next.has(group.key)) next.delete(group.key); else next.add(group.key); return next;})} /> Exclude {group.material.replace(/_/g, " / ")} · {group.batch}{groupLabels.get(group.key) ? ` · ${groupLabels.get(group.key)}` : ""}{splitByRibbon ? ` · ${ribbonLabel(group.ribbon)}` : ""}</label>)}</details>
+        <details><summary>Exclude groups from calculations</summary>{availableGroups.map(group=><label key={group.key}><input type="checkbox" checked={excludedGroupKeys.has(group.key)} onChange={()=>setExcludedGroupKeys(current=>{const next=new Set(current); if(next.has(group.key)) next.delete(group.key); else next.add(group.key); return next;})} /> Exclude {figureFormulationLabel({material_family:group.family,material_raw:group.material})} · {group.batch}{groupLabels.get(group.key) ? ` · ${groupLabels.get(group.key)}` : ""}{splitByRibbon ? ` · ${ribbonLabel(group.ribbon)}` : ""}</label>)}</details>
         {groups.length < availableGroups.length && <button type="button" className="soft-button" onClick={() => setHiddenGroupKeys(new Set())}>Show all</button>}
       </fieldset>}
       {availableGroups.length > 0 && <label>Paired change summary <select value={deltaSummary} onChange={event => setDeltaSummary(event.target.value as typeof deltaSummary)}><option value="median">Median of individual changes</option><option value="mean">Mean of individual changes</option><option value="none">Individual values only</option></select></label>}
@@ -206,14 +214,16 @@ export function EncapsulationComparison({ dataset, selections, ribbonSampleIds, 
         <div style={{ overflowX: "auto" }}>
           <svg ref={svgRef} xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label="PCE avant et après encapsulation, par formulation et lot" style={{ background: "white", fontFamily: "Arial, sans-serif", color: "#222" }}>
             <rect width={width} height={height} fill="white" />
-            <text x={width / 2} y={28} textAnchor="middle" fontSize={18} fontWeight="bold">PCE avant / après encapsulation</text>
-            {commonBatch && <text x={width / 2} y={47} textAnchor="middle" fontSize={11}>Lot {commonBatch}</text>}
-            <text x={20} y={180} transform="rotate(-90 20 180)" textAnchor="middle" fontSize={14}>PCE (%)</text>
-            {Array.from({ length: 6 }, (_, i) => min + (max - min) * i / 5).map((value) => <g key={value}><line x1={65} x2={width - 20} y1={y(value)} y2={y(value)} stroke="#ddd" /><text x={55} y={y(value) + 4} textAnchor="end" fontSize={12}>{value.toFixed(1)}</text></g>)}
+            <text className="export-title" x={width / 2} y={28} textAnchor="middle" fontSize={18} fontWeight="bold">PCE avant / après encapsulation</text>
+            {commonBatch && <text x={width / 2} y={47} textAnchor="middle" fontSize={11}>{figureBatchLabel([commonBatch])}</text>}
+            <text className="axis-title" x={20} y={180} transform="rotate(-90 20 180)" textAnchor="middle" fontSize={14}>PCE (%)</text>
+            {Array.from({ length: 6 }, (_, i) => min + (max - min) * i / 5).map((value) => <g key={value}><line x1={65} x2={width - 20} y1={y(value)} y2={y(value)} stroke="#ddd" /><text className="axis-label" x={55} y={y(value) + 4} textAnchor="end" fontSize={12}>{figureNumber(value,1)}</text></g>)}
             {groups.map((group, index) => {
               const center = 100 + (index + 0.5) * (width - 120) / groups.length;
               const color = selections.find((item) => item.material === group.family)?.color ?? "#336699";
               const groupLabel = [groupLabels.get(group.key), splitByRibbon ? ribbonLabel(group.ribbon) : null].filter(Boolean).join(" · ");
+              const labelLines = processLines.get(group.key) ?? [];
+              const offsetY = Math.max(0, labelLines.length - 1) * 19;
               const changes = pairedChanges(group.pairs);
               const relativeChange = deltaSummary === "none" ? null : changes.relative[deltaSummary];
               const dayRange = pairedMeasurementDayRange(group.pairs);
@@ -237,22 +247,22 @@ export function EncapsulationComparison({ dataset, selections, ribbonSampleIds, 
                     <text x={x} y={323} textAnchor="middle" fontSize={12}>{figureStageLabel(stage)}</text>
                   </g>;
                 })}
-                <text x={center} y={348} textAnchor="middle" fontSize={12} fontWeight="bold">{figureFormulationLabel({material_family:group.family,material_raw:group.material})}</text>
-                {groupLabel && <text x={center} y={369} textAnchor="middle" fontSize={11}>{groupLabel}</text>}
-                <text x={center} y={groupLabel ? 390 : 371} textAnchor="middle" fontSize={11}>{commonBatch ? "" : `Lot ${group.batch} · `}<tspan fontStyle="italic">n</tspan> = {group.pairs.length}{group.electrode === "Cu" ? "" : ` · ${group.electrode}`}</text>
-                {deltaSummary !== "none" && <text x={center} y={groupLabel ? 411 : 392} textAnchor="middle" fontSize={11} fill="#5f6875"><tspan>{deltaSummary === "mean" ? "Moyenne" : "Médiane"} ΔPCE</tspan><tspan baselineShift="sub" fontSize={8}>rel</tspan><tspan> = {relativeChange === null ? "—" : `${relativeChange < 0 ? "−" : relativeChange > 0 ? "+" : ""}${Math.abs(relativeChange).toFixed(1)} %`}{changes.relative.n === group.pairs.length ? "" : ` · n = ${changes.relative.n}`}</tspan></text>}
-                {showMeasurementInterval && <text x={center} y={groupLabel ? 432 : 413} textAnchor="middle" fontSize={11} fill="#5f6875">Avant→après {dayLabel}</text>}
+                <text className="export-legend" x={center} y={348} textAnchor="middle" fontSize={fonts.legend} fontWeight="bold">{figureFormulationLabel({material_family:group.family,material_raw:group.material})}</text>
+                {labelLines.map((line,i) => <text key={i} x={center} y={369+i*19} textAnchor="middle" fontSize={fonts.detail}>{line}</text>)}
+                <text x={center} y={(groupLabel ? 390 : 371)+offsetY} textAnchor="middle" fontSize={fonts.detail}>{commonBatch ? "" : `${figureBatchLabel([group.batch])} · `}<tspan fontStyle="italic">n</tspan> = {group.pairs.length}{group.electrode === "Cu" ? "" : ` · ${group.electrode}`}</text>
+                {deltaSummary !== "none" && <text x={center} y={(groupLabel ? 411 : 392)+offsetY} textAnchor="middle" fontSize={fonts.detail} fill="#5f6875"><tspan>{deltaSummary === "mean" ? "Moyenne" : "Médiane"} ΔPCE</tspan><tspan baselineShift="sub" fontSize={8}>rel</tspan><tspan> = {relativeChange === null ? "—" : `${relativeChange < 0 ? "−" : relativeChange > 0 ? "+" : ""}${figureNumber(Math.abs(relativeChange),1)} %`}{changes.relative.n === group.pairs.length ? "" : ` · n = ${changes.relative.n}`}</tspan></text>}
+                {showMeasurementInterval && <text x={center} y={(groupLabel ? 432 : 413)+offsetY} textAnchor="middle" fontSize={fonts.detail} fill="#5f6875">Avant→après {dayLabel}</text>}
               </g>;
             })}
           </svg>
         </div>
-        <details><summary>Individual paired changes and alternative summaries</summary>{groups.map(group => { const changes = pairedChanges(group.pairs); return <div key={group.key}><h4>{group.material.replace(/_/g, " / ")} / {group.batch}{groupLabels.get(group.key) ? ` / ${groupLabels.get(group.key)}` : ""}{splitByRibbon ? ` / ${ribbonLabel(group.ribbon)}` : ""}</h4><p>Median ΔPCE: {changes.absolute.median?.toFixed(2)} pp · Median individual relative change: {changes.relative.median?.toFixed(2) ?? "—"}% (n={changes.relative.n}) · Relative change of group means: {changes.relativeChangeOfGroupMeans?.toFixed(2) ?? "—"}%</p><table><thead><tr><th>Cell</th><th>Before (%)</th><th>After (%)</th><th>Δ (pp)</th><th>Individual Δ (%)</th><th>Before→after interval</th></tr></thead><tbody>{group.pairs.map((pair,i) => { const days = pairedMeasurementDayRange([pair]); return <tr key={pair.sampleUid}><td>{pair.sampleUid}</td><td>{pair.before}</td><td>{pair.after}</td><td>{changes.individual[i].absolute.toFixed(2)}</td><td>{changes.individual[i].relative?.toFixed(2) ?? "Unavailable: before = 0"}</td><td>{days ? `${days.min}–${days.max} d` : "Unknown"}</td></tr>; })}</tbody></table></div>; })}</details>
+        <details><summary>Individual paired changes and alternative summaries</summary>{groups.map(group => { const changes = pairedChanges(group.pairs); return <div key={group.key}><h4>{figureFormulationLabel({material_family:group.family,material_raw:group.material})} / {group.batch}{groupLabels.get(group.key) ? ` / ${groupLabels.get(group.key)}` : ""}{splitByRibbon ? ` / ${ribbonLabel(group.ribbon)}` : ""}</h4><p>Median ΔPCE: {changes.absolute.median?.toFixed(2)} pp · Median individual relative change: {changes.relative.median?.toFixed(2) ?? "—"}% (n={changes.relative.n}) · Relative change of group means: {changes.relativeChangeOfGroupMeans?.toFixed(2) ?? "—"}%</p><table><thead><tr><th>Cell</th><th>Before (%)</th><th>After (%)</th><th>Δ (pp)</th><th>Individual Δ (%)</th><th>Before→after interval</th></tr></thead><tbody>{group.pairs.map((pair,i) => { const days = pairedMeasurementDayRange([pair]); return <tr key={pair.sampleUid}><td>{pair.sampleUid}</td><td>{pair.before}</td><td>{pair.after}</td><td>{changes.individual[i].absolute.toFixed(2)}</td><td>{changes.individual[i].relative?.toFixed(2) ?? "Unavailable: before = 0"}</td><td>{days ? `${days.min}–${days.max} d` : "Unknown"}</td></tr>; })}</tbody></table></div>; })}</details>
         <div className="table-scroll"><table><thead><tr><th>Formulation / batch</th><th>Paired n</th><th>Mean before (%)</th><th>Mean after (%)</th><th>Mean paired Δη (pp)</th><th>Mean paired ΔPCErel (%) <InfoTip text="Mean of the relative PCE change calculated separately for each paired cell: (after − before) / before × 100%." align="right" /></th><th>Measurement timeline <InfoTip text="Before measurement → encapsulation → after measurement. Dates appear only when the raw files link unambiguously to the same physical cell." align="right" /></th></tr></thead><tbody>{groups.map((group) => {
           const beforeDates = group.pairs.map((pair) => pair.beforeMeasurementDate).filter((value): value is string => Boolean(value));
           const encapsulationDates = group.pairs.map((pair) => pair.encapsulationDate).filter((value): value is string => Boolean(value));
           const afterDates = group.pairs.flatMap((pair) => pair.afterMeasurementDates);
           const relativeChange = meanPairedRelativeChange(group.pairs);
-          return <tr key={group.key}><td>{group.material.replace(/_/g, " / ")} / {group.batch}{groupLabels.get(group.key) ? ` / ${groupLabels.get(group.key)}` : ""}{splitByRibbon ? ` / ${ribbonLabel(group.ribbon)}` : ""}{group.electrode === "Cu" ? "" : ` / ${group.electrode}`}</td><td>{group.pairs.length}</td><td>{mean(group.pairs.map((pair) => pair.before)).toFixed(2)}</td><td>{mean(group.pairs.map((pair) => pair.after)).toFixed(2)}</td><td>{mean(group.pairs.map((pair) => pair.after - pair.before)).toFixed(2)}</td><td>{relativeChange === null ? "—" : relativeChange.toFixed(2)}</td><td>{dateRange(beforeDates)} → {dateRange(encapsulationDates)} → {dateRange(afterDates)}</td></tr>;
+          return <tr key={group.key}><td>{figureFormulationLabel({material_family:group.family,material_raw:group.material})} / {group.batch}{groupLabels.get(group.key) ? ` / ${groupLabels.get(group.key)}` : ""}{splitByRibbon ? ` / ${ribbonLabel(group.ribbon)}` : ""}{group.electrode === "Cu" ? "" : ` / ${group.electrode}`}</td><td>{group.pairs.length}</td><td>{mean(group.pairs.map((pair) => pair.before)).toFixed(2)}</td><td>{mean(group.pairs.map((pair) => pair.after)).toFixed(2)}</td><td>{mean(group.pairs.map((pair) => pair.after - pair.before)).toFixed(2)}</td><td>{relativeChange === null ? "—" : relativeChange.toFixed(2)}</td><td>{dateRange(beforeDates)} → {dateRange(encapsulationDates)} → {dateRange(afterDates)}</td></tr>;
         })}</tbody></table></div>
       </>}
     </section>

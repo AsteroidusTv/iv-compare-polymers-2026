@@ -11,6 +11,11 @@ import { downloadFigureFile } from "../lib/browser-figure-download";
 import { markerPath, segmentLinePattern, type MaterialStyle } from "../lib/material-style";
 import { applyReportSvgStyle } from "../lib/report-svg";
 import { figureXAxisLabel } from "../lib/figure-language";
+import { publicationText } from "../lib/figure-language";
+import { persistentZeroNotes, publicationTrendSeries } from "../lib/figure-legend";
+import { applyFigureTypography, DEFAULT_FIGURE_PRESENTATION, figureFonts, publicationLegendColumns, validFigurePresentation, wrapFigureText } from "../lib/figure-presentation";
+import { useFigurePresentation } from "./FigurePresentation";
+import { materialLabel } from "../lib/public-labels";
 import { FieldTitle, InfoTip } from "./InfoTip";
 import { sampleDisplayPoints } from "../lib/display-sampling";
 
@@ -36,6 +41,7 @@ export interface TrendPoint {
 }
 
 export interface TrendSeries {
+  displayMode?: import("../lib/trend-display").TrendDisplay;
   marker?: MaterialStyle["marker"];
   id: string;
   label: string;
@@ -63,7 +69,7 @@ export interface CurveSeries {
 
 type CurrentConvention = "instrument" | "pv";
 
-const numberFormat = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 });
+const numberFormat = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 });
 const MAX_TREND_ZOOM = 12;
 const TREND_CHART_WIDTH = 900;
 const TREND_CHART_HEIGHT = 360;
@@ -73,8 +79,6 @@ const CURVE_CHART_HEIGHT = 360;
 const CURVE_CHART_MARGIN = { left: 64, right: 22, top: 24, bottom: 50 };
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const EXPORT_SCALE = 3;
-const EXPORT_COLUMNS = 3;
-const EXPORT_COLUMN_WIDTH = 280;
 const EXPORT_STYLES = `
   text { font-family: Arial, Helvetica, sans-serif; }
   .export-title { fill: #15233d; font-size: 16px; font-weight: 700; }
@@ -103,7 +107,7 @@ type ExportSeries = Pick<TrendSeries | CurveSeries, "label" | "color"> & {
 };
 
 function exportFileStem(prefix: string, series: ExportSeries[]): string {
-  const labels = uniqueLegendEntries(series).map((item) => item.exportLabel ?? item.label).join("-vs-");
+  const labels = uniqueLegendEntries(series).map((item) => materialLabel(item.exportLabel ?? item.label)).join("-vs-");
   const slug = `${prefix}-${labels}`
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -132,12 +136,24 @@ function serialiseChart(
   manifest?: FigureManifest,
   preset: "default" | "report" = "default",
 ): { content: string; width: number; height: number } {
+  const options = validFigurePresentation(manifest?.display.publication) ? manifest.display.publication : DEFAULT_FIGURE_PRESENTATION;
+  const fonts = figureFonts(options);
   const legendSeries = uniqueLegendEntries(series);
-  const legendRows = Math.max(1, Math.ceil(legendSeries.length / EXPORT_COLUMNS));
-  const legendRowHeight = legendSeries.some((item) => item.exportDetail && item.exportSelection) ? 40 : legendSeries.some((item) => item.exportSelection || item.exportDetail) ? 30 : 20;
-  const legendTop = subtitle ? 62 : 50;
-  const headerHeight = legendTop - 8 + legendRows * legendRowHeight;
-  const exportHeight = height + headerHeight;
+  const columns = publicationLegendColumns(width, legendSeries.length, options);
+  const columnWidth = (width - 48) / columns;
+  const titleLines = wrapFigureText(publicationText(title), width - 48, fonts.title);
+  const subtitleLines = wrapFigureText(publicationText(subtitle), width - 48, fonts.detail);
+  const legendTop = 28 + titleLines.length * (fonts.title + 4) + subtitleLines.length * (fonts.detail + 4) + 12;
+  const entries = legendSeries.map(item => ({ item,
+    labels: wrapFigureText(publicationText(item.exportLabel ?? item.label), columnWidth - 38, fonts.legend),
+    details: [item.exportDetail, item.exportSelection].filter((value): value is string => !!value)
+      .flatMap(value => wrapFigureText(publicationText(value), columnWidth - 38, fonts.detail)) }));
+  const rowHeights = Array.from({length:Math.ceil(entries.length / columns)}, (_,row) => Math.max(...entries.slice(row*columns,(row+1)*columns)
+    .map(entry => entry.labels.length * (fonts.legend + 4) + entry.details.length * (fonts.detail + 3) + 14)));
+  const headerHeight = legendTop + rowHeights.reduce((sum,value) => sum + value, 0);
+  const notes = Array.isArray(manifest?.display.notes) ? manifest.display.notes.filter((note): note is string => typeof note === "string") : [];
+  const noteLines = notes.flatMap(note => wrapFigureText(publicationText(note), width - 48, fonts.detail));
+  const exportHeight = height + headerHeight + (noteLines.length ? 20 + noteLines.length * (fonts.detail + 4) : 0);
   const root = document.createElementNS(SVG_NAMESPACE, "svg");
   root.setAttribute("xmlns", SVG_NAMESPACE);
   root.setAttribute("viewBox", `0 0 ${width} ${exportHeight}`);
@@ -159,15 +175,15 @@ function serialiseChart(
   background.setAttribute("fill", "white");
   root.appendChild(background);
 
-  appendSvgText(root, title, 24, 24, "export-title");
-  if (subtitle) appendSvgText(root, subtitle, 24, 42, "export-subtitle");
+  titleLines.forEach((line,i) => appendSvgText(root, line, 24, 28 + i * (fonts.title + 4), "export-title"));
+  subtitleLines.forEach((line,i) => appendSvgText(root, line, 24, 28 + titleLines.length * (fonts.title + 4) + i * (fonts.detail + 4), "export-subtitle"));
   const legend = document.createElementNS(SVG_NAMESPACE, "g");
   legend.setAttribute("class", "export-legend");
-  legendSeries.forEach((item, index) => {
-    const column = index % EXPORT_COLUMNS;
-    const row = Math.floor(index / EXPORT_COLUMNS);
-    const x = 24 + column * EXPORT_COLUMN_WIDTH;
-    const y = legendTop + row * legendRowHeight;
+  entries.forEach(({item,labels,details}, index) => {
+    const column = index % columns;
+    const row = Math.floor(index / columns);
+    const x = 24 + column * columnWidth;
+    const y = legendTop + rowHeights.slice(0,row).reduce((sum,value) => sum + value, 0);
     const marker = document.createElementNS(SVG_NAMESPACE, "line");
     marker.setAttribute("x1", String(x));
     marker.setAttribute("x2", String(x + 16));
@@ -186,9 +202,8 @@ function serialiseChart(
       symbol.setAttribute("stroke-width", "1.4");
       legend.appendChild(symbol);
     }
-    appendSvgText(legend, item.exportLabel ?? item.label, x + 22, y, "export-legend");
-    if (item.exportDetail) appendSvgText(legend, item.exportDetail.slice(0, 48), x + 22, y + 11, "export-subtitle");
-    if (item.exportSelection) appendSvgText(legend, item.exportSelection.slice(0, 48), x + 22, y + (item.exportDetail ? 22 : 11), "export-subtitle");
+    labels.forEach((line,i) => appendSvgText(legend, line, x + 22, y + i*(fonts.legend+4), "export-legend"));
+    details.forEach((line,i) => appendSvgText(legend, line, x + 22, y + labels.length*(fonts.legend+4) + i*(fonts.detail+3), "export-subtitle"));
   });
   root.appendChild(legend);
 
@@ -200,7 +215,13 @@ function serialiseChart(
   clone.removeAttribute("tabindex");
   Array.from(clone.childNodes).forEach((child) => chart.appendChild(child));
   root.appendChild(chart);
+  noteLines.forEach((line,i) => appendSvgText(root, line, 24, headerHeight + height + 16 + i*(fonts.detail+4), "export-subtitle figure-note"));
+  for (const element of root.querySelectorAll("text,title")) {
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    let node; while ((node = walker.nextNode())) node.nodeValue = publicationText(node.nodeValue ?? "");
+  }
   if (preset === "report") applyReportSvgStyle(root);
+  applyFigureTypography(root, options);
 
   return {
     content: new XMLSerializer().serializeToString(root),
@@ -322,12 +343,16 @@ export function TrendChart({
   reportYAxisLabel?: string;
   exportContext?: FigureExportContext;
 }) {
+  const presentation = useFigurePresentation();
   const [viewport, setViewport] = useState<TrendViewport>({ zoom: 1, centreX: 0.5, centreY: 0.5 });
   const storageKey = `trend:${xUnit}:${yUnit}:${reportYAxisLabel ?? ""}:${[...new Set(series.map(item => item.id.split(":")[0]))].sort().join(",")}`;
   const [graphEndInput, setGraphEndInput] = useWorkspaceState<string | null>(`${storageKey}:end`, null, value => value === null || typeof value === "string");
   const [pointInterval, setPointInterval] = useWorkspaceState(`${storageKey}:spacing`, 0, value => typeof value === "number" && Number.isFinite(value) && value >= 0);
   const [manualY, setManualY] = useWorkspaceState<{ min: string; max: string } | null>(`${storageKey}:y`, null, value => value === null || !!value && typeof value === "object" && "min" in value && "max" in value && typeof value.min === "string" && typeof value.max === "string");
   const [showIntervals, setShowIntervals] = useWorkspaceState(`${storageKey}:intervals`, true);
+  const publicationKey = `${storageKey}:${series.map(item => item.id).sort().join(",")}`;
+  const [titleOverride, setTitleOverride] = useWorkspaceState(`${publicationKey}:publication-title`, "");
+  const [figureNote, setFigureNote] = useWorkspaceState(`${publicationKey}:publication-note`, "");
   const dragRef = useRef<{ clientX: number; clientY: number; centreX: number; centreY: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const clipId = `plot-${useId().replace(/:/g, '')}`;
@@ -399,7 +424,8 @@ export function TrendChart({
   const [paddedYMin, paddedYMax] = extent(isRetention ? [...allValues, 100] : allValues);
   const autoYStep = niceStep(paddedYMax - paddedYMin);
   const manualYValid = manualY !== null && manualY.min.trim() !== "" && manualY.max.trim() !== "" && Number.isFinite(Number(manualY.min)) && Number.isFinite(Number(manualY.max)) && Number(manualY.min) < Number(manualY.max);
-  const fullYMin = manualYValid ? Number(manualY!.min) : Math.floor(paddedYMin / autoYStep) * autoYStep;
+  const autoYMin = Math.floor(paddedYMin / autoYStep) * autoYStep;
+  const fullYMin = manualYValid ? Number(manualY!.min) : isRetention && allValues.every(value => value >= 0) ? Math.max(0, autoYMin) : autoYMin;
   const fullYMax = manualYValid ? Number(manualY!.max) : Math.ceil(paddedYMax / autoYStep) * autoYStep;
   const width = TREND_CHART_WIDTH;
   const height = TREND_CHART_HEIGHT;
@@ -418,25 +444,28 @@ export function TrendChart({
   const xTicks = viewport.zoom === 1 ? (graphEnd === null ? tickSequence(fullXMin, fullXMax, fullXStep) : ticks(fullXMin, fullXMax)) : ticks(xMin, xMax);
   const yTicks = viewport.zoom === 1 && !manualYValid ? tickSequence(fullYMin, fullYMax, autoYStep) : ticks(yMin, yMax);
   const clippedY = allValues.some((value) => value < yMin || value > yMax);
-  const legendSelections = legendSelectionsByKey(plottedSeries);
   const selectedSamples = Array.isArray(exportContext.selectedSampleMetadata)
     ? exportContext.selectedSampleMetadata as import("../lib/iv-data").Sample[] : [];
   const electrodeBySample = new Map(selectedSamples.map((sample) => [sample.sample_uid, sample.electrode]));
-  const legendElectrodes = legendElectrodesByKey(plottedSeries, electrodeBySample);
-  const exportSeries = plottedSeries.map((item) => ({
+  const publicationSeries = publicationTrendSeries(plottedSeries, selectedSamples, presentation);
+  // Legend effectifs describe all contributing measurements, not decorative spacing.
+  const legendSelections = legendSelectionsByKey(publicationTrendSeries(analyticalSeries, selectedSamples, presentation));
+  const legendElectrodes = legendElectrodesByKey(publicationSeries, electrodeBySample);
+  const exportSeries = publicationSeries.map((item) => ({
     ...item,
     exportDetail: electrodeBySample.size ? legendElectrodes.get(item.exportLegendKey ?? item.label) : item.exportDetail,
     exportSelection: legendSelections.get(item.exportLegendKey ?? item.label),
   }));
-  const exportTitle = reportTitle ?? `Évolution au cours du temps — ${yUnit}`;
+  const exportTitle = publicationText(titleOverride.trim() || reportTitle || `Évolution au cours du temps — ${yUnit}`);
   const scaleNote = `${manualYValid ? "Manual" : "Auto"} Y: ${yNumberFormat.format(yMin)}–${yNumberFormat.format(yMax)} ${yUnit}${clippedY ? " · values or intervals clipped" : ""}${showIntervals ? "" : " · uncertainty intervals hidden"}`;
-  const samplingNote = displayInterval ? `Affichage espacé de ${displayInterval} h par courbe ; premier et dernier points conservés, sans moyenne ni interpolation. Analyse sur les données complètes.` : "";
-  const exportSubtitle = [trendExportScaleWarning(clippedY, showIntervals), samplingNote].filter(Boolean).join(" · ");
+  const samplingNote = displayInterval ? `Points affichés espacés de ${numberFormat.format(displayInterval)} h par courbe ; premier et dernier points conservés, sans agrégation temporelle ni interpolation. Analyse sur les données complètes ; la moyenne aller/retour éventuelle est calculée séparément, à chaque instant.` : "";
+  const notes = [samplingNote, ...(xUnit === "days" ? persistentZeroNotes(analyticalSeries, selectedSamples) : []), figureNote.trim()].filter(Boolean);
+  const exportSubtitle = trendExportScaleWarning(clippedY, showIntervals);
   const yAxisLabel = reportYAxisLabel ?? yUnit;
   const exportStem = exportFileStem(graphEnd === null ? "performance-over-time" : `performance-over-time-through-${graphEnd}-${xUnit}`, exportSeries);
-  const manifest = figureManifest({ kind: "trend", title: exportTitle, caption: [exportTitle, exportSubtitle, exportContext.methodCaption, "Les lignes relient les durées mesurées ; aucune interpolation temporelle"].filter(Boolean).join(". ") + ".", context: exportContext,
+  const manifest = figureManifest({ kind: "trend", title: exportTitle, caption: publicationText([exportTitle, exportSubtitle, exportContext.methodCaption, ...notes, "Les lignes relient les durées mesurées ; aucune interpolation temporelle"].filter(Boolean).join(". ") + "."), context: exportContext,
     xUnit, yUnit, analyticLimit: { maximumX: graphEnd, interpolation: "none" }, viewport: { xMin, xMax, yMin, yMax },
-    intervalsVisible: showIntervals, series: exportSeries, display: { zoom: viewport.zoom, yScale: manualYValid ? "manual" : "auto", clippedY, smallSampleMembersShown: true, pointInterval: displayInterval, pointIntervalUnit: xUnit, pointSelection: "first, then first recorded point at least interval after previous selected point, and last; display only", analyticalPointCount: analyticalSeries.reduce((sum, item) => sum + item.points.length, 0) } });
+    intervalsVisible: showIntervals, series: exportSeries, display: { publication: presentation, notes, zoom: viewport.zoom, yScale: manualYValid ? "manual" : "auto", clippedY, smallSampleMembersShown: true, pointInterval: displayInterval, pointIntervalUnit: xUnit, pointSelection: "first, then first recorded point at least interval after previous selected point, and last; display only", analyticalPointCount: analyticalSeries.reduce((sum, item) => sum + item.points.length, 0) } });
 
   const changeZoom = (nextZoom: number, anchorX = 0.5, anchorY = 0.5) => {
     setViewport((current) => {
@@ -515,11 +544,17 @@ export function TrendChart({
           if (svgRef.current) exportSvg(svgRef.current, exportTitle, exportSubtitle, exportSeries, exportStem, width, height, manifest, "report");
         }}>Report-ready SVG</button>
         <FigureDownloads manifest={manifest} stem={exportStem} />
+        <details className="figure-publication-settings"><summary>Title &amp; documented note</summary><div className="figure-publication-fields">
+          <label>Figure title<input aria-label="Publication figure title" value={titleOverride} maxLength={240} placeholder={reportTitle} onChange={e => setTitleOverride(e.target.value)}/></label>
+          <label>Note below the figure<textarea aria-label="Documented figure note" value={figureNote} maxLength={1200} placeholder="Optional experimental information; do not infer the cause of an anomaly." onChange={e => setFigureNote(e.target.value)}/></label>
+        </div></details>
         </ExportMenu>
       </div>
       <figure className="data-figure">
       <div className="chart-zoom-controls" aria-label="Y-axis scale">
         <button type="button" onClick={() => { setManualY(null); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} aria-pressed={manualY === null}>Automatic Y</button>
+        {clippedY && <button type="button" onClick={() => { setManualY(null); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }}>Fit all observations</button>}
+        <button type="button" disabled={allValues.some(value => value < 0)} title="Only available when all displayed values and enabled intervals are non-negative." onClick={() => { setManualY({min:"0",max:String(Math.max(fullYMax,Math.ceil(paddedYMax/autoYStep)*autoYStep,1))}); setViewport({zoom:1,centreX:.5,centreY:.5}); }}>Start Y at 0</button>
         <button type="button" onClick={() => { setManualY({ min: String(fullYMin), max: String(fullYMax) }); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} aria-pressed={manualY !== null}>Set Y limits</button>
         {manualY && <>
           <label>Y min <input aria-label="Y minimum" type="number" step="any" style={{ width: 90 }} value={manualY.min} onChange={(event) => { setManualY({ ...manualY, min: event.target.value }); setViewport({ zoom: 1, centreX: 0.5, centreY: 0.5 }); }} /></label>
@@ -551,7 +586,7 @@ export function TrendChart({
           </g>;
         })}</g>
       </svg>
-      <figcaption className="visually-hidden">The line connects aggregate values by ageing duration. Vertical ranges show the 95% confidence interval for means or the interquartile range for medians. No statistical outlier is hidden. A graph-end limit excludes later observations without creating an interpolated point.</figcaption>
+      <figcaption className="visually-hidden">Each line follows an individual cell or a selected summary, according to the display setting for its series. Lines connect measured ageing durations without time interpolation. For aggregated series, vertical ranges show the 95% confidence interval for means or the interquartile range for medians when enough cells contribute. Quality exclusions are documented in the method files; persistent low values are not automatically removed. A graph-end limit excludes later observations without creating an interpolated point.</figcaption>
       </figure>
     </div>
   );
@@ -611,6 +646,7 @@ export function CurveChart({
   scaleMode: "primary" | "all";
   exportContext?: FigureExportContext;
 }) {
+  const presentation = useFigurePresentation();
   const [viewport, setViewport] = useState<TrendViewport>({ zoom: 1, centreX: 0.5, centreY: 0.5 });
   const dragRef = useRef<{ clientX: number; clientY: number; centreX: number; centreY: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -672,7 +708,7 @@ export function CurveChart({
   const exportStem = exportFileStem("iv-curves", series);
   const manifest = figureManifest({ kind: "jv", title: exportTitle, caption: `${exportTitle}. ${exportSubtitle}. ${exportContext.methodCaption??""} ${jvMethodCaption(exportContext,series)}`, context: exportContext,
     xUnit: "V", yUnit: yAxisLabel, analyticLimit: { maximumX: null, interpolation: "none" }, viewport: { xMin, xMax, yMin, yMax },
-    intervalsVisible: false, series, display: { currentConvention, scaleMode, showPoints, showLandmarks, zoom: viewport.zoom } });
+    intervalsVisible: false, series, display: { publication: presentation, currentConvention, scaleMode, showPoints, showLandmarks, zoom: viewport.zoom } });
 
   const changeZoom = (nextZoom: number) => setViewport((current) => clampViewport({ ...current, zoom: clamp(nextZoom, 1, MAX_TREND_ZOOM) }));
   const onPointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {

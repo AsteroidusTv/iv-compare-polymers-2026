@@ -27,9 +27,9 @@ export interface EncapsulationGroup {
 
 /** Label equipment using the lab's standard-laminator default, never an ambiguous raw recipe code. */
 export function encapsulationDisplayLabels<T extends Pick<EncapsulationGroup, "key" | "material" | "batch" | "electrode" | "recipeUid"> & { ribbon?: string | null }>(groups: T[], recipes: Recipe[]) {
-  const laminatorByUid = new Map(recipes.map((recipe) => [recipe.recipe_uid, recipe.laminator?.trim()]));
+  const recipeByUid = new Map(recipes.map((recipe) => [recipe.recipe_uid, recipe]));
   const equipmentLabel = (group: T) => {
-    const laminator = group.recipeUid ? laminatorByUid.get(group.recipeUid) : null;
+    const laminator = group.recipeUid ? recipeByUid.get(group.recipeUid)?.laminator?.trim() : null;
     const normalized = laminator?.toLowerCase();
     if (!normalized || normalized === "unspecified" || normalized === "standard laminator") return "Lamineuse standard";
     if (normalized === "small laminator") return "Petite lamineuse";
@@ -46,9 +46,15 @@ export function encapsulationDisplayLabels<T extends Pick<EncapsulationGroup, "k
     const matching = peers.get(identity)!;
     const equipment = equipmentLabel(group);
     const sameEquipment = equipment ? matching.filter((peer) => equipmentLabel(peer) === equipment) : [];
+    const recipe = group.recipeUid ? recipeByUid.get(group.recipeUid) : undefined;
+    const processDetails = [
+      recipe?.temperature_profile_C != null ? `${recipe.temperature_profile_C} °C` : null,
+      recipe?.duration_profile_min ? `${recipe.duration_profile_min} min` : recipe?.duration_profile_s ? `${recipe.duration_profile_s} s` : null,
+      recipe?.pressure_values_mbar ? `${recipe.pressure_values_mbar} mbar` : null,
+    ].filter(Boolean).join(" / ");
     const label = equipment === "Lamineuse standard" && matching.length === 1 ? null
-      : sameEquipment.length > 1 && equipment !== "Lamineuse standard"
-        ? `${equipment} · groupe ${sameEquipment.findIndex((peer) => peer.key === group.key) + 1}`
+      : sameEquipment.length > 1 && processDetails
+        ? `${equipment} · ${processDetails}`
         : equipment;
     return [group.key, label] as const;
   }));

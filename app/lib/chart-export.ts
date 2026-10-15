@@ -1,9 +1,10 @@
 export type TrendExportPoint = {
   n: number;
   selectedLabel?: string;
+  members?: Array<{ sampleUid: string }>;
 };
 
-type PlottedTrendPoint = TrendExportPoint & {
+type PlottedTrendPoint = Omit<TrendExportPoint, "members"> & {
   y: number;
   intervalLow: number;
   intervalHigh: number;
@@ -72,6 +73,13 @@ export function pointsThrough<T extends { x: number }>(points: T[], maximumX: nu
 
 export function describeSeriesSelection(points: TrendExportPoint[]): string | undefined {
   const individualLabels = [...new Set(points.map((point) => point.selectedLabel).filter((label): label is string => Boolean(label)))];
+  const contributingPoints = points.filter(point => point.n > 0);
+  const recordedSpecimens = new Set(contributingPoints.flatMap(point => point.members?.map(member => member.sampleUid) ?? []));
+  // A one-cell median is still an individual specimen. n=1 alone is not enough:
+  // different cells may contribute at different times in an available cohort.
+  if (!individualLabels.length && recordedSpecimens.size === 1 && contributingPoints.every(point => point.n === 1 && point.members?.length === 1)) {
+    return "Échantillon individuel";
+  }
   const aggregateCounts = points.filter((point) => !point.selectedLabel && point.n > 0).map((point) => point.n);
   const minimum = aggregateCounts.reduce((smallest, count) => Math.min(smallest, count), Infinity);
   const maximum = aggregateCounts.reduce((largest, count) => Math.max(largest, count), -Infinity);

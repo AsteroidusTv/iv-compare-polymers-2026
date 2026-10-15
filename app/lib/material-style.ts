@@ -1,3 +1,5 @@
+import { figureBatchLabel, figureFormulationLabel } from "./figure-language";
+
 export interface MaterialStyle { color: string; marker: "circle" | "square" | "diamond" | "triangle" | "cross" | "star"; dash: string }
 /** Compare same-family aggregates without relying on colour or a hash collision. */
 export function aggregateSeriesMarkers<T extends { id: string; config: { material: string }; marker?: MaterialStyle["marker"] }>(series: T[]): T[] {
@@ -16,11 +18,12 @@ export function evaFormulationStyle(material: string, formulations: Array<string
   return null;
 }
 /** Keep known EVA formulations separate even in an individual-sample export legend. */
-export function individualTrendPresentation(material: string, formulation: string | null | undefined, seriesId: string, sampleUid: string) {
+export function individualTrendPresentation(material: string, formulation: string | null | undefined, seriesId: string, sampleUid: string, batch?: string | null) {
   const style = evaFormulationStyle(material, [formulation]);
+  const label = figureFormulationLabel({ material_family: material, material_raw: formulation });
   return {
-    exportLabel: style?.label ?? material,
-    exportLegendKey: style ? JSON.stringify([seriesId, style.label]) : seriesId,
+    exportLabel: `${label}${batch !== undefined ? ` — ${figureBatchLabel([batch])}` : ""}`,
+    exportLegendKey: batch !== undefined ? JSON.stringify([seriesId, label, batch]) : style ? JSON.stringify([seriesId, style.label]) : seriesId,
     linePattern: style?.linePattern ?? identityLinePattern(sampleUid),
   };
 }
@@ -58,4 +61,22 @@ export function materialStyle(material: string): MaterialStyle {
   let hash = 2166136261;
   for (const character of material) hash = Math.imul(hash ^ character.charCodeAt(0), 16777619) >>> 0;
   return { color: `hsl(${hash % 360} 55% 35%)`, marker: ["circle", "square", "diamond", "triangle"][hash % 4] as MaterialStyle["marker"], dash: hash % 2 ? "7 3" : "" };
+}
+
+/** Stable across plot selections: styles are assigned from the complete specimen registry. */
+export function specimenStylesById(samples: import("./iv-data").Sample[]): Map<string, MaterialStyle> {
+  const patterns = ["", "8 4", "2 4", "11 4 2 4", "14 4", "5 3"];
+  const markers: MaterialStyle["marker"][] = ["circle", "square", "triangle", "diamond", "cross", "star"];
+  const groups = new Map<string, import("./iv-data").Sample[]>();
+  for (const sample of samples) {
+    // EVA 406/806 share a family colour: assigning across the whole family
+    // prevents two formulations from accidentally sharing the same dash/marker.
+    const key = sample.material_family;
+    groups.set(key, [...(groups.get(key) ?? []), sample]);
+  }
+  return new Map([...groups.values()].flatMap(group => [...group].sort((a,b) => a.sample_uid.localeCompare(b.sample_uid, "en", { numeric: true })).map((sample, index) => {
+    const base = materialStyle(sample.material_family);
+    return [sample.sample_uid, { ...base, dash: patterns[index % patterns.length],
+      marker: index < patterns.length ? base.marker : markers[(markers.indexOf(base.marker) + Math.floor(index / patterns.length)) % markers.length] }] as const;
+  })));
 }
