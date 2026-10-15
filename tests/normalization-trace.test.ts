@@ -33,3 +33,27 @@ test("Outdoor adjudicated PR stays inspectable, is excluded by default, and can 
   assert.deepEqual(excluded[0].baseline?.observations.map(item=>item.observation_uid),["O1","O2","O3"]);
   assert.equal(included[0].value,0);
 });
+
+test("optional zero exclusion is exact, reversible, and preserves source values and references", () => {
+  const rows = [row("B", "Unaged", 10), row("Z", "TC", 0), {...row("N", "TC", 0.2), exposure_duration_numeric: 20}];
+  const dataset = {observations: rows} as IVDataset;
+  const options = {sampleUids:["S1"], protocol:"TC", metric:"efficiency_pct" as const, mode:"retention" as const, includeQa:false, outdoorWindow:7 as const, qaIssues:new Map<string,string>()};
+  const filtered = normalizationTraces(dataset, {...options, excludeZeroAgeingPoints:true});
+  assert.equal(filtered[0].value, null);
+  assert.equal(filtered[0].absoluteValue, 0);
+  assert.deepEqual(filtered[0].exclusions, ["user_excluded_zero_value"]);
+  assert.equal(filtered[0].baseline?.value, 10);
+  assert.equal(filtered[1].value, 2);
+  assert.equal(normalizationTraces(dataset, options)[0].value, 0);
+  assert.equal(rows[1].efficiency_pct, 0);
+  const invalid = normalizationTraces({observations:[row("B","Unaged",0),row("Z","TC",0)]} as IVDataset, {...options, excludeZeroAgeingPoints:true});
+  assert.ok(invalid[0].exclusions.includes("zero_baseline"));
+});
+
+test("zero exclusion applies to DH/TC without changing light-ageing or Outdoor references", () => {
+  for (const protocol of ["DH", "TC", "Light ageing", "Outdoor", "Unaged"]) {
+    const rows = protocol === "Unaged" ? [row("Z",protocol,0)] : [row("B","Unaged",10), row("Z",protocol,0)];
+    const result = normalizationTraces({observations:rows} as IVDataset, {sampleUids:["S1"], protocol, metric:"efficiency_pct", mode:"absolute", includeQa:true, outdoorWindow:7, qaIssues:new Map(), excludeZeroAgeingPoints:true});
+    assert.equal(result.find(t=>t.observation.observation_uid==="Z")?.value, ["DH","TC"].includes(protocol) ? null : 0);
+  }
+});

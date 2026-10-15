@@ -44,3 +44,12 @@ test("JV manifest records omitted source ranges and distinguishes them from unse
  const caption=jvMethodCaption(context,series);
  assert.match(caption,/lot A1/);assert.match(caption,/305 h/);assert.match(caption,/inspection uniquement/);
 });
+
+test("trend export records explicitly excluded zeros with their source value", () => {
+ const observation = {observation_uid:"Z",sample_uid:"S1",test_type:"TC",exposure_duration_numeric:50,efficiency_pct:0};
+ const trace = {version:"1.0.0" as const,observation,absoluteValue:0,value:null,baseline:null,rule:"absolute" as const,qaReasons:[],exclusions:["user_excluded_zero_value"]};
+ const manifest = figureManifest({...base,kind:"trend",series:[],context:{qa:{excludeZeroAgeingPoints:true},analysisTrace:{S:[trace]}}});
+ assert.deepEqual(manifest.exclusions,[{seriesId:"S",observationId:"Z",sampleUid:"S1",reasons:["user_excluded_zero_value"]}]);
+ assert.equal(manifest.context.analysisTrace?.S[0].absoluteValue,0);
+ assert.deepEqual(manifest.actualContributors,[]);
+});

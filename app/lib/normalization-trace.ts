@@ -26,6 +26,7 @@ export interface NormalizationTrace {
 export function normalizationTraces(dataset: IVDataset, options: {
   sampleUids: string[]; protocol: string; metric: MetricKey; mode: "absolute" | "retention";
   includeQa: boolean; outdoorWindow: 3 | 7 | 14; qaIssues: ReadonlyMap<string, string>;
+  excludeZeroAgeingPoints?: boolean;
 }): NormalizationTrace[] {
   const { metric, protocol } = options;
   const definition = pearlMetric(metric), mode = metricValueMode(metric, options.mode);
@@ -72,6 +73,7 @@ export function normalizationTraces(dataset: IVDataset, options: {
     const absoluteValue = numeric(observation[metric]) ? observation[metric] as number : null;
     const reasons = qaReasons(observation), exclusions: string[] = [];
     if (absoluteValue === null) exclusions.push("non_numeric_metric");
+    if (options.excludeZeroAgeingPoints && (protocol === "DH" || protocol === "TC") && absoluteValue === 0) exclusions.push("user_excluded_zero_value");
     if (protocol === "Light ageing" && lightIrradianceExcluded(observation.data_quality_flag)) exclusions.push("different_irradiance");
     if (!options.includeQa && reasons.length) exclusions.push("qa_metric");
     if (protocol !== "Unaged" && !numeric(observation.exposure_duration_numeric)) exclusions.push("missing_time");
