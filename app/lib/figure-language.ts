@@ -44,9 +44,9 @@ export function figureSpecimenLabel(sample: Sample): string {
 /** French wording for figures and their captions; analytical keys stay unchanged. */
 export function figureMetricLabel(metric: MetricKey): string {
   const pearl = pearlMetric(metric);
-  if (pearl) return pearl.figureLabel;
+  if (pearl) return pearl.direction === "mean" ? pearl.figureLabel.replace(" (moyenne aller/retour)", "") : pearl.figureLabel;
   const labels: Partial<Record<MetricKey, string>> = {
-    light_pout_mean_mW_cm2: "Pout (moyenne aller/retour)",
+    light_pout_mean_mW_cm2: "Pout",
     efficiency_pct: "PCE",
     jsc_mA_cm2: "Jsc",
     voc_V: "Voc",
@@ -74,6 +74,7 @@ export function publicationText(text: string): string {
   // Format quantities, not dates, software versions, section numbers or source URLs.
   const numericText = /^[-+−]?\d+\.\d+(?:[eE][-+]?\d+)?$/.test(text.trim()) ? text.replace(".", ",") : text;
   return materialLabel(numericText)
+    .replace(/\s*\(moyenne aller\/retour\)/gi, "")
     .replace(/Silicone\s*\/\s*PDMS/g, "PDMS")
     .replace(/\b(?:DNP[- ]?CVF|CVF)\b/gi, "TPO-1")
     .replace(/\bMitsui\b/gi, "POE-1").replace(/\bTF4\b/gi, "POE-2")

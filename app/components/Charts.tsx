@@ -151,7 +151,8 @@ function serialiseChart(
   const rowHeights = Array.from({length:Math.ceil(entries.length / columns)}, (_,row) => Math.max(...entries.slice(row*columns,(row+1)*columns)
     .map(entry => entry.labels.length * (fonts.legend + 4) + entry.details.length * (fonts.detail + 3) + 14)));
   const headerHeight = legendTop + rowHeights.reduce((sum,value) => sum + value, 0);
-  const notes = Array.isArray(manifest?.display.notes) ? manifest.display.notes.filter((note): note is string => typeof note === "string") : [];
+  const visibleNotes = manifest?.display.visibleNotes ?? manifest?.display.notes;
+  const notes = Array.isArray(visibleNotes) ? visibleNotes.filter((note): note is string => typeof note === "string") : [];
   const noteLines = notes.flatMap(note => wrapFigureText(publicationText(note), width - 48, fonts.detail));
   const exportHeight = height + headerHeight + (noteLines.length ? 20 + noteLines.length * (fonts.detail + 4) : 0);
   const root = document.createElementNS(SVG_NAMESPACE, "svg");
@@ -459,13 +460,14 @@ export function TrendChart({
   const exportTitle = publicationText(titleOverride.trim() || reportTitle || `Évolution au cours du temps — ${yUnit}`);
   const scaleNote = `${manualYValid ? "Manual" : "Auto"} Y: ${yNumberFormat.format(yMin)}–${yNumberFormat.format(yMax)} ${yUnit}${clippedY ? " · values or intervals clipped" : ""}${showIntervals ? "" : " · uncertainty intervals hidden"}`;
   const samplingNote = displayInterval ? `Points affichés espacés de ${numberFormat.format(displayInterval)} h par courbe ; premier et dernier points conservés, sans agrégation temporelle ni interpolation. Analyse sur les données complètes ; la moyenne aller/retour éventuelle est calculée séparément, à chaque instant.` : "";
-  const notes = [samplingNote, ...(xUnit === "days" ? persistentZeroNotes(analyticalSeries, selectedSamples) : []), figureNote.trim()].filter(Boolean);
+  const visibleNotes = [...(xUnit === "days" ? persistentZeroNotes(analyticalSeries, selectedSamples) : []), figureNote.trim()].filter(Boolean);
+  const notes = [samplingNote, ...visibleNotes].filter(Boolean);
   const exportSubtitle = trendExportScaleWarning(clippedY, showIntervals);
   const yAxisLabel = reportYAxisLabel ?? yUnit;
   const exportStem = exportFileStem(graphEnd === null ? "performance-over-time" : `performance-over-time-through-${graphEnd}-${xUnit}`, exportSeries);
   const manifest = figureManifest({ kind: "trend", title: exportTitle, caption: publicationText([exportTitle, exportSubtitle, exportContext.methodCaption, ...notes, "Les lignes relient les durées mesurées ; aucune interpolation temporelle"].filter(Boolean).join(". ") + "."), context: exportContext,
     xUnit, yUnit, analyticLimit: { maximumX: graphEnd, interpolation: "none" }, viewport: { xMin, xMax, yMin, yMax },
-    intervalsVisible: showIntervals, series: exportSeries, display: { publication: presentation, notes, zoom: viewport.zoom, yScale: manualYValid ? "manual" : "auto", clippedY, smallSampleMembersShown: true, pointInterval: displayInterval, pointIntervalUnit: xUnit, pointSelection: "first, then first recorded point at least interval after previous selected point, and last; display only", analyticalPointCount: analyticalSeries.reduce((sum, item) => sum + item.points.length, 0) } });
+    intervalsVisible: showIntervals, series: exportSeries, display: { publication: presentation, notes, visibleNotes, zoom: viewport.zoom, yScale: manualYValid ? "manual" : "auto", clippedY, smallSampleMembersShown: true, pointInterval: displayInterval, pointIntervalUnit: xUnit, pointSelection: "first, then first recorded point at least interval after previous selected point, and last; display only", analyticalPointCount: analyticalSeries.reduce((sum, item) => sum + item.points.length, 0) } });
 
   const changeZoom = (nextZoom: number, anchorX = 0.5, anchorY = 0.5) => {
     setViewport((current) => {
