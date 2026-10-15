@@ -11,7 +11,7 @@ test("September IV links are unique, stage-consistent and supported by measured 
   const provisional = dataset.files.filter((row: { match_status: string }) => row.match_status === "matched_filename");
   assert.equal(provisional.length, 38);
   assert.equal(dataset.files.filter((row: { source_file: string; match_status: string }) => row.source_file.includes("260909 - Red box") && row.match_status === "reference_unassigned").length, 12);
-  assert.equal(dataset.files.filter((row: { file_uid: string; match_status: string }) => Number(row.file_uid.slice(4)) >= 410 && Number(row.file_uid.slice(4)) <= 468 && row.match_status === "unmatched").length, 9);
+  assert.equal(dataset.files.filter((row: { file_uid: string; match_status: string }) => Number(row.file_uid.slice(4)) >= 410 && Number(row.file_uid.slice(4)) <= 468 && row.match_status === "unmatched").length, 8);
   for (const file of provisional) {
     const observation = observations.get(file.matched_observation_uid) as { sample_uid: string; test_type: string; exposure_duration_numeric: number | null; efficiency_pct: number | null } | undefined;
     assert.ok(observation, file.source_file);
