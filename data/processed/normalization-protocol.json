@@ -1,12 +1,13 @@
 {
-  "pipelineVersion": "2.4.1",
-  "generatedOn": "2026-10-03",
+  "pipelineVersion": "2.4.2",
+  "generatedOn": "2026-10-15",
   "inventory": {
     "source": "data/raw/IV/Summary.xlsx",
     "rule": "Parse both Lami-results and Lami-results2. Forward-fill batch, electrode, owner, encapsulation date and material only inside each sheet's sample block. A non-empty Material or Sample ID starts a sample; following rows contain additional observations until the next sample.",
     "manualDateOverrides": [
       "Ambiguous source dates are resolved in the normalized workbook and retained with their original text in encapsulation_date_raw."
-    ]
+    ],
+    "receivedSource": "OneDrive_2026-10-15.zip: Data Achille/IV/Summary&Post-mortem.xlsx"
   },
   "iv": {
     "voltage": "Legacy simple V-I exports contain millivolt values even when the header says V [V]; curve_voltage_scale_to_V records the applied 0.001 conversion.",
@@ -38,6 +39,7 @@
     "The September intake also archives FTIR and SEM sources but does not interpret them as IV or ageing measurements.",
     "The processed workbook remains the auditable normalization decision ledger.",
     "The compact browser package is rebuilt deterministically from versioned processed artifacts.",
-    "October logger intake: 11 superseded CSV snapshots retained as archives; 8 provisional A1 links; no double counting. Export rounds timestamps to minutes and values to about 10 significant digits. Photos are archived without specimen attribution."
+    "October logger intake: 11 superseded CSV snapshots retained as archives; 8 provisional A1 links; no double counting. Export rounds timestamps to minutes and values to about 10 significant digits. Photos are archived without specimen attribution.",
+    "2026-10-15 intake: 149 samples, 495 inventory observations, 545 IV files, 6640 sweeps. Existing identities and measured values retained; OBS-0374 and OBS-0415 pending stages now contain source measurements. New file matches remain provisional or unassigned; no Outdoor or Pearl observations added."
   ]
 }

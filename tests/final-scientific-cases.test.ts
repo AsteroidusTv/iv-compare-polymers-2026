@@ -13,7 +13,8 @@ const dataset=JSON.parse(gunzipSync(readFileSync("public/data/iv-compare-dowsil.
 test("final real-data re-audit: EVA TC disappearance is visible and constant cohort cannot silently recover",()=>{
  const ids=dataset.samples.filter(s=>s.material_family==="EVA").map(s=>s.sample_uid);
  const traces=normalizationTraces(dataset,{sampleUids:ids,protocol:"TC",metric:"efficiency_pct",mode:"retention",includeQa:false,outdoorWindow:7,qaIssues:labQualityIssues(dataset.observations,"efficiency_pct")});
- const rows=traces.filter(t=>t.value!==null).map(t=>({sampleUid:t.observation.sample_uid,time:t.observation.exposure_duration_numeric!,value:t.value!}));
+ // Keep the originally audited horizon; October now also supplies TC200/250.
+ const rows=traces.filter(t=>t.value!==null&&t.observation.exposure_duration_numeric!<=150).map(t=>({sampleUid:t.observation.sample_uid,time:t.observation.exposure_duration_numeric!,value:t.value!}));
  const available=cohortTimeline(rows,"mean"),common=constantCohort(rows,{start:20,end:100});
  assert.deepEqual(available.map(p=>p.n),[2,5,2,2]);
  assert.ok(Math.abs(available[1].summary.value-39.9467213115)<1e-8);
@@ -32,7 +33,7 @@ test("final real-data re-audit: coherent JV is visible while strict validation a
   assert.equal(d.quantitativeEligible,false);
   if(d.analysis.primaryIndex>=0)assert.notEqual(d.segments[d.analysis.primaryIndex].status,"suspected_export_residue");
  }
- assert.equal([...diagnostics.values()].filter(d=>d.screeningEligible).length,5408);
+ assert.equal(dataset.measurements.filter(m=>Number(m.measurement_uid.slice(4))<=5741&&diagnostics.get(m.measurement_uid)?.screeningEligible).length,5408);
  const questionable=dataset.measurements.filter(m=>dataset.files.find(f=>f.file_uid===m.file_uid)?.source_file?.includes("04-17")&&diagnostics.get(m.measurement_uid)?.currentDensityStatus==="suspicious_surface_or_units");
  assert.equal(questionable.length,138);
  assert.equal(new Set(questionable.map(m=>m.file_uid)).size,12);
@@ -43,7 +44,7 @@ test("final real-data re-audit: coherent JV is visible while strict validation a
  const copies=Array.from({length:100},(_,i)=>({...candidates[0],measurement_uid:`audit-copy-${i}`}));
  const duplicated={...dataset,measurements:[...dataset.measurements,...copies],curves:{...dataset.curves,...Object.fromEntries(copies.map(m=>[m.measurement_uid,dataset.curves[candidates[0].measurement_uid]]))}};
  assert.equal(chooseSpecimenFirstMeasurement([...candidates,...copies],duplicated,true)?.sample_uid,chosen);
- console.log(JSON.stringify({case:"JV",diagnostics:diagnostics.size,suspectSegments:suspect.length,suspectMeasurements:[...diagnostics.values()].filter(d=>d.segments.some(s=>s.status==="suspected_export_residue")).length,screeningEligible:5408,quantitativelyEligible:0,duplicateInvariantSpecimen:chosen,quarantinedApril17:questionable.length}));
+ console.log(JSON.stringify({case:"JV",diagnostics:diagnostics.size,suspectSegments:suspect.length,suspectMeasurements:[...diagnostics.values()].filter(d=>d.segments.some(s=>s.status==="suspected_export_residue")).length,screeningEligible:[...diagnostics.values()].filter(d=>d.screeningEligible).length,quantitativelyEligible:0,duplicateInvariantSpecimen:chosen,quarantinedApril17:questionable.length}));
 });
 test("final real-data re-audit: exact staged times retain measured zeros and never invent missing values",()=>{
  const ids=dataset.samples.filter(s=>["EVA","POE-2 / TF4"].includes(s.material_family)&&(s.assigned_test==="TC"||dataset.observations.some(o=>o.sample_uid===s.sample_uid&&o.test_type==="TC"))).map(s=>s.sample_uid);

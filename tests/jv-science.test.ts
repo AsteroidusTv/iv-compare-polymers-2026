@@ -71,7 +71,7 @@ test("audited real sweeps: April17 ambiguity and residue-selected MEA-00564/0056
   const smallAreaConsistent = dataset.measurements.filter(m => m.cell_area_cm2 === 0.1 && diagnostics.get(m.measurement_uid)?.validation.numericallyConsistent);
   assert.ok(smallAreaConsistent.length > 0, "0.1 cm² alone must not imply numerical inconsistency");
   assert.ok([...diagnostics.values()].every(d => !d.quantitativeEligible), "Legacy metadata supplies no experimental validation");
-  assert.equal([...diagnostics.values()].filter(d => d.screeningEligible).length, 5408, "Numerically coherent curves should remain visible for cautious comparison");
+  assert.equal(dataset.measurements.filter(m => Number(m.measurement_uid.slice(4)) <= 5741 && diagnostics.get(m.measurement_uid)?.screeningEligible).length, 5408, "Previously audited coherent curves should remain visible after later intakes");
 });
 
 test("legacy conversion text and numerical consistency never confer validation", () => {

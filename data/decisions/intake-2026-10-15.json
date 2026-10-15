@@ -1,0 +1,223 @@
+{
+  "schemaVersion": "iv-compare-intake/1",
+  "receivedOn": "2026-10-15",
+  "source": "OneDrive_2026-10-15.zip",
+  "activeInventory": "Data Achille/IV/Summary&Post-mortem.xlsx",
+  "preservedOutdoorDailySha256": "0e74e05e1e10dc5dca217708694505cb19dd1e5bb8b8d8ab95893d8917456c8b",
+  "preservedPearlSha256": "3a6cbcce4c084756372d3225070703ea3dc730d4d30022da9fc74abcd5540af7",
+  "previousOutdoorInventoryRows": [
+    {
+      "observation_uid": "OBS-0025",
+      "source_row": 20
+    },
+    {
+      "observation_uid": "OBS-0027",
+      "source_row": 21
+    },
+    {
+      "observation_uid": "OBS-0058",
+      "source_row": 48
+    },
+    {
+      "observation_uid": "OBS-0075",
+      "source_row": 64
+    },
+    {
+      "observation_uid": "OBS-0077",
+      "source_row": 65
+    },
+    {
+      "observation_uid": "OBS-0082",
+      "source_row": 68
+    },
+    {
+      "observation_uid": "OBS-0084",
+      "source_row": 69
+    },
+    {
+      "observation_uid": "OBS-0098",
+      "source_row": 81
+    },
+    {
+      "observation_uid": "OBS-0100",
+      "source_row": 82
+    },
+    {
+      "observation_uid": "OBS-0128",
+      "source_row": 106
+    },
+    {
+      "observation_uid": "OBS-0140",
+      "source_row": 115
+    },
+    {
+      "observation_uid": "OBS-0143",
+      "source_row": 117
+    },
+    {
+      "observation_uid": "OBS-0198",
+      "source_row": 165
+    },
+    {
+      "observation_uid": "OBS-0221",
+      "source_row": 183
+    },
+    {
+      "observation_uid": "OBS-0224",
+      "source_row": 185
+    },
+    {
+      "observation_uid": "OBS-0297",
+      "source_row": 3
+    },
+    {
+      "observation_uid": "OBS-0311",
+      "source_row": 16
+    },
+    {
+      "observation_uid": "OBS-0325",
+      "source_row": 29
+    },
+    {
+      "observation_uid": "OBS-0327",
+      "source_row": 30
+    },
+    {
+      "observation_uid": "OBS-0337",
+      "source_row": 39
+    },
+    {
+      "observation_uid": "OBS-0339",
+      "source_row": 40
+    },
+    {
+      "observation_uid": "OBS-0345",
+      "source_row": 45
+    },
+    {
+      "observation_uid": "OBS-0351",
+      "source_row": 50
+    },
+    {
+      "observation_uid": "OBS-0418",
+      "source_row": 78
+    }
+  ],
+  "newSamples": [
+    {
+      "key": [
+        "Lami-results2",
+        "A5",
+        "TPO-2_Lenzing",
+        "1_R9"
+      ],
+      "sample_uid": "SMP2-071",
+      "row": 137
+    },
+    {
+      "key": [
+        "Lami-results2",
+        "A5",
+        "TPO-2_Lenzing",
+        "1_R7"
+      ],
+      "sample_uid": "SMP2-072",
+      "row": 138
+    },
+    {
+      "key": [
+        "Lami-results2",
+        "A5",
+        "TPO-2_Lenzing",
+        "1_R2"
+      ],
+      "sample_uid": "SMP2-073",
+      "row": 139
+    }
+  ],
+  "filledPlaceholders": [
+    {
+      "observation_uid": "OBS-0374",
+      "before": [
+        null,
+        null,
+        null,
+        null,
+        550,
+        null,
+        null
+      ],
+      "after": [
+        13.8,
+        23.7,
+        1.07,
+        54.5,
+        550,
+        null,
+        null
+      ],
+      "new_source_row": 63
+    },
+    {
+      "observation_uid": "OBS-0415",
+      "before": [
+        null,
+        null,
+        null,
+        null,
+        "50 but check earlier",
+        null,
+        null
+      ],
+      "after": [
+        18.1,
+        23.4,
+        1.06,
+        73.2,
+        50,
+        null,
+        null
+      ],
+      "new_source_row": 127
+    }
+  ],
+  "newInventoryObservations": 74,
+  "newFiles": 77,
+  "provisionallyLinkedNewFiles": 52,
+  "unassignedNewFiles": [
+    "IV/10-01_A2A3DH500_Old/EVA1_5mm.xls",
+    "IV/10-01_A2A3DH500_Old/A2_DH520/A2_CVF_SL1.xls",
+    "IV/10-01_A2A3DH500_Old/EVA2.xls",
+    "IV/10-02_UnagedA5_TCA1-A4-Old/A4_TC50_Cyb/A4_Cyb1.xls",
+    "IV/10-02_UnagedA5_TCA1-A4-Old/A4_TC50_Cyb/A4_Cyb2.xls",
+    "IV/10-02_UnagedA5_TCA1-A4-Old/A5_Unaged/A5_Len1.xls",
+    "IV/10-02_UnagedA5_TCA1-A4-Old/A5_Unaged/A5_Len2.xls",
+    "IV/10-02_UnagedA5_TCA1-A4-Old/A5_Unaged/A5_Len3.xls",
+    "IV/10-02_UnagedA5_TCA1-A4-Old/OldTC/Old_700-3.xls",
+    "IV/10-02_UnagedA5_TCA1-A4-Old/OldTC/Old_CVF_SL3.xls",
+    "IV/10-02_UnagedA5_TCA1-A4-Old/OldTC/Old_Len_SL3.xls",
+    "IV/10-02_UnagedA5_TCA1-A4-Old/OldTC/Old_low3.xls",
+    "IV/10-02_UnagedA5_TCA1-A4-Old/OldTC/Old_TF4-3.xls",
+    "IV/10-02_UnagedA5_TCA1-A4-Old/OldTC/Old_TF4-4.xls",
+    "IV/10-12_TCA1-A4-Old_DHA2-A3/samp1.xls",
+    "IV/10-12_TCA1-A4-Old_DHA2-A3/A2_3_TC150/A2_CVF_SL2.xls",
+    "IV/10-12_TCA1-A4-Old_DHA2-A3/A2_3_TC150/A2_CVF_SL3.xls",
+    "IV/10-12_TCA1-A4-Old_DHA2-A3/A2_3_TC150/A3_Len_SL4.xls",
+    "IV/10-12_TCA1-A4-Old_DHA2-A3/A4_TC100/A4_Cyb_5.xls",
+    "IV/10-12_TCA1-A4-Old_DHA2-A3/OldTC/700-3.xls",
+    "IV/10-12_TCA1-A4-Old_DHA2-A3/OldTC/CVF_SL3.xls",
+    "IV/10-12_TCA1-A4-Old_DHA2-A3/OldTC/Len_SL3.xls",
+    "IV/10-12_TCA1-A4-Old_DHA2-A3/OldTC/Low.xls",
+    "IV/10-12_TCA1-A4-Old_DHA2-A3/OldTC/TF4-3.xls",
+    "IV/10-12_TCA1-A4-Old_DHA2-A3/OldTC/TF4-4.xls"
+  ],
+  "newMeasurements": 899,
+  "newPoints": 134850,
+  "totalSamples": 149,
+  "totalInventoryObservations": 495,
+  "totalFiles": 545,
+  "totalMeasurements": 6640,
+  "totalPoints": 1272000,
+  "previousRegistrySha256": "6728f91969a2c7e04ff17cde2e41e74084fc37e731920a6d87842dc477aa023f",
+  "archiveSha256": "c9d2f845b27c60bc1d8f914ab1793cf2b503863f0ab99ca3610d546b7f34bffa"
+}

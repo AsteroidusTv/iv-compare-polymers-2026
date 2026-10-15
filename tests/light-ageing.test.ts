@@ -25,8 +25,13 @@ test("light-ageing reproduces five raw summaries without duplicating TXT rows or
  assert.equal(new Set(rows.map(r=>dataset.samples.find(s=>s.sample_uid===r.sample_uid)!.material_family)).size,2);
  assert.ok(rows.every(r=>r.efficiency_pct===null&&r.exposure_unit==="h"));
  const manifest=JSON.parse(await fs.readFile("data/decisions/light-ageing-pearl-v1.json","utf8"));
- const hash=createHash("sha256").update(JSON.stringify(dataset.observations.filter(r=>r.test_type==="Outdoor"))).digest("hex");
+ // Later inventory insertions move Excel provenance rows, without changing logger data.
+ const intake=JSON.parse(await fs.readFile("data/decisions/intake-2026-10-15.json","utf8"));
+ const oldRows=new Map(intake.previousOutdoorInventoryRows.map((r:{observation_uid:string;source_row:number})=>[r.observation_uid,r.source_row]));
+ const outdoor=dataset.observations.filter(r=>r.test_type==="Outdoor");
+ const hash=createHash("sha256").update(JSON.stringify(outdoor.map(r=>oldRows.has(r.observation_uid)?{...r,source_row:oldRows.get(r.observation_uid)}:r))).digest("hex");
  assert.equal(hash,manifest.previousOutdoorObservationsSha256);
+ assert.equal(createHash("sha256").update(JSON.stringify(outdoor.filter(r=>r.observation_uid.startsWith('ODD-')))).digest('hex'),intake.preservedOutdoorDailySha256);
  assert.deepEqual(metricOptionsFor("Light ageing").slice(0,3),[combined,forward,reverse]);
  assert.equal(metricOptionsFor("Light ageing").length,26);
 });

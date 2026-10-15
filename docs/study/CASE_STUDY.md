@@ -49,11 +49,11 @@ Original files are in `data/raw/LightAgeing/`; the derived audit copy is
 `data/processed/Light_ageing_Pearl.json`. These observations are loaded directly
 from hashed raw summaries alongside the existing normalized workbook.
 
-- `data/raw/IV/`: versioned inventories through `Summary_v3.xlsx` (also copied as the active `Summary.xlsx`) and original solar-simulator `.xls` files through 23 September 2026. Earlier inventories remain archived.
+- `data/raw/IV/`: the active `Summary.xlsx` from the 15 October Summary&Post-mortem delivery and original solar-simulator `.xls` files through 12 October 2026. Earlier inventories remain archived; the received original and intermediate v4 are preserved in the local TM reception folder.
 - `data/raw/Outdoor/`: immutable logger CSV files.
 - `data/raw/FTIR/` and `data/raw/SEM/`: archived original analytical sources; not yet interpreted or included in IV/ageing graphs.
 - `data/processed/IV_dataset_normalise_Outdoor.xlsx`: relational inventory, matching decisions, measurement metadata, and daily Outdoor aggregates.
-- `data/processed/IV_curve_points.tsv`: 1,137,150 ordered IV points.
+- `data/processed/IV_curve_points.tsv`: 1,272,000 ordered IV points.
 - `data/processed/Outdoor_raw_measurements.tsv`: 406,346 traceable Outdoor measurements through 29–30 September 2026.
 - `data/processed/normalization-protocol.json`: versioned transformation rules and scientific assumptions.
 - `data/processed/IV_Compare_DOWSIL.ivpack`: compact browser package.
@@ -79,7 +79,9 @@ pnpm data:verify
 pnpm data:verify:deep
 ```
 
-`data:verify` reconciles the recorded source links and row counts, then proves that both committed `.ivpack` files are byte-for-byte reproducible. `data:verify:deep` additionally reads every raw IV workbook and active Outdoor CSV and compares all 1,137,150 IV points and 406,346 Outdoor measurements with the processed values.
+`data:verify` reconciles the recorded source links and row counts, then proves that both committed `.ivpack` files are byte-for-byte reproducible. `data:verify:deep` additionally reads every raw IV workbook and active Outdoor CSV and compares all 1,272,000 IV points and 406,346 Outdoor measurements with the processed values.
+
+The [15 October intake](../data/INTAKE_2026-10-15.md) extends the inventory to 149 cells and 495 observations, and records 545 files with 6,640 sweeps. Its 52 new provisional links require explicit filename identity plus four matching source metrics; another 25 new files remain unassigned. Outdoor and Pearl data are unchanged.
 
 ## Local development
 

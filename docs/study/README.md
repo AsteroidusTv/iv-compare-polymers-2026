@@ -12,6 +12,7 @@ for traceability; their presence does not establish permission to publish source
 - [Light-ageing sources](../data/LIGHT_AGEING_PEARL.md)
 - [September intake](../data/INTAKE_2026-09-25.md)
 - [October intake](../data/INTAKE_2026-10-03.md)
+- [15 October inventory and IV intake](../data/INTAKE_2026-10-15.md)
 - [UI review](../UI_UX_REVIEW_2026-10-03.md)
 - [Historical remediation report](../archive/SCIENTIFIC_REMEDIATION_REPORT.md)
 - [Historical plan](../archive/SCIENTIFIC_REMEDIATION.md)
