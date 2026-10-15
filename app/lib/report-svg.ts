@@ -16,6 +16,7 @@ const REPORT_PALETTE: Record<string, string> = {
 
 const REPORT_CSS = `
   text { font-family: "Latin Modern Roman", "TeX Gyre Termes", "Times New Roman", serif !important; fill: #202020 !important; }
+  .export-legend, .export-legend text, .export-legend tspan { fill: #000000 !important; }
   svg > text:first-of-type, .export-title { font-weight: 700; }
   .axis-label { fill: #353535 !important; }
   .axis-title { fill: #202020 !important; font-weight: 600; }
@@ -41,6 +42,13 @@ export function applyReportSvgStyle(svg: SVGSVGElement): void {
     }
     const inlineStyle = element.getAttribute("style");
     if (inlineStyle) element.setAttribute("style", inlineStyle.replace(/#[0-9a-f]{6}\b/gi, (color) => reportInkColor(color)));
+  }
+  // Explicit ink also survives SVG-to-PDF tools with incomplete CSS support.
+  for (const label of svg.querySelectorAll<SVGTextElement>("text.export-legend, .export-legend text")) {
+    for (const text of [label, ...label.querySelectorAll<SVGTSpanElement>("tspan")]) {
+      text.setAttribute("fill", "#000000");
+      text.style.setProperty("fill", "#000000", "important");
+    }
   }
   const style = document.createElementNS(SVG_NAMESPACE, "style");
   style.textContent = REPORT_CSS;
