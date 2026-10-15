@@ -24,3 +24,22 @@ test("time selection defaults to endpoints and always retains two curves", () =>
   assert.deepEqual(toggleAgeingTime([0, 500, 1000], 500), [0, 1000]);
   assert.deepEqual(toggleAgeingTime([0, 1000], 500), [0, 500, 1000]);
 });
+
+test("reviewed low3 TC500 source is available with original sweep values", () => {
+  const dataset: IVDataset = JSON.parse(zlib.gunzipSync(fs.readFileSync("public/data/iv-compare-dowsil.ivpack")).toString());
+  const config = {id:"pdms",material:"Silicone / PDMS",stress:"TC",metric:"efficiency_pct" as const,electrode:"all",recipe:"all"};
+  const candidate = ageingSampleCandidates(dataset, config, false).find(item=>item.sampleUid==="SMP-051");
+  const stage = candidate?.times.find(item=>item.time===500);
+  assert.ok(stage, "TC500 must appear without enabling unsafe inspection or QA-flagged data");
+  assert.equal(stage.files.length,1);
+  assert.equal(stage.files[0].matched_observation_uid,"OBS-0373");
+  const sweep = stage.measurements.find(item=>item.measurement_uid==="MEA-05596");
+  assert.ok(sweep);
+  assert.equal(sweep.sheet_name,"exp1_3");
+  assert.equal(sweep.efficiency_pct,9.275723);
+  assert.equal(sweep.ff_pct,37.03645);
+  const allSweeps = dataset.measurements.filter(item=>item.file_uid==="FIL-0454");
+  assert.equal(allSweeps.length,10);
+  assert.ok(allSweeps.every(item=>item.sample_uid==="SMP-051"));
+  assert.equal(dataset.observations.find(item=>item.observation_uid==="OBS-0373")?.efficiency_pct,9.3);
+});

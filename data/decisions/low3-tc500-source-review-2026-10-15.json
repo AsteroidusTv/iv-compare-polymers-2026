@@ -1,0 +1,97 @@
+{
+  "reviewedOn": "2026-10-15",
+  "sourceFile": "IV/09-23_TC150A1_50A2A3_Old_UnagedA4/OldTC/Low3-lowEff.xls",
+  "rawSha256": "876836c52917a81ff574e9ba55d27e4f93239275bd7d649c542710d2323c03b6",
+  "sampleUid": "SMP-051",
+  "observationUid": "OBS-0373",
+  "matchingMeasurementUid": "MEA-05596",
+  "matchingSheet": "exp1_3",
+  "uniqueMatchingObservationCount": 1,
+  "scope": "File identity and TC500 stage only. All ten registered sweeps retained. No source values or inventory observations changed. Not experimental validation.",
+  "evidence": {
+    "sampleAlias": "low3 is unique among inventory specimens",
+    "path": "OldTC, acquisition date 2026-09-23",
+    "inventory": {
+      "PCE": 9.3,
+      "Jsc": 23.2,
+      "Voc": 1.08,
+      "FF": 37
+    },
+    "rawSweep": {
+      "PCE": 9.275723,
+      "Jsc": 23.24514,
+      "Voc": 1.077423,
+      "FF": 37.03645
+    },
+    "roundingTolerance": {
+      "PCE": 0.05,
+      "Jsc": 0.05,
+      "Voc": 0.005,
+      "FF": 0.05
+    }
+  },
+  "previousMatchingEntry": {
+    "target": "IV/09-23_TC150A1_50A2A3_Old_UnagedA4/OldTC/Low3-lowEff.xls",
+    "oldValue": null,
+    "decision": {
+      "file_uid": "FIL-0454",
+      "sample_uid": null,
+      "match_status": "unmatched",
+      "match_score": null,
+      "second_best_score": null,
+      "match_margin": null,
+      "match_reasons": "historical_cell_identity_not_independently_adjudicated",
+      "matched_observation_uid": null,
+      "matched_measurement_sheet": null,
+      "metric_fields_tight": null,
+      "metric_mean_normalized_diff": null,
+      "inferred_test_type": "TC",
+      "inferred_exposure_duration": null,
+      "inferred_exposure_unit": null,
+      "material_family_inferred": "Unclassified"
+    },
+    "reason": "Raw source retained; identity is not unique enough for quantitative linkage.",
+    "source": "2026-09-25 intake: source path + Summary_v3 inventory",
+    "status": "requires_review"
+  },
+  "updatedMatchingEntry": {
+    "target": "IV/09-23_TC150A1_50A2A3_Old_UnagedA4/OldTC/Low3-lowEff.xls",
+    "oldValue": {
+      "file_uid": "FIL-0454",
+      "sample_uid": null,
+      "match_status": "unmatched",
+      "match_score": null,
+      "second_best_score": null,
+      "match_margin": null,
+      "match_reasons": "historical_cell_identity_not_independently_adjudicated",
+      "matched_observation_uid": null,
+      "matched_measurement_sheet": null,
+      "metric_fields_tight": null,
+      "metric_mean_normalized_diff": null,
+      "inferred_test_type": "TC",
+      "inferred_exposure_duration": null,
+      "inferred_exposure_unit": null,
+      "material_family_inferred": "Unclassified"
+    },
+    "decision": {
+      "file_uid": "FIL-0454",
+      "sample_uid": "SMP-051",
+      "match_status": "matched_filename_stage",
+      "match_score": null,
+      "second_best_score": null,
+      "match_margin": null,
+      "match_reasons": "unique_low3_alias;old_tc_source;unique_four_metric_rounded_stage_match;owner_authorized_source_review",
+      "matched_observation_uid": "OBS-0373",
+      "matched_measurement_sheet": "exp1_3",
+      "metric_fields_tight": 4,
+      "metric_mean_normalized_diff": null,
+      "inferred_test_type": "TC",
+      "inferred_exposure_duration": 500,
+      "inferred_exposure_unit": "cycles",
+      "material_family_inferred": "Silicone / PDMS"
+    },
+    "reason": "Unique low3 specimen alias in the inventory and OldTC source path; exp1_3 uniquely matches TC500 OBS-0373 across PCE, Jsc, Voc and FF at inventory rounding precision. Computational source review authorized by owner on 2026-10-15; not experimental validation.",
+    "source": "2026-10-15 targeted source review: raw Low3-lowEff.xls + active Summary.xlsx",
+    "status": "provisional_unverified"
+  }
+}
