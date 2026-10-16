@@ -82,9 +82,19 @@ export async function loadLightAgeing(root,samples) {
    row.data_quality_flag=[row.data_quality_flag,'light_irradiance_changed'].filter(Boolean).join(';');
    row.comments+=' Excluded from standard-irradiance trends: '+exclusion.reason;
   }
+  for(const exclusion of (manifest.interferenceExclusions??[]).filter(item=>item.source===entry.source)){
+   const row=parsed.find(row=>row.source_row===exclusion.sourceRow);
+   if(exclusion.status!=='reviewed_under_owner_authorized_filtering'||exclusion.decision!=='exclude_both_directions_from_standard_trends'
+    ||exclusion.sample_uid!==entry.sample_uid||exclusion.sourceSha256!==sha(raw)||!row
+    ||row.exposure_duration_numeric!==exclusion.expectedTime_h
+    ||row.light_pout_forward_mW_cm2!==exclusion.expectedForward_mW_cm2
+    ||row.light_pout_reverse_mW_cm2!==exclusion.expectedReverse_mW_cm2)throw Error('light-ageing interference exclusion no longer matches its reviewed source');
+   row.data_quality_flag=[row.data_quality_flag,'light_measurement_interference'].filter(Boolean).join(';');
+   row.comments+=' Excluded from standard trends: '+exclusion.reason;
+  }
   observations.push(...parsed);
  }
- const exclusions=manifest.irradianceExclusions??[];
+ const exclusions=[...(manifest.irradianceExclusions??[]),...(manifest.interferenceExclusions??[])];
  if(new Set(exclusions.map(item=>item.source+':'+item.sourceRow)).size!==exclusions.length
   ||exclusions.some(item=>!manifest.entries.some(entry=>entry.source===item.source)))throw Error('Duplicate or unknown light-ageing irradiance exclusion');
  return {observations,manifestSha256:sha(bytes)};

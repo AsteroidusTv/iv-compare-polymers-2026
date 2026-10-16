@@ -20,7 +20,7 @@ test("light-ageing reproduces five raw summaries without duplicating TXT rows or
  const light=await loadLightAgeing(process.cwd(),dataset.samples);
  const rows=dataset.observations.filter(r=>r.test_type==="Light ageing");
  assert.deepEqual(rows,light.observations);
- assert.equal(rows.length,1908);
+ assert.equal(rows.length,5232);
  assert.equal(new Set(rows.map(r=>r.sample_uid)).size,5);
  assert.equal(new Set(rows.map(r=>dataset.samples.find(s=>s.sample_uid===r.sample_uid)!.material_family)).size,2);
  assert.ok(rows.every(r=>r.efficiency_pct===null&&r.exposure_unit==="h"));
@@ -78,7 +78,7 @@ test("all five light-ageing cells omit reviewed 1.5-sun peaks and recovery trans
  for(const metric of [forward,reverse,combined] as const){
   const result=normalizationTraces(dataset,{sampleUids,protocol:"Light ageing",metric,mode:"retention",includeQa:true,outdoorWindow:7,qaIssues:new Map()});
   const excluded=result.filter(t=>t.exclusions.includes("different_irradiance"));
-  assert.equal(excluded.length,30);assert.equal(result.filter(t=>t.value!==null).length,1878);
+  assert.equal(excluded.length,30);assert.equal(result.filter(t=>t.value!==null).length,5052);
   assert.ok(excluded.every(t=>[5,6,84,85,86,87].includes(t.observation.source_row!)));
   assert.ok(result.filter(t=>[83,88].includes(t.observation.source_row!)).every(t=>t.value!==null));
   assert.ok(result.every(t=>t.baseline?.observations[0].source_row===7));
@@ -121,4 +121,57 @@ test("paired light-ageing mean inherits QA from either direction",()=>{
   assert.equal(result[1].value,null);
   assert.ok(result[1].exclusions.includes("qa_metric"));
  }
+});
+
+
+test("reviewed acquisition interference is excluded without deleting raw measurements or hiding sustained decline", async () => {
+ const dataset=validateDataset(JSON.parse(gunzipSync(await fs.readFile("public/data/iv-compare-dowsil.ivpack")).toString()));
+ const ids=["SMP2-060","SMP2-061","SMP2-062","SMP2-063","SMP2-064"];
+ const manifest=JSON.parse(await fs.readFile("data/decisions/light-ageing-pearl-v1.json","utf8"));
+ assert.equal(manifest.interferenceExclusions.length,150);
+ for(const includeQa of [false,true])for(const metric of [forward,reverse,combined] as const){
+  const result=normalizationTraces(dataset,{sampleUids:ids,protocol:"Light ageing",metric,mode:"retention",includeQa,outdoorWindow:7,qaIssues:new Map()});
+  assert.equal(result.filter(t=>t.exclusions.includes("measurement_interference")).length,150);
+  for(const ex of manifest.interferenceExclusions){
+   const trace=result.find(t=>t.observation.sample_uid===ex.sample_uid&&t.observation.source_row===ex.sourceRow)!;
+   assert.equal(trace.value,null);
+   assert.equal(trace.observation.light_pout_forward_mW_cm2,ex.expectedForward_mW_cm2);
+   assert.equal(trace.observation.light_pout_reverse_mW_cm2,ex.expectedReverse_mW_cm2);
+  }
+  // No automatic clipping of the genuinely poor POE-2 cell, nor change of reference.
+  const poor=result.filter(t=>t.observation.sample_uid==='SMP2-062'&&t.observation.exposure_duration_numeric!>499&&t.observation.exposure_duration_numeric!<501);
+  assert.ok(poor.length>0&&poor.every(t=>t.value!==null&&t.value<15));
+  assert.ok(result.every(t=>t.baseline?.observations[0].source_row===7));
+  assert.ok(result.filter(t=>t.observation.exposure_duration_numeric!>499&&t.observation.exposure_duration_numeric!<501).every(t=>t.value!==null));
+ }
+ // Reject stale source-bound decisions rather than silently applying them elsewhere.
+ const update=manifest.updates.at(-1);
+ assert.deepEqual(update.audit.map((a:{receivedRows:number})=>a.receivedRows),[1264,993,992,992,991]);
+ assert.ok(update.audit.every((a:{previousRows:number;unchangedPrefixRows:number})=>a.previousRows===a.unchangedPrefixRows));
+});
+
+test('interference decisions fail closed when reviewed source coordinates or values change', async () => {
+ const {mkdtemp,rm,mkdir,writeFile}=await import('node:fs/promises');
+ const {tmpdir}=await import('node:os');const {join}=await import('node:path');
+ const root=await mkdtemp(join(tmpdir(),'pearl-exclusion-validation-'));
+ try {
+  await mkdir(join(root,'data/raw/LightAgeing'),{recursive:true});await mkdir(join(root,'data/decisions'),{recursive:true});
+  const book=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet([
+   ['Group','Len1','Len1'],['Substrate','A4-len1','A4-len1'],['Cell','C337','C337'],
+   ['Timestamp_C337','Pout_F_C337','Pout_R_C337'],[0,10,20],[1,8,16]
+  ]),'Summary');
+  const bytes=XLSX.write(book,{type:'buffer',bookType:'xlsx'}),hash=createHash('sha256').update(bytes).digest('hex');
+  const entries=Array.from({length:5},(_,i)=>({source:`LightAgeing/cell${i}.xlsx`,sample_uid:`S${i}`,inventory_id:`cell${i}`,material_family:'TPO-2',substrate:'A4-len1',cell:'C337'}));
+  const samples=entries.map(e=>({sample_uid:e.sample_uid,sample_id_raw:e.inventory_id,batch_no_raw:'A4',material_family:e.material_family}));
+  for(const e of entries)await writeFile(join(root,'data/raw',e.source),bytes);
+  const exclusion={source:entries[0].source,sample_uid:'S0',sourceRow:5,sourceSha256:hash,expectedTime_h:0,expectedForward_mW_cm2:10,expectedReverse_mW_cm2:20,status:'reviewed_under_owner_authorized_filtering',decision:'exclude_both_directions_from_standard_trends',reason:'test fixture'};
+  const manifest={schemaVersion:'pearl-light-ageing/1',entries,rawHashes:Object.fromEntries(entries.map(e=>[e.source,hash])),interferenceExclusions:[exclusion]};
+  const save=()=>writeFile(join(root,'data/decisions/light-ageing-pearl-v1.json'),JSON.stringify(manifest));
+  await save();assert.equal((await loadLightAgeing(root,samples)).observations.filter(r=>r.data_quality_flag?.includes('light_measurement_interference')).length,1);
+  for(const patch of [{expectedTime_h:2},{expectedForward_mW_cm2:11},{sourceSha256:'incorrect'},{sample_uid:'S1'},{status:'unreviewed'}]){
+   manifest.interferenceExclusions=[{...exclusion,...patch}];await save();
+   await assert.rejects(loadLightAgeing(root,samples),/interference exclusion no longer matches/);
+  }
+ }finally{await rm(root,{recursive:true,force:true});}
 });

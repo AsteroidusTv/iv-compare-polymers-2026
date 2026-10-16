@@ -89,3 +89,13 @@ the mean of separately normalized forward/reverse retentions. Exports retain
 both original readings, the derived mean and its calculation rule. The source
 Excel files are unchanged. The package now retains all electrical and context
 columns; mean metrics are derived at graph time from their paired source readings.
+
+## Extension received 16 October 2026
+
+The historical counts above describe the original intake. The active summaries
+now contain 5,232 observations through approximately 527 h. The original 1,908
+measurements are unchanged. In addition to the 30 prior irradiation exclusions,
+150 source-bound interference readings are excluded, leaving 5,052 eligible
+observations. The reference remains row 7 for each cell. See
+[the extension and filtering record](INTAKE_2026-10-16_PEARL.md) for the five
+reviewed windows, provenance, preservation checks and recovery procedure.

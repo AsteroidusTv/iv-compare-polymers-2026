@@ -38,6 +38,7 @@ export function readableReason(reason: string) {
     negative_baseline: 'Initial reference is negative', ambiguous_baseline: 'Multiple initial references',
     missing_time: 'Exposure time unavailable', non_numeric_metric: 'Measurement unavailable',
     qa_metric: 'Excluded by quality review', different_irradiance: 'Different illumination',
+    measurement_interference: 'Measurement interference',
     missing_at_exact_time: 'No measurement at this time', ambiguous_duplicate_observation: 'Multiple measurements at the same time'};
   return names[reason] ?? reason.replace(/_/g, ' ');
 }

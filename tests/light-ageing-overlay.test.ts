@@ -56,9 +56,9 @@ test('real light-ageing overlay retains all five cells, source rows and mandator
     assert.equal(cells.length, 5);
     for (const i of [0, 1, 2, 3]) {
       const points = cells.flatMap(cell => cell.panels[i].points);
-      assert.equal(points.length, 1908);
+      assert.equal(points.length, 5232);
       assert.equal(points.filter(p => p.reasons.includes('different_irradiance')).length, 30);
-      assert.equal(points.filter(p => p.value !== null).length, 1878);
+      assert.equal(points.filter(p => p.value !== null).length, 5052);
       assert.ok(points.every(p => p.trace?.baseline?.observations[0].source_row === 7));
     }
   }

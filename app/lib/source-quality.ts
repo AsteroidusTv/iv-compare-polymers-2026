@@ -8,6 +8,10 @@ for (const key of LIGHT_METRIC_KEYS) SOURCE_METRIC[key] = key;
 export function lightIrradianceExcluded(flag: string | null | undefined): boolean {
   return Boolean(flag?.split(/[;,|]/).some(part=>part.trim()==="light_irradiance_changed"));
 }
+/** Reviewed acquisition interference remains excluded even when QA inspection is enabled. */
+export function lightInterferenceExcluded(flag: string | null | undefined): boolean {
+  return Boolean(flag?.split(/[;,|]/).some(part=>part.trim()==="light_measurement_interference"));
+}
 /** Only explicitly recognised metric-local flags are scoped. Irradiance absence and unknown flags remain global. */
 export function sourceQualityFlagApplies(flag: string | null | undefined, metric?: MetricKey): boolean {
   const definition = metric ? pearlMetric(metric) : undefined;

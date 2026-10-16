@@ -17,7 +17,7 @@ function traces(observations: Observation[], metric: MetricKey, includeQa = fals
   return normalizationTraces({ observations } as IVDataset, {sampleUids: ['S'], protocol: 'Light ageing', metric, mode: 'retention', includeQa, outdoorWindow: 7, qaIssues: new Map()});
 }
 
-test('all 1908 Pearl rows retain the additional electrical and context columns from all five Excel sources', async () => {
+test('all 5232 Pearl rows retain the additional electrical and context columns from all five Excel sources', async () => {
   const data = await dataset();
   const rows = data.observations.filter(row => row.test_type === 'Light ageing');
   const manifest = JSON.parse(await fs.readFile('data/decisions/light-ageing-pearl-v1.json', 'utf8'));
@@ -41,7 +41,7 @@ test('all 1908 Pearl rows retain the additional electrical and context columns f
       checked++;
     }
   }
-  assert.equal(checked, 1908);
+  assert.equal(checked, 5232);
   for (const row of rows) assert.doesNotMatch(`${row.action_or_status} ${row.aggregation_protocol} ${row.comments}`, /\bPearl\b/i);
 });
 
@@ -50,8 +50,8 @@ test('all 26 metrics plot real data, retain 30 irradiation exclusions and export
   const sampleUids = [...new Set(data.observations.filter(row => row.test_type === 'Light ageing').map(row => row.sample_uid))];
   for (const metric of LIGHT_METRIC_KEYS) {
     const result = normalizationTraces(data, {sampleUids, protocol: 'Light ageing', metric, mode: 'retention', includeQa: true, outdoorWindow: 7, qaIssues: new Map()});
-    assert.equal(result.length, 1908, metric);
-    assert.equal(result.filter(trace => trace.value !== null).length, 1878, metric);
+    assert.equal(result.length, 5232, metric);
+    assert.equal(result.filter(trace => trace.value !== null).length, 5052, metric);
     assert.equal(result.filter(trace => trace.exclusions.includes('different_irradiance')).length, 30, metric);
     assert.ok(METRICS[metric].unit);
     assert.notEqual(figureMetricLabel(metric), metric);

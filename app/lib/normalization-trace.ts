@@ -1,7 +1,7 @@
 import type { IVDataset, MetricKey, Observation } from "./iv-data";
 import { numeric, outdoorBaseline } from "./science";
 import { sourceQualityFlagApplies } from "./lab-quality";
-import { lightIrradianceExcluded } from "./source-quality";
+import { lightIrradianceExcluded, lightInterferenceExcluded } from "./source-quality";
 import { metricValueMode, pearlMetric } from './light-ageing-metrics';
 
 export interface BaselineTrace {
@@ -46,7 +46,7 @@ export function normalizationTraces(dataset: IVDataset, options: {
   const baselineFor = (sampleUid: string): BaselineTrace => {
     const cached = baselines.get(sampleUid); if (cached) return cached;
     if (protocol === "Light ageing") {
-      const measured = observationsForMetric.filter(row => row.sample_uid === sampleUid && row.test_type === protocol && !lightIrradianceExcluded(row.data_quality_flag) && numeric(row.exposure_duration_numeric)).sort((a,b) => a.exposure_duration_numeric! - b.exposure_duration_numeric!);
+      const measured = observationsForMetric.filter(row => row.sample_uid === sampleUid && row.test_type === protocol && !lightIrradianceExcluded(row.data_quality_flag) && !lightInterferenceExcluded(row.data_quality_flag) && numeric(row.exposure_duration_numeric)).sort((a,b) => a.exposure_duration_numeric! - b.exposure_duration_numeric!);
       const first = measured[0];
       const observations = first ? measured.filter(row => row.exposure_duration_numeric === first.exposure_duration_numeric) : [];
       const value = observations.length === 1 && numeric(first[metric]) && (options.includeQa || !qaReasons(first).length) ? first[metric] as number : null;
@@ -75,6 +75,7 @@ export function normalizationTraces(dataset: IVDataset, options: {
     if (absoluteValue === null) exclusions.push("non_numeric_metric");
     if (options.excludeZeroAgeingPoints && (protocol === "DH" || protocol === "TC") && absoluteValue === 0) exclusions.push("user_excluded_zero_value");
     if (protocol === "Light ageing" && lightIrradianceExcluded(observation.data_quality_flag)) exclusions.push("different_irradiance");
+    if (protocol === "Light ageing" && lightInterferenceExcluded(observation.data_quality_flag)) exclusions.push("measurement_interference");
     if (!options.includeQa && reasons.length) exclusions.push("qa_metric");
     if (protocol !== "Unaged" && !numeric(observation.exposure_duration_numeric)) exclusions.push("missing_time");
     const baseline = mode === "retention" ? baselineFor(observation.sample_uid) : null;
