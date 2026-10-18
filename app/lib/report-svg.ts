@@ -35,6 +35,33 @@ export function reportInkColor(color: string): string {
 export function applyReportSvgStyle(svg: SVGSVGElement): void {
   svg.setAttribute("data-export-preset", "latex-report");
   svg.style.background = "white";
+  // Use real SVG subscripts in titles, axes and legends, preserving any
+  // existing tspans and leaving the chart and export metadata untouched.
+  const doc = svg.ownerDocument;
+  for (const label of svg.querySelectorAll("text")) {
+    const walker = doc.createTreeWalker(label, 4 /* NodeFilter.SHOW_TEXT */);
+    const nodes: Text[] = [];
+    let node;
+    while ((node = walker.nextNode())) nodes.push(node as Text);
+    for (const text of nodes) {
+      const value = text.data;
+      const matches = [...value.matchAll(/\bPout\b/g)];
+      if (!matches.length) continue;
+      const replacement = doc.createDocumentFragment();
+      let start = 0;
+      for (const match of matches) {
+        replacement.appendChild(doc.createTextNode(value.slice(start, match.index) + "P"));
+        const subscript = doc.createElementNS(SVG_NAMESPACE, "tspan");
+        subscript.setAttribute("baseline-shift", "sub");
+        subscript.setAttribute("font-size", "70%");
+        subscript.textContent = "out";
+        replacement.appendChild(subscript);
+        start = match.index + match[0].length;
+      }
+      replacement.appendChild(doc.createTextNode(value.slice(start)));
+      text.replaceWith(replacement);
+    }
+  }
   for (const element of [svg, ...svg.querySelectorAll("*")]) {
     for (const attribute of ["stroke", "fill"] as const) {
       const value = element.getAttribute(attribute);
